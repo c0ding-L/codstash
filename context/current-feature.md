@@ -6,7 +6,7 @@ Spec: `@context/features/database-spec.md`
 
 ## Status
 
-In Progress
+Completed
 
 ## Goals
 
@@ -210,6 +210,20 @@ Open questions:
   P2010 `UnsupportedNativeDataType`: they return PostgreSQL's `name` type,
   which the driver adapter cannot deserialize. Cast to `::text`. Worth knowing
   before writing any other raw query.
+
+- 2026-08-01 — Database feature completed and merged into `main` (`c9657df`).
+  Build, typecheck, lint and `prisma migrate status` all green; `.env` and the
+  generated client confirmed absent from history. Not pushed yet.
+
+Left undone by this feature:
+
+- **NextAuth is installed but not configured.** No `auth.ts`, no route handler,
+  no GitHub provider. The models exist and the adapter is available, but
+  nothing wires them up — signing in is not possible yet.
+- The UI still reads `src/lib/mock-data.ts`. Nothing queries the database, and
+  every table is empty. A seed script would be the natural next step.
+- `Item.contentType`, `language` and the type/color fields are strings rather
+  than enums, matching the mock's string unions.
 
 Backlog from the dashboard series:
 
