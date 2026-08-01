@@ -1,14 +1,67 @@
 # Current Feature
 
-Database — Prisma 7 + Neon PostgreSQL
+Seed Data — sample rows for development and demos
 
-Spec: `@context/features/database-spec.md`
+Spec: `@context/features/seed-spec.md`
 
 ## Status
 
 Completed
 
 ## Goals
+
+Fill the empty database the previous feature created, so the UI has something
+real to read once it stops importing `src/lib/mock-data.ts`.
+
+- `prisma/seed.ts`, run with `tsx`, wired as `npm run db:seed` and as
+  `migrations.seed` in `prisma.config.ts`
+- 1 demo user (`demo@codstash.io`, password hashed with bcryptjs, 12 rounds)
+- The 7 system item types
+- 5 collections and 18 items, per the spec's per-collection breakdown
+- Idempotent: running it twice leaves the same row counts
+
+## Notes
+
+Adaptations of the spec, and the reasoning:
+
+- **`ItemType.color` stores the mock's colour tokens** (`emerald`, `amber`,
+  `blue`, `cyan`, `rose`, `violet`, `yellow`), not the OKLCH values or the
+  Tailwind class strings from `@context/features/item-type-card-color-handler.md`.
+  That document describes a later, different design; the tokens are what
+  `src/lib/item-type-ui.ts` actually keys `colorClasses` / `surfaceClasses` by,
+  so they are the shapes the code consumes today. Icons are stored as the
+  lucide component names already used by the mock.
+- **`ItemType` has no `pluralName` column.** The sidebar derives its route from
+  `pluralName.toLowerCase()` in the mock, so that mapping has to live in the UI
+  (or the column has to be added) whenever the switch-over happens. Not
+  invented here.
+- **System types get explicit stable ids** (`typ_snippet`, …, matching the
+  mock) and are upserted on `id`. The schema's `@@unique([userId, slug])` does
+  not constrain them: `userId` is null for system types, and NULLs do not
+  collide in a PostgreSQL unique index, so an upsert keyed on that pair would
+  create a duplicate on every run.
+- **Only the demo user is deleted.** `Item.typeId` is `onDelete: Restrict`, so
+  deleting a system item type would fail as soon as any user owns an item of
+  that type — the types are upserted on their fixed id instead and never
+  removed. The single delete is scoped to `email: "demo@codstash.io"` and
+  cascades their items, collections, tags, accounts and sessions. Nothing else
+  in the database is touched. The seed is destructive for the demo user's rows.
+- **Flags the spec is silent on.** It never mentions `isPinned`, `isFavorite`
+  or tags. The dashboard renders a pinned-items section and a favorite-
+  collections section that would both be empty with every flag false, which
+  defeats the point of demo data — so a few are set (assumption, not spec).
+  Tags are left out entirely: the spec does not ask for them.
+- Setting `migrations.seed` means `prisma migrate reset` and `migrate dev`
+  auto-run the seed. Intended, but worth knowing before running a migration.
+
+`npm run build` does not exercise any of this. Verification is `npm run
+db:seed`, then `npm run db:test` for the row counts, then a second
+`db:seed` + `db:test` to prove idempotency.
+
+---
+
+Previous feature (completed) — Database, Prisma 7 + Neon PostgreSQL.
+Spec: `@context/features/database-spec.md`. Its notes follow.
 
 Stand up the data layer the mock has been standing in for.
 
@@ -215,7 +268,24 @@ Open questions:
   Build, typecheck, lint and `prisma migrate status` all green; `.env` and the
   generated client confirmed absent from history. Not pushed yet.
 
-Left undone by this feature:
+- 2026-08-01 — Started Seed Data on branch `feature/seed`. `bcryptjs@3.0.3`
+  installed as a runtime dependency (NextAuth credential login will want it
+  too); it ships its own types, so no `@types/bcryptjs`.
+- 2026-08-01 — `prisma/seed.ts` written, plus `npm run db:seed` and
+  `migrations.seed` in `prisma.config.ts`. Seeded 1 user, 7 system types, 5
+  collections, 18 items. Verified with `db:test`: users 1, itemTypes 7,
+  collections 5, items 18, tags 0, itemTags 0 — identical after a second
+  `db:seed`, so the reset-and-recreate path is idempotent. Build, `tsc
+  --noEmit` and lint all green.
+- 2026-08-01 — The stale comment in `src/lib/prisma.ts` claiming migrations use
+  `@prisma/adapter-pg` is still there; that package was uninstalled during the
+  database feature. Not touched here.
+- 2026-08-01 — Workflow correction from the author: document the feature, then
+  stop and wait for an explicit go-ahead before implementing. Document → Branch
+  → Implement are separate checkpoints, not one run.
+- 2026-08-01 — Seed feature completed and merged into `main`. Not pushed yet.
+
+Left undone by the database feature:
 
 - **NextAuth is installed but not configured.** No `auth.ts`, no route handler,
   no GitHub provider. The models exist and the adapter is available, but
