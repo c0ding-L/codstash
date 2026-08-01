@@ -245,6 +245,10 @@ model ItemTag {
 - Mobile drawer for sidebar
 - Touch‑optimized icons and buttons
 
+### **Design Reference**
+
+See `@context/screenshots/dashboard-ui-main.png` for the main dashboard design. It does not have to be pixel perfect. Use it as a base.
+
 ---
 
 ## 🔌 API Architecture
