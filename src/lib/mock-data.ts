@@ -727,5 +727,11 @@ export const dashboardStats = {
   /** Sum of the denormalized counts, not `items.length`. */
   totalItems: collections.reduce((total, c) => total + c.itemCount, 0),
   favoriteCount: collections.filter((c) => c.isFavorite).length,
+  /**
+   * Counted from the sample, so it is not comparable to `totalItems`: this is
+   * "3 of the 18 items that exist here", while `totalItems` is the
+   * denormalized 306. Real data makes the two consistent again.
+   */
+  favoriteItemCount: items.filter((i) => i.isFavorite).length,
   lastUpdated: recentCollections[0],
 };

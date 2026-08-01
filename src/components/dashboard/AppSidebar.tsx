@@ -1,17 +1,5 @@
 import Link from "next/link";
-import {
-  Clock,
-  Code2,
-  File,
-  FileText,
-  Image,
-  Link as LinkIcon,
-  type LucideIcon,
-  Settings,
-  Sparkles,
-  SquareTerminal,
-  Star,
-} from "lucide-react";
+import { Clock, Code2, Settings, Star } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -27,49 +15,12 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import {
-  collections,
-  currentUser,
-  itemTypes,
-  recentCollections,
-  type ColorToken,
-  type ItemType,
-  type ItemTypeSlug,
-} from "@/lib/mock-data";
-
-/**
- * Mock data stores lucide icon names as strings. Mapping them explicitly keeps
- * the icons tree-shakeable and type-checked — indexing the lucide namespace at
- * runtime would give up both.
- */
-const typeIcons: Record<ItemTypeSlug, LucideIcon> = {
-  snippet: Code2,
-  prompt: Sparkles,
-  note: FileText,
-  command: SquareTerminal,
-  file: File,
-  image: Image,
-  link: LinkIcon,
-};
-
-/** Tailwind cannot see interpolated class names, so the tokens are spelled out. */
-const colorClasses: Record<ColorToken, string> = {
-  emerald: "text-emerald-400",
-  amber: "text-amber-400",
-  blue: "text-blue-400",
-  cyan: "text-cyan-400",
-  rose: "text-rose-400",
-  violet: "text-violet-400",
-  yellow: "text-yellow-400",
-};
-
-/** The spec routes types to `/items/snippets`, so plural and lowercased. */
-function itemTypeHref(type: ItemType) {
-  return `/items/${type.pluralName.toLowerCase()}`;
-}
-
-function typeById(id: string) {
-  return itemTypes.find((type) => type.id === id);
-}
+  colorClasses,
+  itemTypeHref,
+  typeById,
+  typeIcons,
+} from "@/lib/item-type-ui";
+import { collections, currentUser, itemTypes, recentCollections } from "@/lib/mock-data";
 
 const favoriteCollections = collections.filter(
   (collection) => collection.isFavorite,

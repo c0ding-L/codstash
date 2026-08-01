@@ -1,8 +1,8 @@
 # Current Feature
 
-Dashboard UI — Phase 2 (sidebar)
+Dashboard UI — Phase 3 (main area)
 
-Spec: `@context/features/dashboard-phase-2-spec.md` (phase 2 of 3)
+Spec: `@context/features/dashboard-phase-3-spec.md` (phase 3 of 3)
 
 ## Status
 
@@ -24,7 +24,9 @@ Completed
 - 2026-08-01 — Mock user renamed to CodStash / CS to match the logo.
 - 2026-08-01 — Mock data merged into `main` (`3cb0917`). Build, typecheck and
   lint green. Feature completed.
-- 2026-08-01 — Started Dashboard UI Phase 1 (layout shell).
+- 2026-08-01 — Started Dashboard UI Phase 1 (layout shell). Scope: ShadCN init,
+  `/dashboard` route, dashboard layout and global styles, dark mode by default,
+  display-only top bar, sidebar and main placeholders.
 - 2026-08-01 — ShadCN initialized (style `base-nova`, `@base-ui/react`, lucide);
   added `button` and `input`. `/dashboard` route, top bar and placeholders in
   place. Build, typecheck and lint green.
@@ -32,15 +34,13 @@ Completed
   var(--font-sans) }`, which is self-referential and invalid at computed-value
   time, so `@apply font-sans` resolved to nothing. Fixed by keeping the
   next/font variables named `--font-geist-sans` / `--font-geist-mono` and
-  pointing the theme keys at them. `--font-mono` added at the same time, which
-  phase 2 needs for syntax highlighting. Verified in the compiled CSS.
+  pointing the theme keys at them. `--font-mono` added at the same time.
+  Verified in the compiled CSS.
 - 2026-08-01 — Browser check could not be run in this environment: Chromium is
   missing `libgbm.so.1` and installing it needs sudo. Verified via the compiled
-  CSS instead (dark tokens emitted, utilities present), then reviewed in a
-  browser by the author.
+  CSS instead, then reviewed in a browser by the author.
 - 2026-08-01 — Phase 1 merged into `main` (`fe8d169`) and pushed (`22753c6`).
-  Feature completed. `min-h-svh` on the dashboard container left as-is despite
-  being redundant with `flex-1`.
+  Feature completed.
 - 2026-08-01 — Started Dashboard UI Phase 2 (sidebar). Scope: collapsible
   sidebar, item types linking to `/items/TYPE`, favorite collections, recent
   collections, user avatar area at the bottom, drawer toggle, drawer on mobile.
@@ -56,27 +56,48 @@ Completed
   `Record`s so Tailwind and tree-shaking both see them.
 - 2026-08-01 — The sidebar collapse trigger sits in the top bar rather than the
   sidebar header as in the screenshot: with `collapsible="icon"` a trigger
-  inside the header would vanish when collapsed, leaving no way to reopen. One
-  control now serves both desktop collapse and the mobile drawer.
+  inside the header would vanish when collapsed, leaving no way to reopen.
 - 2026-08-01 — `npm run lint` failed on shadcn's generated `use-mobile.ts`
-  (`react-hooks/set-state-in-effect`). Rewritten with `useSyncExternalStore`,
-  the fitting primitive for a media query. Same behaviour, no cascading render.
+  (`react-hooks/set-state-in-effect`). Rewritten with `useSyncExternalStore`.
   May need reapplying if shadcn regenerates the file.
-- 2026-08-01 — Phase 2 completed. Build, typecheck and lint green; sidebar
-  contents verified against the served HTML and reviewed in a browser by the
-  author.
+- 2026-08-01 — Phase 2 completed, merged into `main` (`224571a`) and pushed.
+- 2026-08-01 — Started Dashboard UI Phase 3 (main area). Scope: main area to the
+  right, recent collections, pinned items, 10 recent items, 4 stats cards.
+- 2026-08-01 — Lifted the icon / color / href maps out of `AppSidebar` into
+  `src/lib/item-type-ui.ts` so the cards and rows share one definition rather
+  than duplicating four `Record`s. Mechanical import swap, no behaviour change.
+- 2026-08-01 — Added `favoriteItemCount` to `dashboardStats`, with a comment at
+  the definition noting it counts the 18-row sample while `totalItems` is the
+  denormalized 306. The two are not comparable until real data exists; the
+  cards ship with that inconsistency visible (306 items beside 3 favorites).
+- 2026-08-01 — `formatRelativeTime` in `src/lib/format.ts` measures against
+  `MOCK_NOW`, not the wall clock: `/dashboard` prerenders static, so `new
+  Date()` would freeze at build time and drift. Labels render exactly as the
+  design shows — 2h ago, 5h ago, Yesterday, 3d ago, 1w ago, 2w ago.
+- 2026-08-01 — Stats cards follow the spec (items, collections, favorite items,
+  favorite collections) rather than the screenshot's Collections / Total Items
+  / Favorites / Last Updated, as the spec directs. Only 2 items are pinned, so
+  that section is sparse next to the 10 recent ones.
+- 2026-08-01 — A leftover phase 2 dev server held port 3000 and served a stale
+  page; an identical byte count gave it away. Checking response content, not
+  just the HTTP status, is what catches this.
+- 2026-08-01 — Phase 3 completed. Build, typecheck and lint green; verified
+  against the served HTML — card values 306 / 8 / 3 / 3, exactly 5 collection
+  cards, 12 item rows (2 pinned + 10 recent). The three-phase dashboard UI is
+  done.
 
-Still open, for phase 3:
+Backlog after the dashboard series:
 
-- The seven `/items/TYPE` links 404 — the spec asked for links, not pages.
-  Fix is a `src/app/(dashboard)/` route group so `/items/*` inherits the shell
-  without changing URLs. Touches phase 1 files, so it needs a decision.
-- Collections in the sidebar render as buttons, not links; no collection route
-  is specified yet.
+- The seven `/items/TYPE` links return 404 — the phase 2 spec asked for links,
+  not pages. Fix is a `src/app/(dashboard)/` route group so `/items/*` inherits
+  the shell without changing URLs. It touches phase 1 files, so it needs a
+  decision.
+- Sidebar collections render as buttons, not links; no collection route exists.
 - `/` still renders the placeholder `<h1>Codstash</h1>`; whether it should
   redirect to `/dashboard` is unanswered.
-- `dashboard-phase-3-spec.md` does not exist yet.
-- The main area is still the phase 1 `<h2>Main</h2>` placeholder.
+- Mock data is still imported directly everywhere. Swapping to Neon + Prisma
+  means changing those imports, which is why the shapes mirror the Prisma
+  draft.
 
 Environment notes that outlive any one feature:
 
