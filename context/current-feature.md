@@ -4,7 +4,7 @@ Mock data source of truth
 
 ## Status
 
-In Progress
+Completed
 
 ## Goals
 
@@ -47,3 +47,5 @@ Deliberate deviations, all reversible:
 <!-- Keep this updated. Earliest to latest -->
 
 - 2026-08-01 — Created `src/lib/mock-data.ts` on branch `feature/mock-data`.
+- 2026-08-01 — Mock user renamed to CodStash / CS to match the logo.
+- 2026-08-01 — Merged into `main` (`3cb0917`). Build, typecheck and lint green.
