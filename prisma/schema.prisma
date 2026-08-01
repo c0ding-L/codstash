@@ -1,0 +1,199 @@
+// Prisma 7: the datasource URL lives in prisma.config.ts, not here.
+// The generator is `prisma-client` (not `prisma-client-js`) and needs an
+// explicit output; importFileExtension = "" keeps the generated imports
+// compatible with the Next.js bundler.
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  importFileExtension = ""
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Auth (NextAuth v5 / @auth/prisma-adapter)
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  // Null for OAuth-only users.
+  password      String?
+
+  isPro                Boolean @default(false)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+
+  accounts    Account[]
+  sessions    Session[]
+  items       Item[]
+  itemTypes   ItemType[]
+  collections Collection[]
+  tags        Tag[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // The adapter queries `where: { provider_providerAccountId }`.
+  @@id([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  // Deliberately no `id`: the adapter strips any id field it finds.
+  @@id([identifier, token])
+}
+
+// ---------------------------------------------------------------------------
+// Domain
+// ---------------------------------------------------------------------------
+
+model ItemType {
+  id       String  @id @default(cuid())
+  // "snippet" | "prompt" | "note" | "command" | "file" | "image" | "link".
+  // Kept as a string rather than an enum because Pro users add custom types.
+  slug     String
+  name     String
+  icon     String?
+  color    String?
+  isSystem Boolean @default(false)
+
+  // Null for the built-in types, set for a Pro user's custom ones.
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  items Item[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, slug])
+  @@index([userId])
+}
+
+model Collection {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  isFavorite  Boolean @default(false)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  items Item[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([userId, updatedAt])
+}
+
+model Item {
+  id          String  @id @default(cuid())
+  title       String
+  description String?
+  // "text" | "file".
+  contentType String  @default("text")
+  content     String?
+  fileUrl     String?
+  fileName    String?
+  fileSize    Int?
+  url         String?
+  isFavorite  Boolean @default(false)
+  isPinned    Boolean @default(false)
+  language    String?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Restrict, not Cascade: deleting a type that items still use should fail
+  // rather than silently delete their items.
+  typeId String
+  type   ItemType @relation(fields: [typeId], references: [id], onDelete: Restrict)
+
+  // Deleting a collection keeps its items and leaves them uncategorised.
+  collectionId String?
+  collection   Collection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+
+  tags ItemTag[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([typeId])
+  @@index([collectionId])
+  @@index([userId, updatedAt])
+  @@index([userId, isPinned])
+  @@index([userId, isFavorite])
+}
+
+model Tag {
+  id   String @id @default(cuid())
+  name String
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  items ItemTag[]
+
+  createdAt DateTime @default(now())
+
+  // A user cannot create the same tag twice.
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model ItemTag {
+  itemId String
+  tagId  String
+
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([itemId, tagId])
+  @@index([tagId])
+}
