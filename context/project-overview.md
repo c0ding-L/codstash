@@ -236,7 +236,7 @@ model ItemTag {
 
 ### Layout
 
-- **Collapsible sidebar** with filters & collections
+- **Collapsible sidebar** with filters & 1
 - Main grid/list workspace
 - Full‑screen item editor
 
