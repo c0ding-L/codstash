@@ -6,7 +6,7 @@ Spec: `@context/features/dashboard-phase-1-spec.md` (phase 1 of 3)
 
 ## Status
 
-In Progress
+Completed
 
 ## Goals
 
@@ -72,4 +72,15 @@ Open questions:
   phase 2 needs for syntax highlighting. Verified in the compiled CSS.
 - 2026-08-01 — Browser check could not be run in this environment: Chromium is
   missing `libgbm.so.1` and installing it needs sudo. Verified via the compiled
-  CSS instead (dark tokens emitted, utilities present). Needs a human look.
+  CSS instead (dark tokens emitted, utilities present), then reviewed in a
+  browser by the author.
+- 2026-08-01 — Merged into `main` (`fe8d169`). Phase 1 completed.
+
+Carried into phase 2:
+
+- `min-h-svh` on the dashboard container is redundant with `flex-1` inside
+  `html.h-full > body.min-h-full`. Left as-is.
+- Whether `/` should redirect to `/dashboard` is still unanswered.
+- `dashboard-phase-2-spec.md` and `dashboard-phase-3-spec.md` do not exist yet.
+- npm must be run from WSL: `node_modules/.bin` has Unix symlinks only, so
+  `npm run dev` from Windows fails with "'next' n'est pas reconnu".
