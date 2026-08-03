@@ -1,12 +1,95 @@
 # Current Feature
 
-Root redirect — `/` sends visitors to `/dashboard`
+Dashboard Collections — real collection data from the database
 
-No separate spec; the decision and its outcome are in the History below.
+Spec: `@context/features/dashboard-collections-spec.md`
 
 ## Status
 
 Completed
+
+## Goals
+
+Swap the recent-collections cards on `/dashboard` off `src/lib/mock-data.ts` and
+onto the seeded Neon rows via Prisma. The layout stays exactly as it is.
+
+- `src/lib/db/collections.ts` holds the fetching functions
+- The dashboard server component queries directly, per `coding-standards.md:29`
+- Each card's accent comes from the most-used item type in that collection
+- Each card shows small icons for every type present in the collection
+- Collection stats (the section count, each card's item count) come from the
+  database
+- Items underneath are explicitly out of scope — `PinnedItems`, `RecentItems`
+  and `StatsCards` keep reading the mock
+
+## Notes
+
+### The blocker to settle first
+
+**Nothing knows who the current user is.** NextAuth is installed but not
+configured — there is no `auth.ts`, no session — while `Collection.userId` is
+required. The proposal: `src/lib/db/collections.ts` takes `userId` as a
+parameter, and a single `getDemoUserId()` (looking up `demo@codstash.io`, the
+seeded address) supplies it. That keeps the shim to one function to delete when
+auth lands, instead of scattering the demo email through the queries. It is a
+temporary stand-in, not a design.
+
+### Adaptations of the spec
+
+- **"6 cards" does not match anything.** The mock's `recentCollections` slices
+  to 5 (`mock-data.ts:720`) and the seed created exactly 5 collections. The
+  section will render what exists — 5 today. Nothing gets padded.
+- **"Most-used content type" means the item *type*** (snippet / prompt / …),
+  not `Item.contentType`, which is the unrelated `"text" | "file"` column. The
+  schema has no `primaryTypeId`; the mock did. It has to be derived by counting
+  items per `typeId` within each collection. Ties break by a stable rule (the
+  type whose slug sorts first) so the colour does not flip between renders, and
+  a collection with no items falls back to the neutral styling the card already
+  uses when `typeById` misses.
+- **The wash/ring colours have to be adapted, not copied.**
+  `@context/features/item-type-card-color-handler.md` specifies
+  `bg-snippet/[0.06]` and `hover:border-snippet/40`, which need `--snippet`-style
+  OKLCH tokens in `globals.css`. Those tokens **do not exist** — checked; the
+  `@theme inline` block holds only shadcn's. The plan is to extend
+  `src/lib/item-type-ui.ts` with `washClasses` and `ringClasses`
+  (`Record<ColorToken, string>`) alongside the existing `colorClasses` /
+  `surfaceClasses`, spelled out literally per that document's own §5 warning
+  that Tailwind v4 cannot see interpolated class names. Same precedent as the
+  seed feature: the `ColorToken` words are what the code consumes.
+- **Small icons for every type in a collection is a new element**, not a port —
+  the current card shows one icon for the dominant type only.
+- `Collection.description` is nullable in Prisma but non-null in the mock's
+  interface, so the card has to handle `null`.
+
+### Consequences worth expecting
+
+- **`/dashboard` stops being static** — but not on its own. A Prisma query is
+  invisible to Next's static analysis, so the route keeps prerendering (`○`)
+  and bakes the rows in at build time unless something opts it out. `await
+  connection()` does that; the build then reports `ƒ`. Verified, after the
+  first build proved the opposite.
+- **`formatRelativeTime` defaults to `MOCK_NOW`** (`format.ts:17`), which is
+  2026-08-01. Real rows measured against it would produce wrong labels, so the
+  call site must pass a real `now`. `format.ts` importing `MOCK_NOW` from
+  `mock-data.ts` is a coupling that should go when the last mock consumer does;
+  whether to break it now is a judgement call to make during implementation.
+- **`typeById` in `item-type-ui.ts` reads the mock's `itemTypes`.** The icon and
+  colour lookup has to come from the database rows (or a slug-keyed map)
+  instead. Easy to miss — the component's imports look innocent.
+- One `findMany` with `items: { select: { typeId: true } }` and aggregation in
+  JS avoids an N+1 across 5 collections without `groupBy` gymnastics.
+
+### Scope boundary
+
+"Update collection stats display" is read narrowly: the section header count and
+each card's item count, from `_count`. The four `StatsCards` at the top read
+`dashboardStats` and mix in item and favorite totals that are not collections —
+converting those is a separate feature.
+
+---
+
+Previous feature (completed) — Root redirect. `/` sends visitors to
+`/dashboard`; the decision and outcome are in the History below.
 
 ---
 
@@ -320,8 +403,58 @@ Open questions:
   Windows-side `next dev`. Deleting `.next` clears it. Open question for the
   author: which environment we standardise on, since alternating between them
   re-poisons the cache each time.
-- 2026-08-02 — Root redirect feature completed. Commit and merge still pending
-  at the time of writing; branch `feature/root-redirect`.
+- 2026-08-02 — Root redirect feature completed, committed (`aa23c7d`) and merged
+  into `main` (`e17df6d`); branch deleted. Not pushed yet.
+- 2026-08-03 — Started Dashboard Collections on branch
+  `feature/dashboard-collections`. `src/lib/db/collections.ts` holds
+  `getDemoUserId()` and `getRecentCollections(userId, limit)`; the queries take
+  a `userId` and know nothing about the demo account, so the shim is one
+  function to delete when auth lands. Two queries, not N+1: collections with
+  `items: { select: { typeId: true } }` and `_count`, plus one `itemType`
+  lookup, aggregated in JS.
+- 2026-08-03 — `RecentCollections` is now an async server component fetching
+  directly, per `coding-standards.md:29`. `item-type-ui.ts` gained
+  `washClasses` (6%) and `ringClasses` (40% on hover) spelled out literally,
+  plus `toItemTypeSlug` / `toColorToken` guards that narrow the database's plain
+  strings and return null for anything unrecognised, so a Pro user's custom type
+  cannot crash the card.
+- 2026-08-03 — `Card` draws its edge with `ring-1 ring-foreground/10`, not a
+  border, so the hover accent overrides the ring rather than a border colour.
+- 2026-08-03 — Bug found in review of the rendered HTML, not by the build:
+  putting the wash utility in `Card`'s `className` made **tailwind-merge drop
+  `bg-card`**, since it treats the two `bg-*` utilities as conflicting. The card
+  lost its opaque surface and the tint sat on the page background. Fixed by
+  moving the wash onto its own `absolute inset-0` layer inside the card, which
+  is what the colour-handler document's §4 stacking diagram describes anyway.
+- 2026-08-03 — Verified against the rendered page: 5 cards, every one keeping
+  `bg-card` with the wash on a separate layer; accents emerald / amber / cyan /
+  yellow; footers `Snippet · 3`, `Prompt · 3`, `Link · 4`, `Command · 4`,
+  `Link · 4`; DevOps showing 3 type chips (2 Link, 1 Command, 1 Snippet) and the
+  rest 1 each; timestamps rendering "Yesterday" from the wall clock rather than
+  MOCK_NOW. `tsc --noEmit` and lint green.
+- 2026-08-03 — **File watching does not work on `/mnt/e`.** The dev server
+  served stale HTML through twelve requests after an edit and never logged a
+  recompile; restarting it picked the change up. Any HMR-based check here has to
+  restart the server, or it verifies the previous version of the code.
+- 2026-08-03 — **A Prisma query does not make a route dynamic.** The doc here
+  first claimed `/dashboard` would flip `○` → `ƒ` as a matter of course; the
+  build said otherwise — still `○`, with the rows and `new Date()` baked in at
+  build time, which is the exact drift `formatRelativeTime` was written to
+  avoid. Next only opts a route out of prerendering when it sees a request-time
+  API, and Prisma is invisible to it. Fixed with `await connection()` from
+  `next/server` at the top of `RecentCollections`, which
+  `01-app/03-api-reference/04-functions/connection.md` prescribes for a
+  component needing per-request output without touching cookies or headers; its
+  "Synchronous database drivers" example is this case. Rebuilt: `/dashboard` is
+  now `ƒ`, `/` still `○`. A dev server check is what proves the component still
+  renders, since a dynamic route is not executed during the build.
+- 2026-08-03 — The lesson worth keeping: a dev server renders dynamically no
+  matter what, so every check made against it passes identically whether the
+  production route is static or dynamic. Only the build's route table
+  distinguishes them.
+- 2026-08-03 — `npm run build` was run twice despite the open environment
+  question, because it is the only thing that reveals the above. `.next` was
+  deleted afterwards both times, so the author still gets a cold start.
 
 Left undone by the database feature:
 

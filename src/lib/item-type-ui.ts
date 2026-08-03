@@ -48,6 +48,50 @@ export const surfaceClasses: Record<ColorToken, string> = {
   yellow: "bg-yellow-400/10",
 };
 
+/**
+ * Card background tint, per `@context/features/item-type-card-color-handler.md`:
+ * the largest surface gets the faintest accent, 6%. That document's
+ * `bg-snippet/[0.06]` form needs `--snippet` OKLCH tokens which this project
+ * does not define, so the same rule is applied to the palette colours already
+ * in use here.
+ */
+export const washClasses: Record<ColorToken, string> = {
+  emerald: "bg-emerald-400/[0.06]",
+  amber: "bg-amber-400/[0.06]",
+  blue: "bg-blue-400/[0.06]",
+  cyan: "bg-cyan-400/[0.06]",
+  rose: "bg-rose-400/[0.06]",
+  violet: "bg-violet-400/[0.06]",
+  yellow: "bg-yellow-400/[0.06]",
+};
+
+/**
+ * Card edge on hover, 40% per the same document. `Card` draws its edge with
+ * `ring-1 ring-foreground/10` rather than a border, so this overrides the ring.
+ */
+export const ringClasses: Record<ColorToken, string> = {
+  emerald: "hover:ring-emerald-400/40",
+  amber: "hover:ring-amber-400/40",
+  blue: "hover:ring-blue-400/40",
+  cyan: "hover:ring-cyan-400/40",
+  rose: "hover:ring-rose-400/40",
+  violet: "hover:ring-violet-400/40",
+  yellow: "hover:ring-yellow-400/40",
+};
+
+/**
+ * Database rows carry `slug` and `color` as plain strings. These narrow them to
+ * the keys of the records above, returning null for anything unrecognised so a
+ * custom type cannot crash the UI.
+ */
+export function toItemTypeSlug(slug: string): ItemTypeSlug | null {
+  return slug in typeIcons ? (slug as ItemTypeSlug) : null;
+}
+
+export function toColorToken(color: string | null): ColorToken | null {
+  return color !== null && color in colorClasses ? (color as ColorToken) : null;
+}
+
 /** The spec routes types to `/items/snippets`, so plural and lowercased. */
 export function itemTypeHref(type: ItemType) {
   return `/items/${type.pluralName.toLowerCase()}`;
