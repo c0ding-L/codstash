@@ -1,12 +1,17 @@
 # Current Feature
 
-Seed Data — sample rows for development and demos
+Root redirect — `/` sends visitors to `/dashboard`
 
-Spec: `@context/features/seed-spec.md`
+No separate spec; the decision and its outcome are in the History below.
 
 ## Status
 
 Completed
+
+---
+
+Previous feature (completed) — Seed Data.
+Spec: `@context/features/seed-spec.md`. Its notes follow.
 
 ## Goals
 
@@ -283,7 +288,40 @@ Open questions:
 - 2026-08-01 — Workflow correction from the author: document the feature, then
   stop and wait for an explicit go-ahead before implementing. Document → Branch
   → Implement are separate checkpoints, not one run.
-- 2026-08-01 — Seed feature completed and merged into `main`. Not pushed yet.
+- 2026-08-01 — Seed feature completed and merged into `main` (`c05b9ee`), branch
+  deleted. Not pushed yet.
+- 2026-08-01 — A `npm run dev` I had backgrounded during the seed feature
+  outlived its command and held port 3000, so the author's own `npm run dev`
+  hit "Another next dev server is already running" and the browser showed a
+  dead page. Killed. Background dev servers must be stopped before handing
+  back.
+- 2026-08-02 — Started Root redirect on branch `feature/root-redirect`.
+  `src/app/page.tsx` now calls `redirect("/dashboard")` from `next/navigation`;
+  the API was read from
+  `node_modules/next/dist/docs/01-app/03-api-reference/04-functions/redirect.md`,
+  which confirms a 307 outside Server Actions and that no `return` is needed
+  (the function returns `never`).
+- 2026-08-02 — Verified against a running server, not just the build: `GET /`
+  returns `307 Temporary Redirect` with `location: /dashboard`, and following
+  it lands on `/dashboard` with a 200. Build reports `/` as still static; lint
+  green.
+- 2026-08-02 — Chose `redirect()` in the route over a `redirects()` entry in
+  `next.config.ts` or a `middleware.ts`. Beyond being the smallest change, a
+  config-level `permanent: true` emits a 308 that browsers cache hard; the
+  307 stays reversible if `/` ever becomes a landing page. Scope was
+  `src/app/page.tsx` only — the `(dashboard)` route-group refactor still in the
+  backlog was deliberately not bundled in.
+- 2026-08-02 — Turbopack panicked for the author with `Input image not found`
+  (`StructuredImageFileSource` → `get_meta_data`, while formatting an unrelated
+  HMR issue). Not the redirect and not a corrupt favicon: `src/app/favicon.ico`
+  was valid, but `.next` held WSL absolute paths
+  (`/mnt/e/PROGRAMMING/CODE/codstash/src/app/favicon.ico.mjs`) and no `E:\`
+  ones. A `.next` written by my WSL `build` / `dev` cannot be read by a
+  Windows-side `next dev`. Deleting `.next` clears it. Open question for the
+  author: which environment we standardise on, since alternating between them
+  re-poisons the cache each time.
+- 2026-08-02 — Root redirect feature completed. Commit and merge still pending
+  at the time of writing; branch `feature/root-redirect`.
 
 Left undone by the database feature:
 
@@ -302,13 +340,17 @@ Backlog from the dashboard series:
   the shell without changing URLs. It touches phase 1 files, so it needs a
   decision.
 - Sidebar collections render as buttons, not links; no collection route exists.
-- `/` still renders the placeholder `<h1>Codstash</h1>`; whether it should
-  redirect to `/dashboard` is unanswered.
+- ~~`/` still renders the placeholder `<h1>Codstash</h1>`~~ — answered: it
+  redirects to `/dashboard`. See the current feature above.
 
 Environment notes that outlive any one feature:
 
-- npm must be run from WSL. `node_modules/.bin` holds Unix symlinks only, so
-  `npm run dev` from Windows fails with "'next' n'est pas reconnu".
+- npm is run from WSL on this side. `node_modules/.bin` holds Unix symlinks, and
+  `npm run dev` from Windows once failed with "'next' n'est pas reconnu" —
+  though the author has since started it from Windows successfully.
+- **Do not mix the two.** `.next` embeds absolute paths in whichever form the
+  process that wrote it uses, so a WSL-built cache makes a Windows `next dev`
+  panic (and presumably the reverse). Delete `.next` when crossing over.
 - Chromium cannot launch here (`libgbm.so.1` missing, sudo required), so
   browser verification is the author's step.
 - Pushing to GitHub is the author's step; WSL has no stored GitHub credentials.
