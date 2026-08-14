@@ -2,85 +2,12 @@
 
 Dashboard Items — real pinned and recent items from the database
 
-Spec: `@context/features/dashboard-items-spec.md`
+Spec: `@context/features/dashboard-items-spec.md` — the decision and its outcome
+are in the History below.
 
 ## Status
 
 Completed
-
-## Goals
-
-Same move as the collections feature, applied to the two item sections below
-it: `PinnedItems` and `RecentItems` stop importing `src/lib/mock-data.ts` and
-query Neon instead. Layout unchanged.
-
-- `src/lib/db/items.ts` holds the fetching functions
-- Both sections fetch directly in their server components
-- Each row's icon and accent come from the item's type
-- The pinned section renders nothing at all when nothing is pinned
-- `ItemRow` is re-typed to the database shape
-- The four `StatsCards` at the top also come off the mock — confirmed in scope
-
-## Notes
-
-### What the seed will show
-
-2 pinned items (`useDebounce`, `Code review — correctness first`), 3 favorite
-items, 18 items total — so the recent list caps at its existing 10 and the
-header reads "10 of 18".
-
-### Decisions this needs
-
-- **The empty-pinned behaviour changes.** Today `PinnedItems` renders a dashed
-  placeholder reading "Nothing pinned yet." The spec says nothing should
-  display, which means hiding the heading too — the component returns `null`.
-  That is a deliberate change to existing design, not a port.
-- **`StatsCards` is in scope** — confirmed by the author. It is the last mock
-  consumer in the main area, and "Update collection stats display" is the
-  requirement that covers it. `dashboardStats` goes away in favour of a
-  `getDashboardStats(userId)` returning four counts. Since the numbers span
-  both collections and items, it belongs in its own `src/lib/db/stats.ts`
-  rather than being wedged into `items.ts`; four `count` calls issued together,
-  not four sequential round trips.
-- **The stats will visibly drop, and that is the point.** Today they read
-  306 items / 5 collections / 3 favorite items / 1 favorite collection — the
-  306 being the mock's denormalized figure. Against the seed they become
-  **18 / 5 / 3 / 1**. The long-standing note that `totalItems` and
-  `favoriteItemCount` are not comparable stops being true, so the comment
-  saying so goes with the mock.
-- **"Item type tags"** is read as the existing type label on each row
-  (`Snippet`, `Prompt`, …), not the `ItemTag` join table. The seed created no
-  tags — `db:test` reports `itemTags 0` — so a tag display would render empty
-  for every row.
-
-### Consequences worth expecting
-
-- **`await connection()` is required in both sections.** Established by the
-  collections feature: a Prisma query does not opt a route out of
-  prerendering, and without it the rows and every relative timestamp bake in at
-  build time. `/dashboard` is already `ƒ`, but that is because
-  `RecentCollections` calls it — these components must not rely on a sibling
-  for their own correctness.
-- **`ItemRow` currently does two mock lookups of its own**: `typeById` over the
-  mock's `itemTypes`, and a `collections.find` for the parent collection name.
-  Both have to come from the query instead — include the type and the
-  collection's name, so neither section pays an N+1. Its `item` prop is typed
-  as the mock's `Item`; that becomes a database-shaped type.
-- **`ItemRow` calls `formatRelativeTime(item.updatedAt)` with no `now`**, so it
-  defaults to `MOCK_NOW` (2026-08-01) and every label would be wrong. It needs
-  `now` passed in, as `RecentCollections` does.
-- `typeById` in `item-type-ui.ts` still has one caller after this
-  (`AppSidebar`), so it stays.
-- Two queries, one per section, rather than fetching all items and filtering in
-  JS — `Item` is indexed on `(userId, isPinned)` and `(userId, updatedAt)`
-  precisely for these two reads.
-
-### Scope boundary
-
-The sidebar keeps reading the mock (`collections`, `currentUser`, `itemTypes`);
-switching it is its own feature. With `StatsCards` included, the sidebar is the
-only mock consumer left once this lands — `src/lib/mock-data.ts` itself stays
-until then.
 
 ---
 
@@ -577,6 +504,24 @@ Open questions:
   `AppSidebar` (collections, currentUser, itemTypes, recentCollections),
   `item-type-ui.ts` (the type unions plus `itemTypes` for `typeById`), and
   `format.ts` (`MOCK_NOW`). Nothing dangling.
+- 2026-08-04 — Scope: `PinnedItems`, `RecentItems` and `StatsCards` off the mock
+  onto Prisma; layout unchanged. `src/lib/db/items.ts` for pinned and recent
+  rows (type and collection name included in the select, no N+1); `src/lib/db/stats.ts`
+  for four counts issued together. `ItemRow` re-typed to `DashboardItem`, takes
+  `now` for wall-clock relative labels. Each section calls `await connection()`
+  on its own — a Prisma query does not opt the route out of prerendering.
+- 2026-08-04 — Empty-pinned behaviour changed deliberately: `PinnedItems` returns
+  `null` when nothing is pinned, replacing the dashed "Nothing pinned yet."
+  placeholder — heading included, per spec.
+- 2026-08-04 — `StatsCards` confirmed in scope by the author — the last mock
+  consumer in the main area. Counts drop from the mock's denormalized 306 items
+  to **18 / 5 / 3 / 1** against the seed, which is intended; the old note that
+  `totalItems` and `favoriteItemCount` were not comparable goes with the mock.
+- 2026-08-04 — "Item type tags" read as the existing type label on each row, not
+  the `ItemTag` join table — the seed created no tags. The sidebar keeps reading
+  the mock; it is the only mock consumer left in the UI once this lands.
+- 2026-08-14 — Dashboard Items feature completed and merged into `main`
+  (`0d1c34c`); branch `feature/dashboard-items` deleted. Not pushed yet.
 
 Left undone by the database feature:
 
