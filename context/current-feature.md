@@ -1,12 +1,91 @@
 # Current Feature
 
-Dashboard Collections — real collection data from the database
+Dashboard Items — real pinned and recent items from the database
 
-Spec: `@context/features/dashboard-collections-spec.md`
+Spec: `@context/features/dashboard-items-spec.md`
 
 ## Status
 
 Completed
+
+## Goals
+
+Same move as the collections feature, applied to the two item sections below
+it: `PinnedItems` and `RecentItems` stop importing `src/lib/mock-data.ts` and
+query Neon instead. Layout unchanged.
+
+- `src/lib/db/items.ts` holds the fetching functions
+- Both sections fetch directly in their server components
+- Each row's icon and accent come from the item's type
+- The pinned section renders nothing at all when nothing is pinned
+- `ItemRow` is re-typed to the database shape
+- The four `StatsCards` at the top also come off the mock — confirmed in scope
+
+## Notes
+
+### What the seed will show
+
+2 pinned items (`useDebounce`, `Code review — correctness first`), 3 favorite
+items, 18 items total — so the recent list caps at its existing 10 and the
+header reads "10 of 18".
+
+### Decisions this needs
+
+- **The empty-pinned behaviour changes.** Today `PinnedItems` renders a dashed
+  placeholder reading "Nothing pinned yet." The spec says nothing should
+  display, which means hiding the heading too — the component returns `null`.
+  That is a deliberate change to existing design, not a port.
+- **`StatsCards` is in scope** — confirmed by the author. It is the last mock
+  consumer in the main area, and "Update collection stats display" is the
+  requirement that covers it. `dashboardStats` goes away in favour of a
+  `getDashboardStats(userId)` returning four counts. Since the numbers span
+  both collections and items, it belongs in its own `src/lib/db/stats.ts`
+  rather than being wedged into `items.ts`; four `count` calls issued together,
+  not four sequential round trips.
+- **The stats will visibly drop, and that is the point.** Today they read
+  306 items / 5 collections / 3 favorite items / 1 favorite collection — the
+  306 being the mock's denormalized figure. Against the seed they become
+  **18 / 5 / 3 / 1**. The long-standing note that `totalItems` and
+  `favoriteItemCount` are not comparable stops being true, so the comment
+  saying so goes with the mock.
+- **"Item type tags"** is read as the existing type label on each row
+  (`Snippet`, `Prompt`, …), not the `ItemTag` join table. The seed created no
+  tags — `db:test` reports `itemTags 0` — so a tag display would render empty
+  for every row.
+
+### Consequences worth expecting
+
+- **`await connection()` is required in both sections.** Established by the
+  collections feature: a Prisma query does not opt a route out of
+  prerendering, and without it the rows and every relative timestamp bake in at
+  build time. `/dashboard` is already `ƒ`, but that is because
+  `RecentCollections` calls it — these components must not rely on a sibling
+  for their own correctness.
+- **`ItemRow` currently does two mock lookups of its own**: `typeById` over the
+  mock's `itemTypes`, and a `collections.find` for the parent collection name.
+  Both have to come from the query instead — include the type and the
+  collection's name, so neither section pays an N+1. Its `item` prop is typed
+  as the mock's `Item`; that becomes a database-shaped type.
+- **`ItemRow` calls `formatRelativeTime(item.updatedAt)` with no `now`**, so it
+  defaults to `MOCK_NOW` (2026-08-01) and every label would be wrong. It needs
+  `now` passed in, as `RecentCollections` does.
+- `typeById` in `item-type-ui.ts` still has one caller after this
+  (`AppSidebar`), so it stays.
+- Two queries, one per section, rather than fetching all items and filtering in
+  JS — `Item` is indexed on `(userId, isPinned)` and `(userId, updatedAt)`
+  precisely for these two reads.
+
+### Scope boundary
+
+The sidebar keeps reading the mock (`collections`, `currentUser`, `itemTypes`);
+switching it is its own feature. With `StatsCards` included, the sidebar is the
+only mock consumer left once this lands — `src/lib/mock-data.ts` itself stays
+until then.
+
+---
+
+Previous feature (completed) — Dashboard Collections.
+Spec: `@context/features/dashboard-collections-spec.md`.
 
 ## Goals
 
@@ -455,6 +534,49 @@ Open questions:
 - 2026-08-03 — `npm run build` was run twice despite the open environment
   question, because it is the only thing that reveals the above. `.next` was
   deleted afterwards both times, so the author still gets a cold start.
+- 2026-08-04 — Started Dashboard Items on branch `feature/dashboard-items`.
+  `src/lib/db/items.ts` holds `getPinnedItems` and `getRecentItems` (which also
+  returns `totalCount` for the "10 of 18" header) over a shared select that
+  pulls the type and the collection name back with each row; `src/lib/db/stats.ts`
+  holds `getDashboardStats`, four counts issued together. `ItemRow` now takes a
+  `DashboardItem` and a `now`, and no longer looks anything up itself.
+  `PinnedItems`, `RecentItems` and `StatsCards` each call `await connection()`
+  rather than relying on `RecentCollections` to keep the route dynamic.
+- 2026-08-04 — Data layer verified against the database: stats
+  `18 / 5 / 3 / 1`; 2 pinned rows (`Code review — correctness first` →
+  Prompt/amber/AI Workflows, `useDebounce` → Snippet/emerald/React Patterns);
+  recent "10 of 18" in `updatedAt` order with type and collection name on every
+  row. `tsc --noEmit` and lint green.
+- 2026-08-04 — **The rendered HTML was not checked, and the reason is the open
+  environment question.** The author had a dev server running on Windows —
+  `.next/dev/lock` held `{"pid":27176,"port":3000}`, a Windows PID — so a WSL
+  `next dev` died with `Permission denied (os error 13)` acquiring the lock. It
+  was not reachable from WSL on either the host IP or the WSL gateway. An
+  isolated copy under /tmp with `node_modules` symlinked also failed: Turbopack
+  rejects a symlink "that points out of the filesystem root". Nothing was killed
+  or deleted. Checked afterwards rather than assumed: **0 files under
+  `.next/dev` contain a `/mnt/e/` path**, so the aborted WSL process did not
+  poison the author's cache — it died acquiring the lock, which happens before
+  Turbopack writes anything. Verification stopped at the data layer plus `tsc`.
+- 2026-08-04 — The author stopped their dev server, so both checks were then
+  run for real. Build: `/dashboard` is `ƒ`, `/` still `○`. Rendered page: stats
+  cards `Items 18 / Collections 5 / Favorite items 3 / Favorite collections 1`;
+  pinned section showing `Code review — correctness first` (Prompt, amber, AI
+  Workflows) and `useDebounce` (Snippet, emerald, React Patterns), with the old
+  "Nothing pinned yet." placeholder gone from the markup; recent header "10 of
+  18" over the ten most recent titles, all labelled "2d ago" from the wall
+  clock. The empty-pinned `return null` branch stays unexercised — two rows are
+  pinned.
+- 2026-08-04 — Mock strings do still appear in the served HTML
+  (`System Prompts`, `Architecture Notes`, `Design Assets`), all inside
+  `sidebar-menu` markup and its copy in the RSC flight payload — the sidebar is
+  out of scope. A grep for "306" hits only a flight-payload chunk id
+  (`305:D"$306"`), not the mock's item total. Nothing mock-derived renders in
+  the main area.
+- 2026-08-04 — Surviving `mock-data` importers after this feature, checked:
+  `AppSidebar` (collections, currentUser, itemTypes, recentCollections),
+  `item-type-ui.ts` (the type unions plus `itemTypes` for `typeById`), and
+  `format.ts` (`MOCK_NOW`). Nothing dangling.
 
 Left undone by the database feature:
 

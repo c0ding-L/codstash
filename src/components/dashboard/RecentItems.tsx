@@ -1,16 +1,18 @@
 import { Clock } from "lucide-react";
+import { connection } from "next/server";
 
 import { ItemRow } from "@/components/dashboard/ItemRow";
-import { items } from "@/lib/mock-data";
+import { getDemoUserId } from "@/lib/db/collections";
+import { getRecentItems } from "@/lib/db/items";
 
-const RECENT_ITEM_COUNT = 10;
+export async function RecentItems() {
+  // A Prisma query does not opt the route out of prerendering on its own.
+  await connection();
 
-// Copied before sorting: `items` is a shared module-level export.
-const recentItems = [...items]
-  .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
-  .slice(0, RECENT_ITEM_COUNT);
+  const userId = await getDemoUserId();
+  const { items, totalCount } = await getRecentItems(userId);
+  const now = new Date().toISOString();
 
-export function RecentItems() {
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-baseline justify-between">
@@ -19,13 +21,13 @@ export function RecentItems() {
           Recent items
         </h2>
         <span className="text-sm text-muted-foreground">
-          {recentItems.length} of {items.length}
+          {items.length} of {totalCount}
         </span>
       </div>
 
       <ul className="flex flex-col gap-2">
-        {recentItems.map((item) => (
-          <ItemRow key={item.id} item={item} />
+        {items.map((item) => (
+          <ItemRow key={item.id} item={item} now={now} />
         ))}
       </ul>
     </section>

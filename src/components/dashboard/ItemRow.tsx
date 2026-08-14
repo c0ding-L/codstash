@@ -1,30 +1,31 @@
 import { Clock, Pin, Star } from "lucide-react";
 
+import type { DashboardItem } from "@/lib/db/items";
 import { formatFileSize, formatRelativeTime } from "@/lib/format";
-import { colorClasses, surfaceClasses, typeById, typeIcons } from "@/lib/item-type-ui";
-import { collections, type Item } from "@/lib/mock-data";
+import {
+  colorClasses,
+  surfaceClasses,
+  toColorToken,
+  toItemTypeSlug,
+  typeIcons,
+} from "@/lib/item-type-ui";
+import { cn } from "@/lib/utils";
 
-function collectionName(collectionId: string | null) {
-  if (!collectionId) return null;
-  return collections.find((c) => c.id === collectionId)?.name ?? null;
-}
-
-export function ItemRow({ item }: { item: Item }) {
-  const type = typeById(item.typeId);
-  const Icon = type ? typeIcons[type.slug] : Clock;
-  const parent = collectionName(item.collectionId);
+/** `now` is passed in so labels measure against the wall clock, not MOCK_NOW. */
+export function ItemRow({ item, now }: { item: DashboardItem; now: string }) {
+  const slug = toItemTypeSlug(item.type.slug);
+  const color = toColorToken(item.type.color);
+  const Icon = slug ? typeIcons[slug] : Clock;
 
   return (
     <li className="flex items-start gap-3 rounded-lg border border-border p-3">
       <span
-        className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${
-          type ? surfaceClasses[type.color] : "bg-muted"
-        }`}
+        className={cn(
+          "flex size-8 shrink-0 items-center justify-center rounded-lg",
+          color ? surfaceClasses[color] : "bg-muted",
+        )}
       >
-        <Icon
-          className={`size-4 ${type ? colorClasses[type.color] : ""}`}
-          aria-hidden
-        />
+        <Icon className={cn("size-4", color && colorClasses[color])} aria-hidden />
       </span>
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -46,16 +47,14 @@ export function ItemRow({ item }: { item: Item }) {
         ) : null}
 
         <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
-          {type ? (
-            <span className={colorClasses[type.color]}>{type.name}</span>
-          ) : null}
-          {parent ? <span>· {parent}</span> : null}
+          <span className={cn(color && colorClasses[color])}>{item.type.name}</span>
+          {item.collectionName ? <span>· {item.collectionName}</span> : null}
           {item.fileSize ? <span>· {formatFileSize(item.fileSize)}</span> : null}
         </div>
       </div>
 
       <span className="shrink-0 text-xs whitespace-nowrap text-muted-foreground">
-        {formatRelativeTime(item.updatedAt)}
+        {formatRelativeTime(item.updatedAt.toISOString(), now)}
       </span>
     </li>
   );

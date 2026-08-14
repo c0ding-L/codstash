@@ -1,39 +1,47 @@
 import { FolderHeart, FolderOpen, Layers, Star } from "lucide-react";
+import { connection } from "next/server";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { dashboardStats } from "@/lib/mock-data";
+import { getDemoUserId } from "@/lib/db/collections";
+import { getDashboardStats } from "@/lib/db/stats";
 
-const stats = [
-  {
-    label: "Items",
-    value: dashboardStats.totalItems,
-    hint: "across all collections",
-    icon: Layers,
-  },
-  {
-    label: "Collections",
-    value: dashboardStats.collectionCount,
-    hint: "across all types",
-    icon: FolderOpen,
-  },
-  {
-    label: "Favorite items",
-    value: dashboardStats.favoriteItemCount,
-    hint: "starred items",
-    icon: Star,
-  },
-  {
-    label: "Favorite collections",
-    value: dashboardStats.favoriteCount,
-    hint: "pinned collections",
-    icon: FolderHeart,
-  },
-];
+export async function StatsCards() {
+  // A Prisma query does not opt the route out of prerendering on its own.
+  await connection();
 
-export function StatsCards() {
+  const userId = await getDemoUserId();
+  const stats = await getDashboardStats(userId);
+
+  const cards = [
+    {
+      label: "Items",
+      value: stats.totalItems,
+      hint: "across all collections",
+      icon: Layers,
+    },
+    {
+      label: "Collections",
+      value: stats.collectionCount,
+      hint: "across all types",
+      icon: FolderOpen,
+    },
+    {
+      label: "Favorite items",
+      value: stats.favoriteItemCount,
+      hint: "starred items",
+      icon: Star,
+    },
+    {
+      label: "Favorite collections",
+      value: stats.favoriteCollectionCount,
+      hint: "pinned collections",
+      icon: FolderHeart,
+    },
+  ];
+
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {stats.map(({ label, value, hint, icon: Icon }) => (
+      {cards.map(({ label, value, hint, icon: Icon }) => (
         <Card key={label}>
           <CardContent className="flex flex-col gap-1">
             <div className="flex items-center justify-between">

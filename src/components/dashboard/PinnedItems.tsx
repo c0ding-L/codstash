@@ -1,11 +1,23 @@
 import { Pin } from "lucide-react";
+import { connection } from "next/server";
 
 import { ItemRow } from "@/components/dashboard/ItemRow";
-import { items } from "@/lib/mock-data";
+import { getDemoUserId } from "@/lib/db/collections";
+import { getPinnedItems } from "@/lib/db/items";
 
-const pinnedItems = items.filter((item) => item.isPinned);
+export async function PinnedItems() {
+  // A Prisma query does not opt the route out of prerendering on its own.
+  await connection();
 
-export function PinnedItems() {
+  const userId = await getDemoUserId();
+  const items = await getPinnedItems(userId);
+
+  // The spec asks for nothing at all when nothing is pinned — heading included,
+  // replacing the "Nothing pinned yet." placeholder this used to render.
+  if (items.length === 0) return null;
+
+  const now = new Date().toISOString();
+
   return (
     <section className="flex flex-col gap-3">
       <h2 className="flex items-center gap-2 text-lg font-semibold">
@@ -13,17 +25,11 @@ export function PinnedItems() {
         Pinned items
       </h2>
 
-      {pinnedItems.length > 0 ? (
-        <ul className="flex flex-col gap-2">
-          {pinnedItems.map((item) => (
-            <ItemRow key={item.id} item={item} />
-          ))}
-        </ul>
-      ) : (
-        <p className="rounded-lg border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-          Nothing pinned yet.
-        </p>
-      )}
+      <ul className="flex flex-col gap-2">
+        {items.map((item) => (
+          <ItemRow key={item.id} item={item} now={now} />
+        ))}
+      </ul>
     </section>
   );
 }
