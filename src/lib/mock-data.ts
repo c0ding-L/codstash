@@ -9,6 +9,10 @@
  * anchor would freeze at build time anyway while making builds nondeterministic.
  */
 
+import type { ColorToken, ItemTypeSlug } from "@/types/item-type";
+
+export type { ColorToken, ItemTypeSlug } from "@/types/item-type";
+
 /** Arbitrary anchor. Relative labels in the UI ("2h ago") are correct as of this date. */
 export const MOCK_NOW = "2026-08-01T09:00:00.000Z";
 
@@ -16,28 +20,8 @@ export const MOCK_NOW = "2026-08-01T09:00:00.000Z";
 /* Types                                                                      */
 /* -------------------------------------------------------------------------- */
 
-/** System item types. The spec calls the last one "URL"; the UI labels it "Links". */
-export type ItemTypeSlug =
-  | "snippet"
-  | "prompt"
-  | "note"
-  | "command"
-  | "file"
-  | "image"
-  | "link";
-
 /** Text items carry `content`; file items carry `fileUrl` / `fileName` / `fileSize`. */
 export type ContentType = "text" | "file";
-
-/** Semantic color token per type. The UI maps these to Tailwind classes. */
-export type ColorToken =
-  | "emerald"
-  | "amber"
-  | "blue"
-  | "cyan"
-  | "rose"
-  | "violet"
-  | "yellow";
 
 export interface User {
   id: string;

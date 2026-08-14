@@ -9,7 +9,7 @@ import {
   SquareTerminal,
 } from "lucide-react";
 
-import { itemTypes, type ColorToken, type ItemType, type ItemTypeSlug } from "@/lib/mock-data";
+import type { ColorToken, ItemTypeSlug } from "@/types/item-type";
 
 /**
  * Mock data stores lucide icon names as strings. Mapping them explicitly keeps
@@ -79,6 +79,27 @@ export const ringClasses: Record<ColorToken, string> = {
   yellow: "hover:ring-yellow-400/40",
 };
 
+/** Sidebar labels and href segments — the schema has no `pluralName` column. */
+export const typePluralNames: Record<ItemTypeSlug, string> = {
+  snippet: "Snippets",
+  prompt: "Prompts",
+  note: "Notes",
+  command: "Commands",
+  file: "Files",
+  image: "Images",
+  link: "Links",
+};
+
+/** Fixed sidebar order and display labels (plural, leading cap). */
+export const sidebarTypes: { slug: ItemTypeSlug; label: string }[] = [
+  { slug: "snippet", label: "Snippets" },
+  { slug: "prompt", label: "Prompts" },
+  { slug: "note", label: "Notes" },
+  { slug: "file", label: "Files" },
+  { slug: "image", label: "Images" },
+  { slug: "link", label: "Links" },
+];
+
 /**
  * Database rows carry `slug` and `color` as plain strings. These narrow them to
  * the keys of the records above, returning null for anything unrecognised so a
@@ -92,11 +113,15 @@ export function toColorToken(color: string | null): ColorToken | null {
   return color !== null && color in colorClasses ? (color as ColorToken) : null;
 }
 
-/** The spec routes types to `/items/snippets`, so plural and lowercased. */
-export function itemTypeHref(type: ItemType) {
-  return `/items/${type.pluralName.toLowerCase()}`;
+/** Routes types to `/items/snippets`, etc. — plural and lowercased. */
+export function itemTypeHref(slug: ItemTypeSlug) {
+  return `/items/${typePluralNames[slug].toLowerCase()}`;
 }
 
-export function typeById(id: string) {
-  return itemTypes.find((type) => type.id === id);
+/** Derive avatar initials from a display name when the user has no image. */
+export function initialsFromName(name: string | null) {
+  if (!name) return "?";
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
+  return `${parts[0]![0] ?? ""}${parts[1]![0] ?? ""}`.toUpperCase();
 }

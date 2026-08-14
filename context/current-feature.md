@@ -1,7 +1,17 @@
 # Current Feature
 
-Dashboard Items — real pinned and recent items from the database
+Stats & Sidebar — real item types and collections in the sidebar
 
+Spec: `@context/features/stats-sidebar-spec.md` — the decision and its outcome
+are in the History below.
+
+## Status
+
+Completed
+
+---
+
+Previous feature (completed) — Dashboard Items.
 Spec: `@context/features/dashboard-items-spec.md` — the decision and its outcome
 are in the History below.
 
@@ -522,14 +532,35 @@ Open questions:
   the mock; it is the only mock consumer left in the UI once this lands.
 - 2026-08-14 — Dashboard Items feature completed and merged into `main`
   (`0d1c34c`); branch `feature/dashboard-items` deleted. Not pushed yet.
+- 2026-08-14 — Started Stats & Sidebar on branch `feature/stats-sidebar`.
+  Extended `src/lib/db/collections.ts` with `aggregateCollectionTypes` (shared
+  with `getRecentCollections`), `getItemTypes`, `getFavoriteCollections`,
+  `getSidebarRecentCollections` (limit 5), and `getDemoUser`. Moved
+  `ItemTypeSlug` / `ColorToken` to `src/types/item-type.ts`; `item-type-ui.ts`
+  gained `typePluralNames`, `sidebarTypes`, slug-based `itemTypeHref`, and
+  `initialsFromName`, and dropped the mock-backed `typeById`.
+- 2026-08-14 — `AppSidebar` is now an async server component with
+  `await connection()`. Types link to `/items/snippets`, etc., in fixed sidebar
+  order (Snippets, Prompts, Notes, Files, Images, Links — Commands omitted from
+  the list per author). Favourites use type-coloured icons; recents wrap each
+  icon in a round `surfaceClasses` circle keyed to the dominant type — corrected
+  from an initial row-wide background after the spec was updated. **View all
+  collections** links to `/collections` below Recent. Footer reads the seeded
+  demo user from the database.
+- 2026-08-14 — Main-area stats left untouched (`StatsCards` already on Prisma).
+  `/items/*` and `/collections` hrefs wired; pages still 404. Build and lint
+  green. Only `format.ts` still imports `MOCK_NOW` from `mock-data.ts`.
+- 2026-08-14 — Stats & Sidebar feature completed and merged into `main`; branch
+  `feature/stats-sidebar` deleted.
 
 Left undone by the database feature:
 
 - **NextAuth is installed but not configured.** No `auth.ts`, no route handler,
   no GitHub provider. The models exist and the adapter is available, but
   nothing wires them up — signing in is not possible yet.
-- The UI still reads `src/lib/mock-data.ts`. Nothing queries the database, and
-  every table is empty. A seed script would be the natural next step.
+- **`format.ts` still imports `MOCK_NOW` from `src/lib/mock-data.ts`.** The rest
+  of the UI reads the database; deleting the mock file is blocked on breaking
+  that coupling (or inlining a default anchor in `format.ts`).
 - `Item.contentType`, `language` and the type/color fields are strings rather
   than enums, matching the mock's string unions.
 
@@ -539,7 +570,8 @@ Backlog from the dashboard series:
   not pages. Fix is a `src/app/(dashboard)/` route group so `/items/*` inherits
   the shell without changing URLs. It touches phase 1 files, so it needs a
   decision.
-- Sidebar collections render as buttons, not links; no collection route exists.
+- Sidebar collection rows still render as buttons, not links; `/collections` is
+  linked only via **View all collections**.
 - ~~`/` still renders the placeholder `<h1>Codstash</h1>`~~ — answered: it
   redirects to `/dashboard`. See the current feature above.
 

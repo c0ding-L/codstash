@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Clock, Code2, Settings, Star } from "lucide-react";
+import { Clock, Code2, FolderOpen, Settings, Star } from "lucide-react";
+import { connection } from "next/server";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -15,18 +16,38 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import {
+  getDemoUser,
+  getDemoUserId,
+  getFavoriteCollections,
+  getItemTypes,
+  getSidebarRecentCollections,
+} from "@/lib/db/collections";
+import {
   colorClasses,
+  initialsFromName,
   itemTypeHref,
-  typeById,
+  sidebarTypes,
+  surfaceClasses,
+  toColorToken,
+  toItemTypeSlug,
   typeIcons,
 } from "@/lib/item-type-ui";
-import { collections, currentUser, itemTypes, recentCollections } from "@/lib/mock-data";
+import { cn } from "@/lib/utils";
 
-const favoriteCollections = collections.filter(
-  (collection) => collection.isFavorite,
-);
+export async function AppSidebar() {
+  // A Prisma query does not opt the layout out of prerendering on its own.
+  await connection();
 
-export function AppSidebar() {
+  const userId = await getDemoUserId();
+  const [itemTypes, favoriteCollections, recentCollections, user] = await Promise.all([
+    getItemTypes(userId),
+    getFavoriteCollections(userId),
+    getSidebarRecentCollections(userId),
+    getDemoUser(),
+  ]);
+
+  const typeBySlug = new Map(itemTypes.map((type) => [type.slug, type]));
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -48,16 +69,24 @@ export function AppSidebar() {
           <SidebarGroupLabel>Types</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {itemTypes.map((type) => {
-                const Icon = typeIcons[type.slug];
+              {sidebarTypes.map(({ slug, label }) => {
+                const type = typeBySlug.get(slug);
+                if (!type) return null;
+
+                const color = toColorToken(type.color);
+                const Icon = typeIcons[slug];
+
                 return (
                   <SidebarMenuItem key={type.id}>
                     <SidebarMenuButton
-                      tooltip={type.pluralName}
-                      render={<Link href={itemTypeHref(type)} />}
+                      tooltip={label}
+                      render={<Link href={itemTypeHref(slug)} />}
                     >
-                      <Icon className={colorClasses[type.color]} aria-hidden />
-                      <span>{type.pluralName}</span>
+                      <Icon
+                        className={cn(color && colorClasses[color])}
+                        aria-hidden
+                      />
+                      <span>{label}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -74,13 +103,16 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {favoriteCollections.map((collection) => {
-                const type = typeById(collection.primaryTypeId);
-                const Icon = type ? typeIcons[type.slug] : Star;
+                const [primary] = collection.types;
+                const primarySlug = primary ? toItemTypeSlug(primary.slug) : null;
+                const primaryColor = primary ? toColorToken(primary.color) : null;
+                const Icon = primarySlug ? typeIcons[primarySlug] : Star;
+
                 return (
                   <SidebarMenuItem key={collection.id}>
                     <SidebarMenuButton tooltip={collection.name}>
                       <Icon
-                        className={type ? colorClasses[type.color] : undefined}
+                        className={cn(primaryColor && colorClasses[primaryColor])}
                         aria-hidden
                       />
                       <span>{collection.name}</span>
@@ -100,15 +132,28 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {recentCollections.map((collection) => {
-                const type = typeById(collection.primaryTypeId);
-                const Icon = type ? typeIcons[type.slug] : Clock;
+                const [primary] = collection.types;
+                const primarySlug = primary ? toItemTypeSlug(primary.slug) : null;
+                const primaryColor = primary ? toColorToken(primary.color) : null;
+                const Icon = primarySlug ? typeIcons[primarySlug] : Clock;
+
                 return (
                   <SidebarMenuItem key={collection.id}>
                     <SidebarMenuButton tooltip={collection.name}>
-                      <Icon
-                        className={type ? colorClasses[type.color] : undefined}
-                        aria-hidden
-                      />
+                      <span
+                        className={cn(
+                          "flex size-5 shrink-0 items-center justify-center rounded-full",
+                          primaryColor ? surfaceClasses[primaryColor] : "bg-muted",
+                        )}
+                      >
+                        <Icon
+                          className={cn(
+                            "size-3.5",
+                            primaryColor && colorClasses[primaryColor],
+                          )}
+                          aria-hidden
+                        />
+                      </span>
                       <span>{collection.name}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -117,6 +162,18 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              tooltip="View all collections"
+              render={<Link href="/collections" />}
+            >
+              <FolderOpen aria-hidden />
+              <span>View all collections</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarContent>
 
       <SidebarFooter>
@@ -128,21 +185,19 @@ export function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" tooltip={currentUser.name}>
+            <SidebarMenuButton size="lg" tooltip={user.name ?? user.email}>
               <Avatar className="size-7 rounded-lg">
-                {currentUser.image ? (
-                  <AvatarImage src={currentUser.image} alt="" />
-                ) : null}
+                {user.image ? <AvatarImage src={user.image} alt="" /> : null}
                 <AvatarFallback className="rounded-lg text-xs">
-                  {currentUser.initials}
+                  {initialsFromName(user.name)}
                 </AvatarFallback>
               </Avatar>
               <span className="grid flex-1 text-left leading-tight">
                 <span className="truncate text-sm font-medium">
-                  {currentUser.name}
+                  {user.name ?? user.email}
                 </span>
                 <span className="truncate text-xs text-sidebar-foreground/70">
-                  {currentUser.email}
+                  {user.email}
                 </span>
               </span>
             </SidebarMenuButton>
