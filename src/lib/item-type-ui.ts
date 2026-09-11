@@ -90,6 +90,9 @@ export const typePluralNames: Record<ItemTypeSlug, string> = {
   link: "Links",
 };
 
+/** Item types gated behind the Pro plan — surfaced with a "PRO" badge. */
+export const proTypeSlugs: ReadonlySet<ItemTypeSlug> = new Set(["file", "image"]);
+
 /** Fixed sidebar order and display labels (plural, leading cap). */
 export const sidebarTypes: { slug: ItemTypeSlug; label: string }[] = [
   { slug: "snippet", label: "Snippets" },

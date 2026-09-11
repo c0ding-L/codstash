@@ -3,6 +3,7 @@ import { Clock, Code2, FolderOpen, Settings, Star } from "lucide-react";
 import { connection } from "next/server";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   Sidebar,
   SidebarContent,
@@ -26,6 +27,7 @@ import {
   colorClasses,
   initialsFromName,
   itemTypeHref,
+  proTypeSlugs,
   sidebarTypes,
   surfaceClasses,
   toColorToken,
@@ -87,6 +89,14 @@ export async function AppSidebar() {
                         aria-hidden
                       />
                       <span>{label}</span>
+                      {proTypeSlugs.has(slug) ? (
+                        <Badge
+                          variant="secondary"
+                          className="ml-auto h-4 px-1.5 text-[10px] font-semibold tracking-wide text-muted-foreground group-data-[collapsible=icon]:hidden"
+                        >
+                          PRO
+                        </Badge>
+                      ) : null}
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
