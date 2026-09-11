@@ -1,7 +1,31 @@
 # Current Feature
 
-Stats & Sidebar — real item types and collections in the sidebar
+## Status
 
+Not Started
+
+## Goals
+
+<!-- Bullet points of what success looks like -->
+
+## Notes
+
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — Add Pro Badge to Sidebar.
+Spec: `@context/features/add-pro-badge-sidebar.md` — outcome in the History
+below.
+
+## Status
+
+Completed
+
+---
+
+Previous feature (completed) — Stats & Sidebar — real item types and
+collections in the sidebar.
 Spec: `@context/features/stats-sidebar-spec.md` — the decision and its outcome
 are in the History below.
 
@@ -552,6 +576,20 @@ Open questions:
   green. Only `format.ts` still imports `MOCK_NOW` from `mock-data.ts`.
 - 2026-08-14 — Stats & Sidebar feature completed and merged into `main`; branch
   `feature/stats-sidebar` deleted.
+- 2026-09-11 — Started Add Pro Badge to Sidebar on branch
+  `feature/add-pro-badge-sidebar`. Added the shadcn/ui `badge` component
+  (`src/components/ui/badge.tsx`), declared `proTypeSlugs` (`file`, `image`) in
+  `src/lib/item-type-ui.ts`, and rendered a subtle uppercase `PRO` badge
+  (`variant="secondary"`, `text-muted-foreground`, `ml-auto`) next to the Files
+  and Images rows in `AppSidebar`. The badge hides when the sidebar collapses to
+  icons via `group-data-[collapsible=icon]:hidden`.
+- 2026-09-11 — Both Files and Images are badged deliberately, per the spec, even
+  though `project-overview.md` gates only file uploads behind Pro (free tier
+  allows image uploads). Build, `tsc --noEmit` and lint all green; `/dashboard`
+  stays `ƒ`.
+- 2026-09-11 — Add Pro Badge to Sidebar feature completed and merged into `main`
+  (`4e51607`, fast-forward); branch `feature/add-pro-badge-sidebar` deleted. The
+  branch was never pushed, so there is no origin branch to remove.
 
 Left undone by the database feature:
 
