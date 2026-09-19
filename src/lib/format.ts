@@ -1,5 +1,3 @@
-import { MOCK_NOW } from "@/lib/mock-data";
-
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
@@ -10,11 +8,11 @@ const WEEK = 7 * DAY;
  * "3d ago", "1w ago". `Intl.RelativeTimeFormat` renders "2 hours ago", so the
  * bucketing is written out.
  *
- * Measured against MOCK_NOW rather than the wall clock: `/dashboard` is
- * statically prerendered, so a `new Date()` here would freeze at build time and
- * every label would drift as the build ages.
+ * `now` is required and passed in by the caller rather than read here: the
+ * dashboard renders per request (`connection()`), so callers take one `new
+ * Date()` per render and every label in it is measured against the same instant.
  */
-export function formatRelativeTime(iso: string, now: string = MOCK_NOW) {
+export function formatRelativeTime(iso: string, now: string) {
   const elapsed = Date.parse(now) - Date.parse(iso);
 
   if (elapsed < MINUTE) return "Just now";

@@ -2,15 +2,96 @@
 
 ## Status
 
-Not Started
+In Progress — branch `feature/scanner-quick-wins`.
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+Quick wins from the `code-scanner` report (2026-09-19), plus the `groupBy`
+query. No schema or layout change, and the rendered dashboard must come out
+identical.
+
+- `getCollectionsWithTypes` and `getRecentCollections` in
+  `src/lib/db/collections.ts` stop pulling one row per item just to count types
+  (`include: { items: { select: { typeId: true } } }`, lines 124 and 178).
+  Instead, once the collections are fetched, a single
+  `prisma.item.groupBy({ by: ["collectionId", "typeId"], _count: true, where: { userId, collectionId: { in: ids } } })`
+  returns the counts, and the results are grouped per collection. Cost then
+  scales with collections × types shown, not with total items.
+- `aggregateCollectionTypes` keeps its output contract (`CollectionType[]`,
+  most-used first, ties broken on slug) — only its input changes, from a list
+  of item rows to `{ typeId, count }` pairs — so the accent colour cannot flip
+  between renders.
+
+- `formatRelativeTime` takes `now` as a required argument instead of defaulting
+  to `MOCK_NOW`, and its stale "statically prerendered" doc comment is
+  rewritten (`/dashboard` is dynamic via `connection()`)
+- `src/lib/format.ts` no longer imports `src/lib/mock-data.ts`
+- `getDemoUserId`, `getDemoUser` and `getItemTypes` are wrapped in React
+  `cache()`, so one dashboard render runs each once instead of up to five
+  (`getDemoUserId`) and four (`itemType` reads) times
+- `loadTypeLookup` reuses `getItemTypes` rather than repeating its query
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- **Required `now` is safe.** Both callers already pass it — `ItemRow.tsx:57`
+  and `RecentCollections.tsx:149` — so nothing relies on the default, and
+  `tsc --noEmit` will catch any caller missed.
+- **Dropping the `MOCK_NOW` import leaves `mock-data.ts` with no importers.**
+  That does not make it deletable in this feature: removing the file is a
+  separate decision and is not part of this scope.
+- **`cache()` is per-request memoisation**, not a data cache, so it cannot
+  serve stale rows across requests. Read the Next 16 docs in
+  `node_modules/next/dist/docs/` before writing it (AGENTS.md), rather than
+  assuming the React 19 API matches older habits.
+- **Scanner finding 2 is now fully in scope.** `loadTypeLookup` (lines 76-83)
+  re-runs the same `itemType.findMany` as `getItemTypes` (lines 58-64) — same
+  `where`, same `select`. It becomes `new Map((await getItemTypes(userId)).map(...))`,
+  so with `getItemTypes` cached, the favourites, sidebar-recent and
+  recent-collections reads of that table collapse into the one call the sidebar
+  already makes. Only the `orderBy` differs (`getItemTypes` sorts by slug), and
+  the lookup is keyed by id, so order does not matter to it.
+- **Every dashboard component still calls `getDemoUserId()` itself** (five
+  call sites). Caching keeps them independent — no props threaded through and
+  the shim stays one function to delete when auth lands — which is why
+  `cache()` is preferred over resolving the user once and passing `userId`
+  down.
+
+### The `groupBy` change is the one item here that is not zero-risk
+
+- **It adds a dependent query.** `groupBy` needs the collection ids, so it runs
+  after the `findMany` rather than beside it in `Promise.all`. That is one
+  extra round trip to Neon per call, traded for not shipping every item row —
+  a win as items grow, not necessarily at 18 items. `loadTypeLookup` can still
+  run in parallel with the `findMany`.
+- **An empty collection must still work.** It has no `groupBy` rows and must
+  yield `types: []`, as today — the card falls back to neutral styling.
+- **Prisma 7 with the Neon driver adapter** — `groupBy` is not exercised
+  anywhere in the codebase yet. Read the Prisma 7 docs for its exact shape
+  (`_count` and typed `by` results) instead of writing it from memory; the
+  `$queryRaw` `name`-type failure already showed that adapter quirks exist.
+- **Verification is by comparison.** The seeded output is known: accents
+  emerald / amber / cyan / yellow; footers `Snippet · 3`, `Prompt · 3`,
+  `Link · 4`, `Command · 4`, `Link · 4`; DevOps showing three type chips (2 Link,
+  1 Command, 1 Snippet). The rendered dashboard and the sidebar's favourite and
+  recent icons must match that exactly.
+
+### Deliberately left out
+
+Not quick wins from the same report:
+
+- `<Suspense>` boundaries around dashboard sections — changes streaming
+  behaviour.
+- Splitting `AppSidebar` / `RecentCollections` and the `getPrimaryType` helper —
+  a refactor across several files.
+- Inert sidebar collection buttons — already in the backlog; a product
+  decision.
+
+### Verification
+
+`npm run build` (route table must still show `/dashboard` as `ƒ`),
+`npx tsc --noEmit`, `npm run lint`, then a dev-server check of the rendered
+dashboard. The dev server needs a restart after edits on `/mnt/e` (file
+watching does not work there).
 
 ---
 
@@ -575,15 +656,43 @@ Open questions:
 - 2026-09-11 — Add Pro Badge to Sidebar feature completed and merged into `main`
   (`4e51607`, fast-forward); branch `feature/add-pro-badge-sidebar` deleted. The
   branch was never pushed, so there is no origin branch to remove.
+- 2026-09-19 — Cleanup: reordered this History, removed the stale
+  `@prisma/adapter-pg` comment from `src/lib/prisma.ts`, added the `cleanup` and
+  `feature` skills and the `code-scanner` subagent, and gitignored
+  `.claude/settings.local.json`. `code-scanner` found no critical or high
+  issues; its medium and low findings seeded the next feature.
+- 2026-09-19 — Started Scanner Quick Wins on branch
+  `feature/scanner-quick-wins`. In `src/lib/db/collections.ts`,
+  `getDemoUserId`, `getDemoUser` and `getItemTypes` are wrapped in React
+  `cache()` (per-request memoisation; the Next docs' "Deduplicating requests"
+  pattern for ORM calls), and `loadTypeLookup` now calls `getItemTypes` instead
+  of repeating its query.
+- 2026-09-19 — The per-item row fetch is gone: `getCollectionsWithTypes` and
+  `getRecentCollections` no longer `include` every item's `typeId`. A new
+  `loadTypeCounts` issues one `item.groupBy` on `collectionId` + `typeId` after
+  the collections are fetched (skipped when there are none), and
+  `aggregateCollectionTypes` now takes `{ typeId, count }` pairs with the same
+  ordering — most-used first, ties on slug.
+- 2026-09-19 — `formatRelativeTime` now requires `now`; the `MOCK_NOW` import
+  and the stale "statically prerendered" comment are gone from `format.ts`, so
+  `mock-data.ts` has no importers left (deleting it is a separate decision).
+- 2026-09-19 — Verified against the database with a throwaway script:
+  `getRecentCollections` and the sidebar queries return Design Resources
+  `link:4`, Terminal Commands `command:4`, DevOps `link:2,command:1,snippet:1`,
+  AI Workflows `prompt:3`, React Patterns `snippet:3` — identical to the counts
+  recorded on 2026-08-03 — and the favourite is React Patterns `snippet:3`.
+  `tsc --noEmit`, lint and `npm run build` are green; `/dashboard` is still `ƒ`.
+  The rendered HTML was not checked in a dev server. `.next` was left in place
+  after the build, so delete it before a Windows-side `next dev`.
 
 Left undone by the database feature:
 
 - **NextAuth is installed but not configured.** No `auth.ts`, no route handler,
   no GitHub provider. The models exist and the adapter is available, but
   nothing wires them up — signing in is not possible yet.
-- **`format.ts` still imports `MOCK_NOW` from `src/lib/mock-data.ts`.** The rest
-  of the UI reads the database; deleting the mock file is blocked on breaking
-  that coupling (or inlining a default anchor in `format.ts`).
+- **`src/lib/mock-data.ts` has no importers left** since the scanner quick-wins
+  feature broke the `format.ts` coupling. Deleting it is still a separate
+  decision.
 - `Item.contentType`, `language` and the type/color fields are strings rather
   than enums, matching the mock's string unions.
 

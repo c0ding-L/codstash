@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import type { Prisma } from "@/generated/prisma/client";
 
 import { prisma } from "@/lib/prisma";
@@ -10,7 +12,9 @@ import { prisma } from "@/lib/prisma";
  */
 const DEMO_USER_EMAIL = "demo@codstash.io";
 
-export async function getDemoUserId() {
+// `cache` memoises per request, so the five dashboard components that each ask
+// for the user share one query per render. It never outlives the request.
+export const getDemoUserId = cache(async () => {
   const user = await prisma.user.findUnique({
     where: { email: DEMO_USER_EMAIL },
     select: { id: true },
@@ -23,7 +27,7 @@ export async function getDemoUserId() {
   }
 
   return user.id;
-}
+});
 
 export interface DemoUser {
   name: string | null;
@@ -32,7 +36,7 @@ export interface DemoUser {
 }
 
 /** Footer avatar block — same demo account as `getDemoUserId`. */
-export async function getDemoUser(): Promise<DemoUser> {
+export const getDemoUser = cache(async (): Promise<DemoUser> => {
   const user = await prisma.user.findUnique({
     where: { email: DEMO_USER_EMAIL },
     select: { name: true, email: true, image: true },
@@ -45,7 +49,7 @@ export async function getDemoUser(): Promise<DemoUser> {
   }
 
   return user;
-}
+});
 
 export interface ItemTypeRow {
   id: string;
@@ -55,13 +59,14 @@ export interface ItemTypeRow {
 }
 
 /** System types plus any custom types the user owns. */
-export async function getItemTypes(userId: string): Promise<ItemTypeRow[]> {
-  return prisma.itemType.findMany({
-    where: { OR: [{ userId: null }, { userId }] },
-    select: { id: true, slug: true, name: true, color: true },
-    orderBy: { slug: "asc" },
-  });
-}
+export const getItemTypes = cache(
+  async (userId: string): Promise<ItemTypeRow[]> =>
+    prisma.itemType.findMany({
+      where: { OR: [{ userId: null }, { userId }] },
+      select: { id: true, slug: true, name: true, color: true },
+      orderBy: { slug: "asc" },
+    }),
+);
 
 /** One item type present in a collection, with how many items carry it. */
 export interface CollectionType {
@@ -74,26 +79,52 @@ export interface CollectionType {
 type TypeLookup = Map<string, { slug: string; name: string; color: string | null }>;
 
 async function loadTypeLookup(userId: string): Promise<TypeLookup> {
-  const itemTypes = await prisma.itemType.findMany({
-    where: { OR: [{ userId: null }, { userId }] },
-    select: { id: true, slug: true, name: true, color: true },
-  });
+  const itemTypes = await getItemTypes(userId);
 
   return new Map(itemTypes.map((type) => [type.id, type]));
 }
 
-/** Most-used first; ties break on slug so accents cannot flip between renders. */
-export function aggregateCollectionTypes(
-  items: { typeId: string }[],
-  typeById: TypeLookup,
-): CollectionType[] {
-  const counts = new Map<string, number>();
-  for (const item of items) {
-    counts.set(item.typeId, (counts.get(item.typeId) ?? 0) + 1);
+/** How many items of one type a collection holds. */
+interface TypeCount {
+  typeId: string;
+  count: number;
+}
+
+/**
+ * Item counts per type for each collection, from one `groupBy`, so the cost
+ * scales with collections × types rather than with every item row. A collection
+ * with no items has no entry.
+ */
+async function loadTypeCounts(
+  userId: string,
+  collectionIds: string[],
+): Promise<Map<string, TypeCount[]>> {
+  const byCollection = new Map<string, TypeCount[]>();
+  if (collectionIds.length === 0) return byCollection;
+
+  const groups = await prisma.item.groupBy({
+    by: ["collectionId", "typeId"],
+    where: { userId, collectionId: { in: collectionIds } },
+    _count: { _all: true },
+  });
+
+  for (const group of groups) {
+    if (!group.collectionId) continue;
+    const counts = byCollection.get(group.collectionId) ?? [];
+    counts.push({ typeId: group.typeId, count: group._count._all });
+    byCollection.set(group.collectionId, counts);
   }
 
+  return byCollection;
+}
+
+/** Most-used first; ties break on slug so accents cannot flip between renders. */
+export function aggregateCollectionTypes(
+  counts: TypeCount[],
+  typeById: TypeLookup,
+): CollectionType[] {
   const types: CollectionType[] = [];
-  for (const [typeId, count] of counts) {
+  for (const { typeId, count } of counts) {
     const type = typeById.get(typeId);
     if (type) {
       types.push({ slug: type.slug, name: type.name, color: type.color, count });
@@ -121,15 +152,18 @@ async function getCollectionsWithTypes(
       where: { userId, ...where },
       orderBy,
       take: limit,
-      include: { items: { select: { typeId: true } } },
     }),
     loadTypeLookup(userId),
   ]);
+  const typeCounts = await loadTypeCounts(
+    userId,
+    collections.map((collection) => collection.id),
+  );
 
   return collections.map((collection) => ({
     id: collection.id,
     name: collection.name,
-    types: aggregateCollectionTypes(collection.items, typeById),
+    types: aggregateCollectionTypes(typeCounts.get(collection.id) ?? [], typeById),
   }));
 }
 
@@ -174,13 +208,14 @@ export async function getRecentCollections(
       where: { userId },
       orderBy: { updatedAt: "desc" },
       take: limit,
-      include: {
-        items: { select: { typeId: true } },
-        _count: { select: { items: true } },
-      },
+      include: { _count: { select: { items: true } } },
     }),
     loadTypeLookup(userId),
   ]);
+  const typeCounts = await loadTypeCounts(
+    userId,
+    collections.map((collection) => collection.id),
+  );
 
   return collections.map((collection) => ({
     id: collection.id,
@@ -189,6 +224,6 @@ export async function getRecentCollections(
     isFavorite: collection.isFavorite,
     itemCount: collection._count.items,
     updatedAt: collection.updatedAt,
-    types: aggregateCollectionTypes(collection.items, typeById),
+    types: aggregateCollectionTypes(typeCounts.get(collection.id) ?? [], typeById),
   }));
 }
