@@ -4,8 +4,7 @@ import { PrismaClient } from "@/generated/prisma/client";
 
 // Prisma 7 requires a driver adapter; `new PrismaClient()` on its own no longer
 // connects. Runtime uses the Neon serverless driver, which suits Vercel's
-// serverless functions. Migrations use @prisma/adapter-pg instead — see
-// prisma.config.ts for why.
+// serverless functions.
 function createPrismaClient() {
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {

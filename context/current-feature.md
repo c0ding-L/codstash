@@ -18,10 +18,6 @@ Previous feature (completed) — Add Pro Badge to Sidebar.
 Spec: `@context/features/add-pro-badge-sidebar.md` — outcome in the History
 below.
 
-## Status
-
-Completed
-
 ---
 
 Previous feature (completed) — Stats & Sidebar — real item types and
@@ -29,19 +25,11 @@ collections in the sidebar.
 Spec: `@context/features/stats-sidebar-spec.md` — the decision and its outcome
 are in the History below.
 
-## Status
-
-Completed
-
 ---
 
 Previous feature (completed) — Dashboard Items.
 Spec: `@context/features/dashboard-items-spec.md` — the decision and its outcome
 are in the History below.
-
-## Status
-
-Completed
 
 ---
 
@@ -391,11 +379,9 @@ Open questions:
   P2010 `UnsupportedNativeDataType`: they return PostgreSQL's `name` type,
   which the driver adapter cannot deserialize. Cast to `::text`. Worth knowing
   before writing any other raw query.
-
 - 2026-08-01 — Database feature completed and merged into `main` (`c9657df`).
   Build, typecheck, lint and `prisma migrate status` all green; `.env` and the
   generated client confirmed absent from history. Not pushed yet.
-
 - 2026-08-01 — Started Seed Data on branch `feature/seed`. `bcryptjs@3.0.3`
   installed as a runtime dependency (NextAuth credential login will want it
   too); it ships its own types, so no `@types/bcryptjs`.
@@ -406,8 +392,7 @@ Open questions:
   `db:seed`, so the reset-and-recreate path is idempotent. Build, `tsc
   --noEmit` and lint all green.
 - 2026-08-01 — The stale comment in `src/lib/prisma.ts` claiming migrations use
-  `@prisma/adapter-pg` is still there; that package was uninstalled during the
-  database feature. Not touched here.
+  `@prisma/adapter-pg` was left here; removed in the 2026-09-19 cleanup.
 - 2026-08-01 — Workflow correction from the author: document the feature, then
   stop and wait for an explicit go-ahead before implementing. Document → Branch
   → Implement are separate checkpoints, not one run.
@@ -503,6 +488,12 @@ Open questions:
   `DashboardItem` and a `now`, and no longer looks anything up itself.
   `PinnedItems`, `RecentItems` and `StatsCards` each call `await connection()`
   rather than relying on `RecentCollections` to keep the route dynamic.
+- 2026-08-04 — Scope: `PinnedItems`, `RecentItems` and `StatsCards` off the mock
+  onto Prisma; layout unchanged. `src/lib/db/items.ts` for pinned and recent
+  rows (type and collection name included in the select, no N+1); `src/lib/db/stats.ts`
+  for four counts issued together. `ItemRow` re-typed to `DashboardItem`, takes
+  `now` for wall-clock relative labels. Each section calls `await connection()`
+  on its own — a Prisma query does not opt the route out of prerendering.
 - 2026-08-04 — Data layer verified against the database: stats
   `18 / 5 / 3 / 1`; 2 pinned rows (`Code review — correctness first` →
   Prompt/amber/AI Workflows, `useDebounce` → Snippet/emerald/React Patterns);
@@ -538,12 +529,6 @@ Open questions:
   `AppSidebar` (collections, currentUser, itemTypes, recentCollections),
   `item-type-ui.ts` (the type unions plus `itemTypes` for `typeById`), and
   `format.ts` (`MOCK_NOW`). Nothing dangling.
-- 2026-08-04 — Scope: `PinnedItems`, `RecentItems` and `StatsCards` off the mock
-  onto Prisma; layout unchanged. `src/lib/db/items.ts` for pinned and recent
-  rows (type and collection name included in the select, no N+1); `src/lib/db/stats.ts`
-  for four counts issued together. `ItemRow` re-typed to `DashboardItem`, takes
-  `now` for wall-clock relative labels. Each section calls `await connection()`
-  on its own — a Prisma query does not opt the route out of prerendering.
 - 2026-08-04 — Empty-pinned behaviour changed deliberately: `PinnedItems` returns
   `null` when nothing is pinned, replacing the dashed "Nothing pinned yet."
   placeholder — heading included, per spec.
@@ -604,8 +589,8 @@ Left undone by the database feature:
 
 Backlog from the dashboard series:
 
-- The seven `/items/TYPE` links return 404 — the phase 2 spec asked for links,
-  not pages. Fix is a `src/app/(dashboard)/` route group so `/items/*` inherits
+- The six `/items/TYPE` links (Commands is omitted from the sidebar) and
+  `/collections` return 404 — the specs asked for links, not pages. Fix is a `src/app/(dashboard)/` route group so `/items/*` inherits
   the shell without changing URLs. It touches phase 1 files, so it needs a
   decision.
 - Sidebar collection rows still render as buttons, not links; `/collections` is
