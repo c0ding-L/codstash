@@ -1,69 +1,24 @@
-# Current Feature: Auth Setup — NextAuth + GitHub Provider
+# Current Feature
 
 ## Status
 
-In Progress — branch `feature/auth-github`. The demo-user shim decision was taken
-at its recommended default: left untouched in this phase.
+Not Started
 
 ## Goals
 
-Spec: `@context/features/auth-phase-1-spec.md` (phase 1 of 3; phase 2 adds the
-Credentials provider and registration, phase 3 the sign-in / register UI). Set up
-NextAuth v5 with the Prisma adapter and GitHub OAuth, using NextAuth's default
-pages.
-
-- Install `next-auth@beta` and `@auth/prisma-adapter`
-- Split auth config for edge compatibility: `src/auth.config.ts` holds providers
-  only, no adapter
-- GitHub OAuth provider
-- `src/auth.ts` — full config with the Prisma adapter and `session: { strategy:
-  'jwt' }`
-- `src/app/api/auth/[...nextauth]/route.ts` exports the handlers from `auth.ts`
-- `src/proxy.ts` protects `/dashboard/*` using the Next.js 16 proxy, as a named
-  export `proxy = auth(...)`, redirecting unauthenticated users to sign-in
-- `src/types/next-auth.d.ts` extends `Session` with `user.id`
-- No custom `pages.signIn` — the default NextAuth sign-in page is used
-- Env: `AUTH_SECRET`, `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`
-
-Testing, per the spec: `/dashboard` redirects to sign-in → "Sign in with GitHub" →
-back on `/dashboard` after auth.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-The spec says to use Context7 to verify the newest config and conventions — do that
-before writing code, and read `node_modules/next/dist/docs/` for Next 16 specifics
-(AGENTS.md).
+<!-- Additional context, constraints, or details from spec -->
 
-- **The install step is already done.** `package.json` has `next-auth@^5.0.0-beta.32`
-  and `@auth/prisma-adapter@^2.11.3`, installed during the database feature. No new
-  packages expected.
-- **The env keys already exist** in both `.env` and `.env.production`
-  (`AUTH_SECRET`, `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` — names checked, values not
-  read). The GitHub OAuth App needs the callback URL
-  `http://localhost:3000/api/auth/callback/github`; that is the author's step.
-- **Proxy runs on the Node.js runtime by default in Next 16**
-  (`03-file-conventions/proxy.md`), and the `runtime` option is not allowed in
-  proxy files. That weakens the edge-compatibility reason for the split config, but
-  the spec asks for it and it still keeps the Prisma / Neon adapter out of the
-  proxy bundle — follow the spec, and re-check the export shape (`proxy` named
-  export vs default) against the docs rather than trusting either memory or spec.
-- **JWT strategy plus an adapter:** users and GitHub `Account` rows are written to
-  the database on first sign-in, but the `Session` table stays unused. `user.id`
-  reaches the session through the `jwt` and `session` callbacks in `auth.ts`, which
-  the spec implies (the `Session` type extension) but does not spell out.
-- **`/api/auth/*` must stay public**, or sign-in cannot complete — the proxy matcher
-  has to exempt it. `/` still redirects to `/dashboard`, so an anonymous visit to
-  `/` now ends at the sign-in page.
-- **Decision needed: the demo-user shim.** Nothing here connects the session to the
-  data. `getDemoUserId()` and `getDemoUser()` still feed the dashboard and the
-  sidebar footer, so a signed-in GitHub user (a new, empty `User`) will see the demo
-  account's items and name. The spec does not say to change that; phase 3 updates
-  the sidebar footer. Recommendation: leave the shim untouched in this phase and
-  say so in the History, since replacing it touches every dashboard component.
-- **Verification:** `npm run build` (`/dashboard` stays `ƒ`; the build also
-  registers `/api/auth/[...nextauth]` and the proxy), `npx tsc --noEmit`,
-  `npm run lint`. The sign-in round trip needs a browser and the author's GitHub
-  account — the author's step, since Chromium cannot launch here.
+---
+
+Previous feature (completed) — Auth Setup, phase 1: NextAuth v5 with the GitHub
+provider, the Prisma adapter and JWT sessions, and `/dashboard/*` protected by the
+Next 16 proxy. Spec: `@context/features/auth-phase-1-spec.md`; phases 2
+(Credentials + registration) and 3 (sign-in / register UI) are still to do.
+Outcome in the History below.
 
 ---
 
@@ -780,12 +735,24 @@ Open questions:
   author's GitHub account, with the OAuth App callback set to
   `http://localhost:3000/api/auth/callback/github`. `.next` was left in place
   after the build — delete it before a Windows-side `next dev`.
+- 2026-09-21 — Auth Setup (NextAuth + GitHub) completed and merged into `main`
+  (`21da98e`, fast-forward); branch `feature/auth-github` deleted. The branch was
+  never pushed. Shipped: `src/auth.config.ts`, `src/auth.ts`,
+  `src/app/api/auth/[...nextauth]/route.ts`, `src/proxy.ts` and
+  `src/types/next-auth.d.ts`. **Not verified by me:** the real GitHub round trip
+  (sign in, land back on `/dashboard`, `User` and `Account` rows created) — it
+  needs the author's browser and GitHub account, and no result was reported
+  before completing. **Still true after this feature:** the demo-user shim feeds
+  every dashboard query and the sidebar footer, so a signed-in GitHub user sees the
+  demo account's data; phases 2 and 3 are not started; a non-Vercel deployment must
+  set `AUTH_TRUST_HOST=true`. `npm run build` green with `/dashboard` still `ƒ`.
 
 Left undone by the database feature:
 
-- **NextAuth is installed but not configured.** No `auth.ts`, no route handler,
-  no GitHub provider. The models exist and the adapter is available, but
-  nothing wires them up — signing in is not possible yet.
+- ~~**NextAuth is installed but not configured.**~~ — configured for GitHub in the
+  auth phase 1 feature (see the History). Still open: the Credentials provider and
+  registration (phase 2), the sign-in / register UI (phase 3), and replacing the
+  demo-user shim with the session user.
 - **`src/lib/mock-data.ts` has no importers left** since the scanner quick-wins
   feature broke the `format.ts` coupling. Deleting it is still a separate
   decision.
