@@ -1,68 +1,29 @@
-# Current Feature: Auth UI (phase 3)
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-Replace the NextAuth default pages with custom UI, and put the signed-in user
-in the sidebar footer. Spec: `@context/features/auth-phase-3-spec.md`.
-
-- `/sign-in`: email + password fields, a "Sign in with GitHub" button, a link to
-  `/register`, form validation and error display
-- `/register`: name, email, password, confirm password; validates that the
-  passwords match and the email format; submits to `/api/auth/register`;
-  redirects to `/sign-in` on success
-- Sidebar footer: avatar (GitHub image, else initials), the user's name, and a
-  dropdown on click with a **Sign out** link; clicking the icon goes to `/profile`
-- A reusable avatar component handling both the image and the initials case
-  ("Brad Traversy" → "BT")
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- **The footer has to read the session user, not the demo user.** `AppSidebar`
-  still takes its footer user from `getDemoUser()`, so this feature has to switch
-  at least the footer to `auth()`. That is the first step of retiring the
-  demo-user shim; the dashboard queries stay on `getDemoUserId()` (out of scope).
-- **Custom pages need `pages: { signIn: "/sign-in" }`** in `src/auth.config.ts`
-  (the edge half, so the proxy sees it), and the proxy currently redirects to
-  `/api/auth/signin` by hand — that URL has to change to `/sign-in`.
-- **`/profile` does not exist**, so the icon link 404s until a profile page is
-  built. The spec asks only for the link; a page is not in scope.
-- **The spec contradicts itself:** requirements put the avatar at the bottom of
-  the sidebar, but testing step 4 says "top bar". Reading it as the sidebar
-  footer, which is what the requirements and the existing footer say. Flag if the
-  top bar was meant.
-- **Sign out** needs a server action or a form posting to `signOut` — the
-  dropdown should use a `<form>` so it works from a server component.
-- **No dropdown component yet** (`src/components/ui` has no `dropdown-menu`); it
-  would be added through shadcn.
-- Register success redirects to `/sign-in`, so a user still signs in once after
-  registering; the spec does not ask for auto sign-in.
-- Left out of scope, still open from phase 2: rate limiting, the `P2002` → 409
-  race, a password length cap, the timing difference in `authorize`, and email
-  verification.
-- **Rendering rule (author):** all app pages are server rendered with dynamic
-  components. `/sign-in` and `/register` are async server components that call
-  `await connection()`, with the forms as small client-component leaves; the build
-  must list both as `ƒ`. `/` is still `○` (a static redirect) — tell me if the
-  rule should cover it.
-- **`next start` does not use the dev database.** It loads `.env.production`
-  (endpoint `ep-tiny-star…`) over `.env` (`ep-little-snow…`, the dev branch). Any
-  test against a production build has to pass `DATABASE_URL` from `.env`
-  explicitly. Discovered while testing this feature: the phase 2 test user
-  `phase2@test.dev` and, before the fix, `uitest@test.dev` and `numtest@test.dev`
-  were registered in the other database and are still there.
-- **Working tree:** `next.config.ts` has uncommitted edits that are not part of
-  this feature (`reactCompiler: true`, `devIndicators: false`) — do not stage them
-  with it.
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — Auth UI, phase 3: custom `/sign-in` and `/register`
+pages, the session user in the sidebar footer with a sign-out menu, and a
+registration toast. Spec: `@context/features/auth-phase-3-spec.md`. Outcome in the
+History below.
 
 ---
 
 Previous feature (completed) — Auth Credentials, phase 2: Credentials provider
 and `POST /api/auth/register`. Spec: `@context/features/auth-phase-2-spec.md`;
-phase 3 (sign-in / register UI) is still to do. Outcome in the History below.
+Outcome in the History below.
 
 ---
 
@@ -827,13 +788,63 @@ Open questions:
   rate limiting, a timing difference between unknown and known emails in
   `authorize`, and no email verification. **Still true:** the demo-user shim
   feeds every dashboard query, so any signed-in user sees the demo account's data.
+- 2026-09-21 — Started Auth UI (phase 3) on branch `feature/auth-ui`. Pages:
+  `/sign-in` and `/register` are async server components calling `await
+  connection()` (the build lists both `ƒ`, per the author's rule that pages are
+  server rendered and dynamic), with `SignInForm` / `RegisterForm` as client
+  leaves in `src/components/auth/`. Sign-in uses server actions in
+  `src/actions/auth.ts` (`signInWithCredentials`, `signInWithGitHub`,
+  `signOutAction`); a `callbackUrl` is accepted only if it is a same-origin path.
+  `pages.signIn` is set in `auth.config.ts` and the proxy redirects to `/sign-in`.
+  Register posts to `/api/auth/register` and redirects to `/sign-in`.
+- 2026-09-21 — Sidebar footer: `AppSidebar` reads `auth()` instead of
+  `getDemoUser()`. `UserAvatar` shows the GitHub image or initials; `UserMenu`
+  puts the avatar on a link to `/profile` and the name on a dropdown holding
+  **Sign out**. Collections and items still come from `getDemoUserId()`, so any
+  signed-in user sees the demo account's data (`getDemoUser` now has no callers).
+- 2026-09-21 — Registration toast, added mid-feature and written into the spec by
+  the author: sonner via shadcn, `<Toaster />` in the root layout so it survives
+  the redirect, green and top-centre, replacing the inline "account created"
+  notice and the `?registered=1` parameter. shadcn's `dropdown-menu` and `sonner`
+  registry files were not usable as generated: the first imported `cn` from an
+  unrelated npm package named `cn` (the CLI installed it) and the second used
+  `next-themes` with no provider in a dark-only app. Both were fixed by hand and
+  the extra packages removed.
+- 2026-09-21 — **Two real bugs, one only visible in a browser.** (1) `next start`
+  loads `.env.production`, a different Neon endpoint from `.env`; test users from
+  phase 2 and this feature landed there and cleanup ran against `.env`, deleting
+  nothing. (2) After a wrong password React 19 resets the form and cleared the
+  email, so the `required` field silently blocked the retry; the action now
+  returns the email for `defaultValue`.
+- 2026-09-21 — **Browser verification now works**, contradicting the earlier
+  "cannot launch here" note: `libgbm` is installed, and a plain Playwright script
+  drives the cached Chromium. The Playwright MCP still fails (it wants Chrome at
+  `/opt/google/chrome/chrome`). Verified against a production build on the `.env`
+  database: register shows the green top-centre toast and lands on `/sign-in`; a
+  wrong password shows the error and keeps the email; a correct one reaches
+  `/dashboard`; the footer shows `TT`, the name, the email and the `/profile`
+  link; the menu opens and Sign out returns to `/sign-in`, after which `/dashboard`
+  redirects again. The seeded demo login (`demo@codstash.io`, `12345678`) also
+  works. `tsc --noEmit`, lint and `npm run build` green with the author's own
+  `next.config.ts` once `babel-plugin-react-compiler` was added to
+  `devDependencies`.
+- 2026-09-21 — Auth UI completed and merged into `main` (`c3dc3d7`, fast-forward);
+  branch `feature/auth-ui` deleted. **Not verified:** the GitHub OAuth round trip
+  (needs the author's account); the dropdown when the sidebar is collapsed to
+  icons, where only the avatar (a profile link) is shown and Sign out is out of
+  reach until it is expanded. **Still open:** `/profile` returns 404; the phase 2
+  hardening list (rate limiting, the `P2002` race, a password length cap, the
+  timing difference in `authorize`, email verification); and `phase2@test.dev`,
+  `uitest@test.dev` and `numtest@test.dev` remain in the `.env.production`
+  database, untouched because production is off limits without being named.
+  `next.config.ts` still carries the author's uncommitted edits.
 
 Left undone by the database feature:
 
 - ~~**NextAuth is installed but not configured.**~~ — configured for GitHub in the
   auth phase 1 feature (see the History). Still open: the Credentials provider and
-  registration (phase 2), the sign-in / register UI (phase 3), and replacing the
-  demo-user shim with the session user.
+  registration (phase 2), and replacing the demo-user shim with the session
+  user (the sign-in / register UI shipped in phase 3).
 - **`src/lib/mock-data.ts` has no importers left** since the scanner quick-wins
   feature broke the `format.ts` coupling. Deleting it is still a separate
   decision.
