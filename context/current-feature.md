@@ -1,16 +1,62 @@
-# Current Feature
+# Current Feature: Auth UI (phase 3)
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+Replace the NextAuth default pages with custom UI, and put the signed-in user
+in the sidebar footer. Spec: `@context/features/auth-phase-3-spec.md`.
+
+- `/sign-in`: email + password fields, a "Sign in with GitHub" button, a link to
+  `/register`, form validation and error display
+- `/register`: name, email, password, confirm password; validates that the
+  passwords match and the email format; submits to `/api/auth/register`;
+  redirects to `/sign-in` on success
+- Sidebar footer: avatar (GitHub image, else initials), the user's name, and a
+  dropdown on click with a **Sign out** link; clicking the icon goes to `/profile`
+- A reusable avatar component handling both the image and the initials case
+  ("Brad Traversy" → "BT")
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- **The footer has to read the session user, not the demo user.** `AppSidebar`
+  still takes its footer user from `getDemoUser()`, so this feature has to switch
+  at least the footer to `auth()`. That is the first step of retiring the
+  demo-user shim; the dashboard queries stay on `getDemoUserId()` (out of scope).
+- **Custom pages need `pages: { signIn: "/sign-in" }`** in `src/auth.config.ts`
+  (the edge half, so the proxy sees it), and the proxy currently redirects to
+  `/api/auth/signin` by hand — that URL has to change to `/sign-in`.
+- **`/profile` does not exist**, so the icon link 404s until a profile page is
+  built. The spec asks only for the link; a page is not in scope.
+- **The spec contradicts itself:** requirements put the avatar at the bottom of
+  the sidebar, but testing step 4 says "top bar". Reading it as the sidebar
+  footer, which is what the requirements and the existing footer say. Flag if the
+  top bar was meant.
+- **Sign out** needs a server action or a form posting to `signOut` — the
+  dropdown should use a `<form>` so it works from a server component.
+- **No dropdown component yet** (`src/components/ui` has no `dropdown-menu`); it
+  would be added through shadcn.
+- Register success redirects to `/sign-in`, so a user still signs in once after
+  registering; the spec does not ask for auto sign-in.
+- Left out of scope, still open from phase 2: rate limiting, the `P2002` → 409
+  race, a password length cap, the timing difference in `authorize`, and email
+  verification.
+- **Rendering rule (author):** all app pages are server rendered with dynamic
+  components. `/sign-in` and `/register` are async server components that call
+  `await connection()`, with the forms as small client-component leaves; the build
+  must list both as `ƒ`. `/` is still `○` (a static redirect) — tell me if the
+  rule should cover it.
+- **`next start` does not use the dev database.** It loads `.env.production`
+  (endpoint `ep-tiny-star…`) over `.env` (`ep-little-snow…`, the dev branch). Any
+  test against a production build has to pass `DATABASE_URL` from `.env`
+  explicitly. Discovered while testing this feature: the phase 2 test user
+  `phase2@test.dev` and, before the fix, `uitest@test.dev` and `numtest@test.dev`
+  were registered in the other database and are still there.
+- **Working tree:** `next.config.ts` has uncommitted edits that are not part of
+  this feature (`reactCompiler: true`, `devIndicators: false`) — do not stage them
+  with it.
 
 ---
 
@@ -767,7 +813,10 @@ Open questions:
   duplicate 409; credentials sign-in returned 302 to `/dashboard`,
   `/api/auth/session` carried the user id, `/dashboard` returned 200, and a wrong
   password redirected to `?error=CredentialsSignin`; `/api/auth/providers` lists
-  `github` and `credentials`. The test user was deleted afterwards. `tsc
+  `github` and `credentials`. The test user was deleted afterwards — **corrected
+  2026-09-21: that was wrong.** `next start` loads `.env.production`, which points at
+  a different Neon endpoint than `.env`, so the test user was registered there while
+  the cleanup ran against the `.env` database and deleted nothing. `tsc
   --noEmit`, lint and `npm run build` green; `/dashboard` still `ƒ`.
 - 2026-09-21 — Auth Credentials completed and merged into `main` (`34332a4`,
   fast-forward); branch `feature/auth-credentials` deleted. **Not verified:** the
@@ -810,6 +859,9 @@ Environment notes that outlive any one feature:
 - **Do not mix the two.** `.next` embeds absolute paths in whichever form the
   process that wrote it uses, so a WSL-built cache makes a Windows `next dev`
   panic (and presumably the reverse). Delete `.next` when crossing over.
-- Chromium cannot launch here (`libgbm.so.1` missing, sudo required), so
-  browser verification is the author's step.
+- Browser checks now work (`libgbm` is installed). The Playwright MCP wants Google
+  Chrome at `/opt/google/chrome/chrome`, which is not installed, so it fails; a
+  plain Playwright script (`playwright@1.63.0`, installed in the scratchpad, using
+  the cached Chromium) drives the app instead. Wait on `location.pathname`, not
+  `waitForURL`, which mishandles Next's soft navigations.
 - Pushing to GitHub is the author's step; WSL has no stored GitHub credentials.

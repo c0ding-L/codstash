@@ -18,6 +18,7 @@ Replace NextAuth default pages with custom UI. Update user icon, email and usern
 - Name, email, password, confirm password fields
 - Form validation (passwords match, email format)
 - Submit to `/api/auth/register`
+- Pop out a toast notification that tells the user they can now login (on success)
 - Redirect to sign-in on success
 
 ### Bottom Of Sidebar

@@ -10,15 +10,14 @@ const { auth } = NextAuth(authConfig);
 export const proxy = auth((req) => {
   if (req.auth) return NextResponse.next();
 
-  // NextAuth's default sign-in page; no custom `pages.signIn` is configured.
-  const signInUrl = new URL("/api/auth/signin", req.nextUrl.origin);
+  const signInUrl = new URL("/sign-in", req.nextUrl.origin);
   signInUrl.searchParams.set("callbackUrl", req.nextUrl.pathname + req.nextUrl.search);
 
   return NextResponse.redirect(signInUrl);
 });
 
 // Only `/dashboard` and below run through the proxy, so `/api/auth/*` stays
-// public and sign-in can complete.
+// public and sign-in can complete; `/sign-in` and `/register` are outside it too.
 export const config = {
   matcher: ["/dashboard/:path*"],
 };

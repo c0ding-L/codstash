@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { Clock, Code2, FolderOpen, Settings, Star } from "lucide-react";
+import { redirect } from "next/navigation";
 import { connection } from "next/server";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { auth } from "@/auth";
+import { UserMenu } from "@/components/auth/UserMenu";
 import { Badge } from "@/components/ui/badge";
 import {
   Sidebar,
@@ -17,7 +19,6 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import {
-  getDemoUser,
   getDemoUserId,
   getFavoriteCollections,
   getItemTypes,
@@ -25,7 +26,6 @@ import {
 } from "@/lib/db/collections";
 import {
   colorClasses,
-  initialsFromName,
   itemTypeHref,
   proTypeSlugs,
   sidebarTypes,
@@ -40,12 +40,19 @@ export async function AppSidebar() {
   // A Prisma query does not opt the layout out of prerendering on its own.
   await connection();
 
+  // The proxy already keeps anonymous requests out of /dashboard; this only
+  // narrows the type.
+  const session = await auth();
+  if (!session?.user) redirect("/sign-in");
+  const user = session.user;
+
+  // Collections and items still come from the demo account until the queries
+  // move to the session user.
   const userId = await getDemoUserId();
-  const [itemTypes, favoriteCollections, recentCollections, user] = await Promise.all([
+  const [itemTypes, favoriteCollections, recentCollections] = await Promise.all([
     getItemTypes(userId),
     getFavoriteCollections(userId),
     getSidebarRecentCollections(userId),
-    getDemoUser(),
   ]);
 
   const typeBySlug = new Map(itemTypes.map((type) => [type.slug, type]));
@@ -195,22 +202,11 @@ export async function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" tooltip={user.name ?? user.email}>
-              <Avatar className="size-7 rounded-lg">
-                {user.image ? <AvatarImage src={user.image} alt="" /> : null}
-                <AvatarFallback className="rounded-lg text-xs">
-                  {initialsFromName(user.name)}
-                </AvatarFallback>
-              </Avatar>
-              <span className="grid flex-1 text-left leading-tight">
-                <span className="truncate text-sm font-medium">
-                  {user.name ?? user.email}
-                </span>
-                <span className="truncate text-xs text-sidebar-foreground/70">
-                  {user.email}
-                </span>
-              </span>
-            </SidebarMenuButton>
+            <UserMenu
+              name={user.name ?? null}
+              email={user.email ?? null}
+              image={user.image ?? null}
+            />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
