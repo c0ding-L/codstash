@@ -2,7 +2,8 @@
 
 ## Status
 
-Not Started — loaded, awaiting go-ahead. No branch yet.
+In Progress — branch `feature/auth-github`. The demo-user shim decision was taken
+at its recommended default: left untouched in this phase.
 
 ## Goals
 
@@ -742,6 +743,43 @@ Open questions:
   recovering is untested. A stale empty `.git/index.lock` (00:24) blocked git
   and was deleted at the author's request. `npm run build` was green with
   `/dashboard` still `ƒ`.
+- 2026-09-21 — Started Auth Setup (NextAuth + GitHub) on branch
+  `feature/auth-github`. Conventions checked against Context7 (Auth.js docs) and
+  `03-file-conventions/proxy.md` before writing code: the split config, JWT plus
+  adapter, the `jwt` / `session` callbacks for `user.id`, and a `proxy` that is
+  either a default or a named export. The demo-user shim was left untouched, as
+  recommended — `getDemoUserId()` still feeds every dashboard query, so a signed-in
+  GitHub user will see the demo account's data until a later phase.
+- 2026-09-21 — Files: `src/auth.config.ts` (GitHub provider only),
+  `src/auth.ts` (`PrismaAdapter(prisma)`, `session: { strategy: "jwt" }`, and
+  callbacks copying `user.id` into the token then the session),
+  `src/app/api/auth/[...nextauth]/route.ts`, `src/proxy.ts` (named export
+  `proxy = auth(...)` built from the adapter-free config; redirects an anonymous
+  request to `/api/auth/signin?callbackUrl=…`; matcher `/dashboard/:path*`, so
+  `/api/auth/*` is never intercepted) and `src/types/next-auth.d.ts`. No packages
+  were installed and no env keys were added — both already existed.
+- 2026-09-21 — **The `JWT` augmentation has to target `@auth/core/jwt`**, not
+  `next-auth/jwt` as the Auth.js docs snippet suggests: `next-auth/jwt` is only
+  `export * from "@auth/core/jwt"`, so augmenting the re-export did not merge
+  into the interface and `token.id` stayed `unknown` (TS2322). Augmenting the
+  declaring module fixed it, and `PrismaAdapter(prisma)` accepted the generated
+  Prisma 7 client without a cast.
+- 2026-09-21 — Verified on a production build: `npm run build` lists
+  `ƒ /api/auth/[...nextauth]` and `ƒ Proxy (Middleware)`, `/dashboard` stays `ƒ`,
+  `tsc --noEmit` and lint green. Against `next start` on :3100: an anonymous
+  `/dashboard` and `/dashboard/x` get a 307 to the sign-in URL with the right
+  `callbackUrl`, `/` ends up at sign-in, `/api/auth/providers` lists only GitHub,
+  the sign-in page renders "Sign in with GitHub", and `/api/auth/session` is
+  `null`, with no auth errors in the server log.
+- 2026-09-21 — **`next start` needs `AUTH_TRUST_HOST=true` off Vercel.** Without it
+  every `/api/auth/*` call returned a 500 `UntrustedHost`, while the proxy redirect
+  still worked. `next dev` does not need it. It was set in the test shell only,
+  not in any file; a non-Vercel deployment will have to set it.
+- 2026-09-21 — **Not verified:** the real GitHub round trip (sign in, come back on
+  `/dashboard`, a `User` and `Account` row created) needs a browser and the
+  author's GitHub account, with the OAuth App callback set to
+  `http://localhost:3000/api/auth/callback/github`. `.next` was left in place
+  after the build — delete it before a Windows-side `next dev`.
 
 Left undone by the database feature:
 
