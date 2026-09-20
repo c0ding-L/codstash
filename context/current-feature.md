@@ -1,16 +1,68 @@
-# Current Feature
+# Current Feature: Auth Setup — NextAuth + GitHub Provider
 
 ## Status
 
-Not Started
+Not Started — loaded, awaiting go-ahead. No branch yet.
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+Spec: `@context/features/auth-phase-1-spec.md` (phase 1 of 3; phase 2 adds the
+Credentials provider and registration, phase 3 the sign-in / register UI). Set up
+NextAuth v5 with the Prisma adapter and GitHub OAuth, using NextAuth's default
+pages.
+
+- Install `next-auth@beta` and `@auth/prisma-adapter`
+- Split auth config for edge compatibility: `src/auth.config.ts` holds providers
+  only, no adapter
+- GitHub OAuth provider
+- `src/auth.ts` — full config with the Prisma adapter and `session: { strategy:
+  'jwt' }`
+- `src/app/api/auth/[...nextauth]/route.ts` exports the handlers from `auth.ts`
+- `src/proxy.ts` protects `/dashboard/*` using the Next.js 16 proxy, as a named
+  export `proxy = auth(...)`, redirecting unauthenticated users to sign-in
+- `src/types/next-auth.d.ts` extends `Session` with `user.id`
+- No custom `pages.signIn` — the default NextAuth sign-in page is used
+- Env: `AUTH_SECRET`, `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`
+
+Testing, per the spec: `/dashboard` redirects to sign-in → "Sign in with GitHub" →
+back on `/dashboard` after auth.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+The spec says to use Context7 to verify the newest config and conventions — do that
+before writing code, and read `node_modules/next/dist/docs/` for Next 16 specifics
+(AGENTS.md).
+
+- **The install step is already done.** `package.json` has `next-auth@^5.0.0-beta.32`
+  and `@auth/prisma-adapter@^2.11.3`, installed during the database feature. No new
+  packages expected.
+- **The env keys already exist** in both `.env` and `.env.production`
+  (`AUTH_SECRET`, `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET` — names checked, values not
+  read). The GitHub OAuth App needs the callback URL
+  `http://localhost:3000/api/auth/callback/github`; that is the author's step.
+- **Proxy runs on the Node.js runtime by default in Next 16**
+  (`03-file-conventions/proxy.md`), and the `runtime` option is not allowed in
+  proxy files. That weakens the edge-compatibility reason for the split config, but
+  the spec asks for it and it still keeps the Prisma / Neon adapter out of the
+  proxy bundle — follow the spec, and re-check the export shape (`proxy` named
+  export vs default) against the docs rather than trusting either memory or spec.
+- **JWT strategy plus an adapter:** users and GitHub `Account` rows are written to
+  the database on first sign-in, but the `Session` table stays unused. `user.id`
+  reaches the session through the `jwt` and `session` callbacks in `auth.ts`, which
+  the spec implies (the `Session` type extension) but does not spell out.
+- **`/api/auth/*` must stay public**, or sign-in cannot complete — the proxy matcher
+  has to exempt it. `/` still redirects to `/dashboard`, so an anonymous visit to
+  `/` now ends at the sign-in page.
+- **Decision needed: the demo-user shim.** Nothing here connects the session to the
+  data. `getDemoUserId()` and `getDemoUser()` still feed the dashboard and the
+  sidebar footer, so a signed-in GitHub user (a new, empty `User`) will see the demo
+  account's items and name. The spec does not say to change that; phase 3 updates
+  the sidebar footer. Recommendation: leave the shim untouched in this phase and
+  say so in the History, since replacing it touches every dashboard component.
+- **Verification:** `npm run build` (`/dashboard` stays `ƒ`; the build also
+  registers `/api/auth/[...nextauth]` and the proxy), `npx tsc --noEmit`,
+  `npm run lint`. The sign-in round trip needs a browser and the author's GitHub
+  account — the author's step, since Chromium cannot launch here.
 
 ---
 
