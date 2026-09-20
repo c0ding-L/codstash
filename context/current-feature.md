@@ -1,16 +1,36 @@
-# Current Feature
+# Current Feature: Auth Credentials (phase 2)
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+Add email/password sign-in alongside GitHub, plus registration.
+Spec: `@context/features/auth-phase-2-spec.md`.
+
+- Credentials provider (email/password) using `bcryptjs` (already installed)
+- `User.password` — already in the schema (`String?`), so no migration needed
+- `src/auth.config.ts`: Credentials provider placeholder, `authorize: () => null`
+- `src/auth.ts`: override Credentials with the real bcrypt validation
+- `POST /api/auth/register` accepting `name`, `email`, `password`,
+  `confirmPassword`: validate passwords match, reject an existing email, hash
+  with bcryptjs, create the user, return a success/error response
+- GitHub OAuth keeps working
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- **Split pattern:** the placeholder lives in the edge-safe `auth.config.ts` so
+  the proxy never pulls Prisma or bcrypt into its bundle; `auth.ts` replaces it
+  with the real `authorize`.
+- **Credentials needs JWT sessions** — already set (`strategy: "jwt"`), and the
+  existing `jwt` callback copies `user.id` into the token.
+- **Testing** (from the spec): register via `curl` to `/api/auth/register`, sign
+  in at `/api/auth/signin`, confirm the redirect to `/dashboard`, confirm GitHub
+  still works. Browser steps are the author's.
+- Reference: https://authjs.dev/getting-started/authentication/credentials
+- Out of scope: the sign-in / register UI (phase 3) and replacing the demo-user
+  shim with the session user.
 
 ---
 
