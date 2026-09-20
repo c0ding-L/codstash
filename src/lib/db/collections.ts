@@ -2,6 +2,7 @@ import { cache } from "react";
 
 import type { Prisma } from "@/generated/prisma/client";
 
+import { clampLimit, MAX_COLLECTION_LIMIT } from "@/lib/db/limits";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -145,13 +146,14 @@ async function getCollectionsWithTypes(
   userId: string,
   where: Prisma.CollectionWhereInput,
   orderBy: Prisma.CollectionOrderByWithRelationInput | Prisma.CollectionOrderByWithRelationInput[],
-  limit?: number,
+  // Always bounded: with no limit passed, the ceiling applies.
+  limit: number = MAX_COLLECTION_LIMIT,
 ): Promise<SidebarCollection[]> {
   const [collections, typeById] = await Promise.all([
     prisma.collection.findMany({
       where: { userId, ...where },
       orderBy,
-      take: limit,
+      take: clampLimit(limit, MAX_COLLECTION_LIMIT),
     }),
     loadTypeLookup(userId),
   ]);
@@ -207,7 +209,7 @@ export async function getRecentCollections(
     prisma.collection.findMany({
       where: { userId },
       orderBy: { updatedAt: "desc" },
-      take: limit,
+      take: clampLimit(limit, MAX_COLLECTION_LIMIT),
       include: { _count: { select: { items: true } } },
     }),
     loadTypeLookup(userId),

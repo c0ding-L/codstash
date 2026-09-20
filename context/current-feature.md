@@ -1,16 +1,152 @@
-# Current Feature
+# Current Feature: Errors, Limits & Indexes
 
 ## Status
 
-Not Started
+In Progress — branch `feature/loading-errors-limits-indexes`. Open decisions
+taken at their recommended defaults: both `error.tsx` files, ceilings of 50
+(collections) and 100 (items).
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+Error recovery, query limits and indexes for the dashboard. Layout and data
+shown stay the same.
+
+- **Loading state with skeleton UI — deferred.** Implemented, then removed on
+  2026-09-20 at the author's request ("il y a un souci"); to be revisited later.
+  See the loading-state notes below and the History for what was tried.
+- **Error boundary with a retry button.** An `error.tsx` that shows a short,
+  generic failure message and a **Try again** button which re-fetches and
+  re-renders the segment
+- **Query limit validation.** Every `limit` reaching a Prisma `take` is
+  validated and capped in one shared helper, and the queries that currently have
+  no limit at all get a ceiling
+- **Database indexes**, added only through `prisma migrate dev` — never
+  `db push` — as a new migration
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+### Loading state (deferred — nothing of it is in the code)
+
+The plan below is kept for when this is picked up again. Do not treat it as
+implemented.
+
+- **`loading.tsx` does not cover the sidebar.** `AppSidebar` lives in
+  `dashboard/layout.tsx` and calls `await connection()`. Per
+  `03-file-conventions/loading.md`, `loading.js` wraps the page and its
+  children but **not** the layout in the same segment, and shows no fallback for
+  request-time data read in the layout — navigation blocks until it finishes.
+  So the sidebar skeleton needs its own `<Suspense fallback={…}>` around
+  `<AppSidebar />` in the layout. The fallback has to fit inside
+  `SidebarProvider`, next to `SidebarInset`, without shifting the layout.
+- **Skeletons mirror the real layout** (four stat cards, a collections grid, two
+  columns of item rows) so nothing jumps when content arrives. They are
+  presentational and take no props, so they can be Server Components.
+- **Left out on purpose: per-section `<Suspense>` inside `page.tsx`.** It would
+  let each section stream independently, but it changes streaming behaviour and
+  makes `loading.tsx` mostly redundant. Whole-page skeleton first; revisit if the
+  slowest section proves to dominate.
+- **A dev server always renders dynamically** and the seed is tiny, so the
+  skeleton will barely flash. Checking it means temporarily delaying a query —
+  and undoing that before the commit.
+
+### Error boundary
+
+- **Next 16.2 names the retry prop `unstable_retry`**, not `reset`
+  (`03-file-conventions/error.md`). It re-fetches and re-renders the boundary's
+  children; `reset()` only clears the error state without re-fetching, which
+  would just re-throw for a failed query. The name is `unstable_` — read the doc
+  again before writing it, and expect it to be renamed.
+- **The boundary must be a Client Component** (`'use client'`).
+- **`error.tsx` does not wrap the layout in its own segment.** A
+  `dashboard/error.tsx` keeps the sidebar and top bar and replaces only the
+  page — but a failure inside `AppSidebar` (a database query in the layout)
+  would not be caught by it. Catching that needs an `src/app/error.tsx`, one
+  segment up. **Decision needed:** ship both, or only the page-level one.
+  Recommendation: both, since the sidebar makes three queries on every render.
+  `global-error.tsx` (root layout failure) is out of scope — the root layout
+  only loads fonts.
+- **Do not show `error.message`.** Prisma and connection errors can carry
+  internals. Show fixed copy plus `error.digest` (which lets a failure be matched
+  to the server log) and rely on Next's own server-side logging rather than
+  adding a `console.log`.
+- **Verification** means making a query throw on purpose — e.g. a wrong
+  `DATABASE_URL` in the dev shell, or a temporary `throw` — and confirming the
+  fallback renders and **Try again** recovers once the cause is removed. There is
+  no test framework; this is a browser check.
+
+### Query limit validation
+
+Current state, read from the code:
+
+- `getRecentCollections(userId, limit = 6)`, `getSidebarRecentCollections(userId,
+  limit = 5)` and `getRecentItems(userId, limit = 10)` accept a `limit` and pass
+  it straight to `take` — unvalidated.
+- `getCollectionsWithTypes(…, limit?)` takes an **optional** limit, so
+  `getFavoriteCollections` has no limit at all, and `getPinnedItems` has none
+  either. Both are unbounded reads of a table that grows with the user.
+- Prisma treats a **negative `take` as "count backwards"**, so a `-5` silently
+  flips the result order rather than failing.
+
+Plan:
+
+- One helper (e.g. `src/lib/db/limits.ts`) that takes a requested value, a
+  default and a maximum. A non-integer or `< 1` is a caller bug and **throws**;
+  a value above the maximum is **clamped** down to it.
+- Applied to the three `limit` parameters above, and a ceiling applied to
+  `getFavoriteCollections` and `getPinnedItems`.
+- **Decision needed: the ceilings.** Proposed: 50 for collections lists, 100 for
+  items lists. Nothing reads these numbers from the spec — they are a guess
+  sized well above today's data (5 collections, 18 items).
+- Callers pass constants today, so nothing changes for the dashboard; this
+  protects the future `/items/*` and `/collections` pages that will take a page
+  size from the URL. It is validation for input that does not exist yet, which
+  is the reason to keep it to one small helper and not an options framework.
+
+### Database indexes
+
+- **The schema already has most of them.** `Item` has `[userId]`, `[typeId]`,
+  `[collectionId]`, `[userId, updatedAt]`, `[userId, isPinned]`,
+  `[userId, isFavorite]`; `Collection` has `[userId]` and `[userId, updatedAt]`.
+  Only indexes that match a query that exists today are worth adding:
+  - `Collection @@index([userId, isFavorite])` — `getFavoriteCollections` and
+    the `favoriteCollectionCount` both filter on exactly that pair, and
+    `Collection` has no equivalent to `Item`'s `[userId, isFavorite]`.
+  - `Item @@index([collectionId, typeId])` — the `groupBy` added in the scanner
+    feature groups on that pair; with it the counts can come from the index
+    alone.
+- **Not added:** an index for `/items/[type]` pages (`[userId, typeId]`) — the
+  pages do not exist yet.
+- **Redundancy, not touched.** `Item [userId]` is a leading prefix of
+  `[userId, updatedAt]`, `[userId, isPinned]` and `[userId, isFavorite]`, so
+  Postgres could serve it from those; the same holds for `Collection [userId]`.
+  Dropping them would save write cost but is a judgement call, so it stays out
+  unless asked.
+- **Be honest about the payoff.** At 18 items the planner will use a sequential
+  scan whatever indexes exist; the benefit is by query shape, not something a
+  measurement here can show.
+- **Always a migration:** `prisma/schema.prisma` edited, then
+  `npx prisma migrate dev --name add_query_indexes`, then
+  `npx prisma migrate status` (per `coding-standards.md`). Never `db push`.
+- **Two things about `migrate dev` here:** `migrations.seed` is set in
+  `prisma.config.ts`, so it may auto-run the seed, which rewrites the demo
+  user's rows; and a suspended Neon compute fails the first attempt with P1001 —
+  a plain query wakes it (see the database feature's History).
+- **Verification** is against the database, as the `init` migration was: the
+  two new indexes exist in `pg_indexes`, `_prisma_migrations` records the
+  migration, and `db:test` row counts are unchanged.
+
+### Out of scope
+
+- Splitting `AppSidebar` / `RecentCollections`, the `getPrimaryType` helper, and
+  the inert sidebar collection buttons — still the scanner's deferred items.
+- A pagination UI. Only the limit validation that a future page would rely on.
+
+### Verification
+
+`npm run build` (`/dashboard` must stay `ƒ`), `npx tsc --noEmit`,
+`npm run lint`, the migration checks above, and browser checks of the skeleton
+and the error fallback. The dev server needs a restart after edits on `/mnt/e`,
+and `.next` should be deleted before a Windows-side `next dev`.
 
 ---
 
@@ -617,6 +753,62 @@ Open questions:
   refactor), and the inert sidebar collection buttons (already in the backlog).
   Not exercised: the empty-collection path and a rendered-page check in a dev
   server.
+- 2026-09-20 — Started Loading, Errors, Limits & Indexes on branch
+  `feature/loading-errors-limits-indexes`. Both open decisions taken at their
+  recommended defaults: an `error.tsx` at the app level as well as under
+  `dashboard/`, and ceilings of 50 (collections) and 100 (items) — the ceilings
+  remain a guess, sized well above today's 5 collections and 18 items.
+- 2026-09-20 — Limits: `src/lib/db/limits.ts` holds `clampLimit(limit, max)` —
+  a non-integer or a value below 1 throws `RangeError`, a value above the max is
+  clamped. Applied to `getRecentCollections`, `getSidebarRecentCollections` (via
+  `getCollectionsWithTypes`, whose `limit` now defaults to the ceiling, so
+  `getFavoriteCollections` is bounded too) and `getRecentItems`;
+  `getPinnedItems` takes the item ceiling. Exercised against the database:
+  `9999 → 50`, `51 → 50`, `0`, `-5`, `2.5`, `NaN` and `Infinity` all throw, and
+  `getRecentItems(uid, 9999)` returns all 18 rows; dashboard results unchanged
+  (10 recent items, 2 pinned, 5 collections, 1 favourite).
+- 2026-09-20 — Loading: `DashboardSkeletons.tsx` holds `DashboardSkeleton`
+  (stats cards, collections grid, two item columns, mirroring the real
+  footprint) shown by `src/app/dashboard/loading.tsx`, and `SidebarSkeleton`,
+  which renders the same `Sidebar` shell so `SidebarInset` keeps its offset.
+  `dashboard/layout.tsx` wraps `AppSidebar` in `<Suspense>`, because
+  `loading.tsx` does not cover its own segment's layout.
+- 2026-09-20 — Errors: `ErrorFallback` (client) shows fixed copy, the
+  `error.digest` reference and a **Try again** button, and never `error.message`.
+  `dashboard/error.tsx` keeps the shell and swaps the page; `src/app/error.tsx`
+  also catches a failing `AppSidebar`. Both use `unstable_retry`, which
+  re-fetches — `reset` would only clear the state and re-throw.
+- 2026-09-20 — Indexes: migration `20260920003036_add_query_indexes` created
+  with `prisma migrate dev` — `Collection(userId, isFavorite)` and
+  `Item(collectionId, typeId)`, and nothing else in the SQL. Verified against the
+  database: both indexes exist in `pg_indexes`, `_prisma_migrations` lists it
+  after `init`, `migrate status` reports the schema up to date, and row counts
+  are unchanged (users 1, itemTypes 7, collections 5, items 18), so the seed did
+  not rewrite anything. The redundant `[userId]` prefix indexes were left alone.
+- 2026-09-20 — **Loading state removed, to be revisited.** The author saw the
+  skeleton sit there for 3–4 s and asked for it to come out. Deleted
+  `src/app/dashboard/loading.tsx` and `DashboardSkeletons.tsx`, and put
+  `dashboard/layout.tsx` back to its committed state (no `<Suspense>` around
+  `AppSidebar`; `git diff` on it is empty). The error boundaries, the limit
+  validation and the indexes stay. `tsc --noEmit` and lint green after the
+  removal.
+- 2026-09-20 — What was learned while debugging it, for the return visit: with
+  the boundary in place the page really streams, and on the author's Windows
+  machine (Node v24.12.0) the dev log showed `TypeError:
+  controller[kState].transformAlgorithm is not a function`, a Node
+  `TransformStream` cancel race fixed upstream (nodejs/node#62040) — updating
+  Node was the remedy the author took. A page that reloaded in a loop was
+  cleared by deleting `.next`; a WSL `next build` / `next start` run while a
+  Windows `next dev` holds the project is the likely cause. Server time was
+  ~0.7–1.2 s in the author's log against 3–4 s perceived, which is unexplained:
+  Neon waking, the round trip to `us-east-2`, and dev-mode overhead are the
+  suspects, and a production build (`npm run build && npm start`) plus the
+  Network tab's time-to-first-byte would separate them. Per-section
+  `<Suspense>` and fewer sequential queries were proposed, not built.
+- 2026-09-20 — `tsc --noEmit`, lint and `npm run build` are green; `/dashboard`
+  is still `ƒ`. **Not checked in a browser:** the skeleton and the error
+  fallback (retry recovering after a forced failure). `.next` was left in place
+  after the build — delete it before a Windows-side `next dev`.
 
 Left undone by the database feature:
 

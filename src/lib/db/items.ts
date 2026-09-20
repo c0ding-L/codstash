@@ -1,3 +1,4 @@
+import { clampLimit, MAX_ITEM_LIMIT } from "@/lib/db/limits";
 import { prisma } from "@/lib/prisma";
 
 /** Everything a row on the dashboard renders, flattened out of the relations. */
@@ -41,11 +42,12 @@ function toDashboardItem(item: SelectedItem): DashboardItem {
   return { ...rest, collectionName: collection?.name ?? null };
 }
 
-/** Pinned items, newest first. Empty when nothing is pinned. */
+/** Pinned items, newest first, up to the ceiling. Empty when nothing is pinned. */
 export async function getPinnedItems(userId: string): Promise<DashboardItem[]> {
   const items = await prisma.item.findMany({
     where: { userId, isPinned: true },
     orderBy: { updatedAt: "desc" },
+    take: MAX_ITEM_LIMIT,
     select: dashboardItemSelect,
   });
 
@@ -67,7 +69,7 @@ export async function getRecentItems(
     prisma.item.findMany({
       where: { userId },
       orderBy: { updatedAt: "desc" },
-      take: limit,
+      take: clampLimit(limit, MAX_ITEM_LIMIT),
       select: dashboardItemSelect,
     }),
     prisma.item.count({ where: { userId } }),

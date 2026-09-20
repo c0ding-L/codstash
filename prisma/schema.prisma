@@ -129,6 +129,7 @@ model Collection {
 
   @@index([userId])
   @@index([userId, updatedAt])
+  @@index([userId, isFavorite])
 }
 
 model Item {
@@ -169,6 +170,7 @@ model Item {
   @@index([userId, updatedAt])
   @@index([userId, isPinned])
   @@index([userId, isFavorite])
+  @@index([collectionId, typeId])
 }
 
 model Tag {
