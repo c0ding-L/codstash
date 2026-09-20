@@ -1,36 +1,22 @@
-# Current Feature: Auth Credentials (phase 2)
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-Add email/password sign-in alongside GitHub, plus registration.
-Spec: `@context/features/auth-phase-2-spec.md`.
-
-- Credentials provider (email/password) using `bcryptjs` (already installed)
-- `User.password` — already in the schema (`String?`), so no migration needed
-- `src/auth.config.ts`: Credentials provider placeholder, `authorize: () => null`
-- `src/auth.ts`: override Credentials with the real bcrypt validation
-- `POST /api/auth/register` accepting `name`, `email`, `password`,
-  `confirmPassword`: validate passwords match, reject an existing email, hash
-  with bcryptjs, create the user, return a success/error response
-- GitHub OAuth keeps working
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- **Split pattern:** the placeholder lives in the edge-safe `auth.config.ts` so
-  the proxy never pulls Prisma or bcrypt into its bundle; `auth.ts` replaces it
-  with the real `authorize`.
-- **Credentials needs JWT sessions** — already set (`strategy: "jwt"`), and the
-  existing `jwt` callback copies `user.id` into the token.
-- **Testing** (from the spec): register via `curl` to `/api/auth/register`, sign
-  in at `/api/auth/signin`, confirm the redirect to `/dashboard`, confirm GitHub
-  still works. Browser steps are the author's.
-- Reference: https://authjs.dev/getting-started/authentication/credentials
-- Out of scope: the sign-in / register UI (phase 3) and replacing the demo-user
-  shim with the session user.
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — Auth Credentials, phase 2: Credentials provider
+and `POST /api/auth/register`. Spec: `@context/features/auth-phase-2-spec.md`;
+phase 3 (sign-in / register UI) is still to do. Outcome in the History below.
 
 ---
 
@@ -766,6 +752,32 @@ Open questions:
   every dashboard query and the sidebar footer, so a signed-in GitHub user sees the
   demo account's data; phases 2 and 3 are not started; a non-Vercel deployment must
   set `AUTH_TRUST_HOST=true`. `npm run build` green with `/dashboard` still `ƒ`.
+- 2026-09-21 — Started Auth Credentials (phase 2) on branch
+  `feature/auth-credentials`. `src/auth.config.ts` gained a Credentials
+  placeholder (`authorize: () => null`) beside GitHub; `src/auth.ts` filters that
+  placeholder out of the config's providers and adds the real one (lowercased
+  email lookup, `bcrypt.compare`, `null` for an unknown user or one with no
+  password). `src/app/api/auth/register/route.ts` validates, rejects an existing
+  email with 409, hashes at 12 rounds and returns 201. `User.password` already
+  existed, so there was no migration.
+- 2026-09-21 — Beyond the spec, disclosed: emails are lowercased and checked
+  against a simple pattern, and passwords need at least 8 characters.
+- 2026-09-21 — Verified on a production build against `next start` on :3100:
+  mismatch, short password and bad JSON return 400, a valid registration 201, a
+  duplicate 409; credentials sign-in returned 302 to `/dashboard`,
+  `/api/auth/session` carried the user id, `/dashboard` returned 200, and a wrong
+  password redirected to `?error=CredentialsSignin`; `/api/auth/providers` lists
+  `github` and `credentials`. The test user was deleted afterwards. `tsc
+  --noEmit`, lint and `npm run build` green; `/dashboard` still `ƒ`.
+- 2026-09-21 — Auth Credentials completed and merged into `main` (`34332a4`,
+  fast-forward); branch `feature/auth-credentials` deleted. **Not verified:** the
+  signin form, the seeded demo login (`demo@codstash.io`) and the GitHub round
+  trip in a browser. **Left for a hardening pass, from the review:** a
+  registration race (a concurrent duplicate returns 500, not 409, until `P2002`
+  is caught), no maximum password length (bcrypt uses the first 72 bytes), no
+  rate limiting, a timing difference between unknown and known emails in
+  `authorize`, and no email verification. **Still true:** the demo-user shim
+  feeds every dashboard query, so any signed-in user sees the demo account's data.
 
 Left undone by the database feature:
 
