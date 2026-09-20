@@ -1,75 +1,23 @@
-# Current Feature: Auth Email Verification (phase 4)
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-Require new email/password users to verify their email address before they can
-sign in, using Resend. Spec: `@context/features/auth-phase-4-spec.md`.
-
-- Send the verification email with Resend (`resend` package, `RESEND_API_KEY`)
-- `POST /api/auth/register` creates the user with `emailVerified` unset, stores a
-  token and emails a single-use link; if the send fails the user is still created
-  and the response says so
-- Token: reuse `VerificationToken` (no migration), `identifier` = lowercased email,
-  32 random bytes in the link, only the SHA-256 hash stored, 24 h expiry, deleted
-  when used, earlier tokens for the same email removed
-- `/verify-email?token=…&email=…`: server component with `await connection()`;
-  sets `emailVerified`, deletes the token, links to `/sign-in`; an invalid or
-  expired link shows an error and the resend action
-- `POST /api/auth/resend-verification`: same generic response whether or not the
-  email exists; only sends for an existing, unverified user with a password
-- Credentials `authorize` refuses an unverified user with a `CredentialsSignin`
-  subclass carrying its own `code`, **after** the password check; the sign-in form
-  shows "Verify your email first" with a resend action
-- Registering with the email of an unverified account: 409 that says the account
-  exists but is not verified, with a button to send a new verification email; the
-  existing account is left untouched
-- Registration toast becomes "Account created. Check your email to verify your
-  account."
-- Existing credentials accounts on the dev branch are marked verified first (script)
-- GitHub sign-in and the seeded demo user are unaffected
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- **Sign-in runs in a server action**, so the custom error is thrown there, not put
-  in the URL: `signInWithCredentials` (`src/actions/auth.ts`) must read
-  `error.code` before its generic `CredentialsSignin` → "Invalid email or password"
-  mapping.
-- **Check `error`, don't rely on `try/catch`:** `resend.emails.send` resolves to
-  `{ data, error }` and does not throw.
-- **New env values needed**, neither exists yet: a from address (`EMAIL_FROM`) and a
-  base URL for the link (`APP_URL`; `AUTH_URL` is not set). `RESEND_API_KEY` is
-  already in `.env`, `.env.example` and `.env.production`. Add both to `.env.example`.
-- **Sender domain:** `onboarding@resend.dev` is for testing only and production needs
-  a verified domain; whether it can deliver to arbitrary recipients is unconfirmed
-  (the Resend docs retrieved do not say). Test recipients such as
-  `delivered@resend.dev` cannot be used to click the link, so an end-to-end check
-  needs a real inbox.
-- **Decided (author): existing accounts are marked verified** (`emailVerified` set to
-  the current date, where it is null and a password exists). Dev branch only, through
-  a one-off script rather than a migration — a migration would be applied to
-  production by `migrate deploy`. **Never touch the production branch unless the
-  author names it explicitly in that same message.**
-- **A GET link that changes state** can be consumed by email scanners that prefetch
-  it; switch to a confirm button if that happens.
-- **Decided (author):** registering again with an email that belongs to an unverified
-  account is refused — never replaced. The 409 says the account exists but must be
-  activated, carries a `code` (e.g. `EMAIL_NOT_VERIFIED`), and `RegisterForm` shows a
-  clickable button to request a new verification email. A verified or GitHub-only
-  account gets the plain "already exists" 409.
-- **Rate limiting** is still absent everywhere; the resend endpoint is the first
-  place it matters (at minimum one email per address per minute).
-- **Testing against a production build** needs `DATABASE_URL` from `.env` passed
-  explicitly — `next start` loads `.env.production` (see the History). Browser
-  checks work through a Playwright script, not the MCP.
-- **Working tree:** `next.config.ts` carries the author's uncommitted edits, and the
-  spec file itself (`auth-phase-4-spec.md`) is not committed yet — stage neither by
-  accident with unrelated changes.
-- Out of scope: password reset, changing email, branded email templates, the phase 2
-  hardening list beyond what this spec touches.
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — Auth Email Verification, phase 4: Resend emails a
+single-use link, credentials sign-in is refused until it is used, a resend path
+and a React Email template. Spec: `@context/features/auth-phase-4-spec.md`.
+Outcome in the History below.
 
 ---
 
@@ -896,6 +844,71 @@ Open questions:
   timing difference in `authorize`, email verification); and `phase2@test.dev`,
   `uitest@test.dev` and `numtest@test.dev` remain in the `.env.production`
   database, untouched because production is off limits without being named.
+  `next.config.ts` still carries the author's uncommitted edits.
+- 2026-09-21 — Started Auth Email Verification (phase 4) on branch
+  `feature/auth-email-verification`. New credentials accounts start with
+  `emailVerified` unset and are emailed a link. Token in the existing
+  `VerificationToken` table (no migration): 32 random bytes in the link, only the
+  SHA-256 hash stored, 24 h expiry, consumed by a `deleteMany` so two concurrent
+  requests cannot both use it. `src/lib/verification.ts` issues and consumes it,
+  `src/lib/email.tsx` sends it. The resend throttle (one email per address per
+  minute) derives the issue time from `expires - TTL`, so no `createdAt` column.
+- 2026-09-21 — Behaviour: `POST /api/auth/register` still creates the user when the
+  send fails and returns `emailSent: false`; registering with the email of an
+  unverified account is a 409 with code `EMAIL_NOT_VERIFIED` (the old account is
+  never replaced), a verified or GitHub-only one gets the plain 409. `POST
+  /api/auth/resend-verification` answers identically for any address and does its
+  lookup and send in `after()`, so neither the body nor the timing reveals whether
+  the account exists. `authorize` throws `EmailNotVerifiedError` (a
+  `CredentialsSignin` with `code = "email_not_verified"`) only after the password
+  is right; Auth.js re-throws the original error in the server action, so
+  `signInWithCredentials` reads `error.code`. `/verify-email` is a dynamic server
+  page. Resend buttons sit on the verify page, the register form and the sign-in
+  form, plus a "Send it again" link on `/sign-in` that needs no session.
+- 2026-09-21 — **A first version told a fresh user to "sign in to request a new
+  one" when the send failed** — nonsense, since they could not sign in. The cause
+  was `APP_URL` missing from `.env`; the fix keeps the user on `/register` with the
+  message and a resend button, and the two env values (`EMAIL_FROM`, `APP_URL`) were
+  appended to `.env`. `.env.example` is gitignored by `.env*`, so it was updated on
+  disk but never committed.
+- 2026-09-21 — Email template: React Email via the single `react-email` package
+  (version 6 folded components and `render` into it; `@react-email/components` is the
+  old way). `src/emails/VerificationEmail.tsx`, inline styles, light background, and
+  it is rendered with `render()` for both HTML and plain text before `emails.send`
+  rather than through Resend's `react` option. Auth.js has no usable template: the
+  Resend provider's `html()` is internal and is a bare magic-link card.
+- 2026-09-21 — Verified against a production build on the `.env` database, in a
+  browser: unverified sign-in with the right password shows "Verify your email first"
+  plus the button, a wrong one shows the ordinary message with no button; registering
+  again with the unverified email gives the 409 message with the button and a toast;
+  a valid link verifies and the account then signs in, the same link again and an
+  expired one show "Link invalid or expired"; the sign-in resend link created a token
+  only for the existing unverified account, none for an unknown or verified address,
+  and all three answers were identical; the throttle kept the first token and a
+  resend after the window replaced it; with an unverified sender domain the user is
+  created, `emailSent` is false, the token is deleted and the warning path shows.
+  Resend accepted real sends from `onboarding@resend.dev` to `delivered+…@resend.dev`
+  test addresses; an unverified domain is reported as `validation_error`, not the 403
+  the docs describe. `tsc --noEmit`, lint and `npm run build` green.
+- 2026-09-21 — Existing accounts on the dev branch were marked verified with
+  `scripts/backfill-email-verified.ts` (dry run, then `--apply`; host checked as
+  `ep-little-snow…`): 4 accounts, and a second dry run found 0. A script rather than
+  a migration, because `migrate deploy` would apply a migration to production.
+  **Production was not touched.**
+- 2026-09-21 — Also added, on request: `scripts/delete-all-users-except-demo.ts`
+  (dry run by default, refuses the host in `.env.production`, aborts if the demo user
+  is missing, deletes items first because of the `Restrict` on `Item.typeId`). Only
+  its dry run was executed.
+- 2026-09-21 — Auth Email Verification completed and merged into `main` (`2b30ed6`
+  and `92032d5`, fast-forward); branch `feature/auth-email-verification` deleted.
+  **Not verified:** a real inbox — only Resend's test addresses were used, so no link
+  from a delivered mail was clicked, Gmail/Outlook rendering of the template is
+  unchecked, and whether `onboarding@resend.dev` can write to arbitrary addresses is
+  unconfirmed; the GitHub OAuth round trip. **Still open:** rate limiting beyond the
+  resend throttle, the `P2002` race, a password length cap, the timing difference
+  between unknown and known emails in `authorize`; production accounts are not
+  backfilled and production still holds `phase2@test.dev`, `uitest@test.dev`,
+  `numtest@test.dev`; `/profile` returns 404; `.env.example` is untracked.
   `next.config.ts` still carries the author's uncommitted edits.
 
 Left undone by the database feature:
