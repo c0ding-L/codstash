@@ -1,13 +1,16 @@
 "use server";
 
-import { AuthError } from "next-auth";
+import { AuthError, CredentialsSignin } from "next-auth";
 
 import { signIn, signOut } from "@/auth";
+import { EMAIL_NOT_VERIFIED_CODE } from "@/lib/auth-errors";
 
 export interface SignInState {
   error: string | null;
   /** Sent back because React resets the form after an action, which would clear it. */
   email: string;
+  /** The password was right but the email has not been verified yet. */
+  unverified: boolean;
 }
 
 const DEFAULT_REDIRECT = "/dashboard";
@@ -32,7 +35,11 @@ export async function signInWithCredentials(
   const password = formData.get("password");
 
   if (typeof email !== "string" || typeof password !== "string" || !email || !password) {
-    return { error: "Enter your email and password.", email: typeof email === "string" ? email : "" };
+    return {
+      error: "Enter your email and password.",
+      email: typeof email === "string" ? email : "",
+      unverified: false,
+    };
   }
 
   try {
@@ -42,6 +49,13 @@ export async function signInWithCredentials(
       redirectTo: safeRedirect(formData.get("callbackUrl")),
     });
   } catch (error) {
+    if (error instanceof CredentialsSignin && error.code === EMAIL_NOT_VERIFIED_CODE) {
+      return {
+        error: "Verify your email first. Check your inbox for the link, or send a new one.",
+        email,
+        unverified: true,
+      };
+    }
     if (error instanceof AuthError) {
       return {
         error:
@@ -49,13 +63,14 @@ export async function signInWithCredentials(
             ? "Invalid email or password."
             : "Something went wrong. Try again.",
         email,
+        unverified: false,
       };
     }
     // A successful sign-in redirects by throwing; that must not be swallowed.
     throw error;
   }
 
-  return { error: null, email };
+  return { error: null, email, unverified: false };
 }
 
 export async function signInWithGitHub(formData: FormData) {

@@ -2,13 +2,14 @@ import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 
 import { prisma } from "@/lib/prisma";
+import { issueVerificationEmail } from "@/lib/verification";
 
 const BCRYPT_ROUNDS = 12;
 const MIN_PASSWORD_LENGTH = 8;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-function fail(error: string, status: number) {
-  return NextResponse.json({ success: false, error }, { status });
+function fail(error: string, status: number, code?: string) {
+  return NextResponse.json({ success: false, error, ...(code ? { code } : {}) }, { status });
 }
 
 export async function POST(request: Request) {
@@ -41,7 +42,18 @@ export async function POST(request: Request) {
   if (password !== confirmPassword) return fail("Passwords do not match.", 400);
 
   const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
-  if (existing) return fail("An account with this email already exists.", 409);
+  if (existing) {
+    // Never replaced or modified: the owner has to activate it, and the client
+    // gets a code so it can offer to send a new verification email.
+    if (existing.password && !existing.emailVerified) {
+      return fail(
+        "An account with this email already exists but has not been verified yet. Check your inbox, or send a new verification email.",
+        409,
+        "EMAIL_NOT_VERIFIED",
+      );
+    }
+    return fail("An account with this email already exists.", 409);
+  }
 
   const user = await prisma.user.create({
     data: {
@@ -52,5 +64,9 @@ export async function POST(request: Request) {
     select: { id: true, name: true, email: true },
   });
 
-  return NextResponse.json({ success: true, user }, { status: 201 });
+  // The account exists either way; `emailSent` lets the client say so when the
+  // send failed, and "resend" on the sign-in form recovers from it.
+  const emailSent = (await issueVerificationEmail(user)) === "sent";
+
+  return NextResponse.json({ success: true, user, emailSent }, { status: 201 });
 }

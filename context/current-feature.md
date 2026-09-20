@@ -1,16 +1,75 @@
-# Current Feature
+# Current Feature: Auth Email Verification (phase 4)
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+Require new email/password users to verify their email address before they can
+sign in, using Resend. Spec: `@context/features/auth-phase-4-spec.md`.
+
+- Send the verification email with Resend (`resend` package, `RESEND_API_KEY`)
+- `POST /api/auth/register` creates the user with `emailVerified` unset, stores a
+  token and emails a single-use link; if the send fails the user is still created
+  and the response says so
+- Token: reuse `VerificationToken` (no migration), `identifier` = lowercased email,
+  32 random bytes in the link, only the SHA-256 hash stored, 24 h expiry, deleted
+  when used, earlier tokens for the same email removed
+- `/verify-email?token=…&email=…`: server component with `await connection()`;
+  sets `emailVerified`, deletes the token, links to `/sign-in`; an invalid or
+  expired link shows an error and the resend action
+- `POST /api/auth/resend-verification`: same generic response whether or not the
+  email exists; only sends for an existing, unverified user with a password
+- Credentials `authorize` refuses an unverified user with a `CredentialsSignin`
+  subclass carrying its own `code`, **after** the password check; the sign-in form
+  shows "Verify your email first" with a resend action
+- Registering with the email of an unverified account: 409 that says the account
+  exists but is not verified, with a button to send a new verification email; the
+  existing account is left untouched
+- Registration toast becomes "Account created. Check your email to verify your
+  account."
+- Existing credentials accounts on the dev branch are marked verified first (script)
+- GitHub sign-in and the seeded demo user are unaffected
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- **Sign-in runs in a server action**, so the custom error is thrown there, not put
+  in the URL: `signInWithCredentials` (`src/actions/auth.ts`) must read
+  `error.code` before its generic `CredentialsSignin` → "Invalid email or password"
+  mapping.
+- **Check `error`, don't rely on `try/catch`:** `resend.emails.send` resolves to
+  `{ data, error }` and does not throw.
+- **New env values needed**, neither exists yet: a from address (`EMAIL_FROM`) and a
+  base URL for the link (`APP_URL`; `AUTH_URL` is not set). `RESEND_API_KEY` is
+  already in `.env`, `.env.example` and `.env.production`. Add both to `.env.example`.
+- **Sender domain:** `onboarding@resend.dev` is for testing only and production needs
+  a verified domain; whether it can deliver to arbitrary recipients is unconfirmed
+  (the Resend docs retrieved do not say). Test recipients such as
+  `delivered@resend.dev` cannot be used to click the link, so an end-to-end check
+  needs a real inbox.
+- **Decided (author): existing accounts are marked verified** (`emailVerified` set to
+  the current date, where it is null and a password exists). Dev branch only, through
+  a one-off script rather than a migration — a migration would be applied to
+  production by `migrate deploy`. **Never touch the production branch unless the
+  author names it explicitly in that same message.**
+- **A GET link that changes state** can be consumed by email scanners that prefetch
+  it; switch to a confirm button if that happens.
+- **Decided (author):** registering again with an email that belongs to an unverified
+  account is refused — never replaced. The 409 says the account exists but must be
+  activated, carries a `code` (e.g. `EMAIL_NOT_VERIFIED`), and `RegisterForm` shows a
+  clickable button to request a new verification email. A verified or GitHub-only
+  account gets the plain "already exists" 409.
+- **Rate limiting** is still absent everywhere; the resend endpoint is the first
+  place it matters (at minimum one email per address per minute).
+- **Testing against a production build** needs `DATABASE_URL` from `.env` passed
+  explicitly — `next start` loads `.env.production` (see the History). Browser
+  checks work through a Playwright script, not the MCP.
+- **Working tree:** `next.config.ts` carries the author's uncommitted edits, and the
+  spec file itself (`auth-phase-4-spec.md`) is not committed yet — stage neither by
+  accident with unrelated changes.
+- Out of scope: password reset, changing email, branded email templates, the phase 2
+  hardening list beyond what this spec touches.
 
 ---
 

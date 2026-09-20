@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { ResendVerificationButton } from "@/components/auth/ResendVerificationButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -15,6 +16,8 @@ export function RegisterForm() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  // Set when the email belongs to an account that was never verified.
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -32,6 +35,7 @@ export function RegisterForm() {
     if (password !== confirmPassword) return setError("Passwords do not match.");
 
     setError(null);
+    setUnverifiedEmail(null);
     setPending(true);
     try {
       const response = await fetch("/api/auth/register", {
@@ -39,14 +43,22 @@ export function RegisterForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password, confirmPassword }),
       });
-      const body: { success?: boolean; error?: string } = await response.json().catch(() => ({}));
+      const body: { success?: boolean; error?: string; code?: string; emailSent?: boolean } =
+        await response.json().catch(() => ({}));
 
       if (!response.ok || !body.success) {
         setError(body.error ?? "Could not create the account. Try again.");
+        if (body.code === "EMAIL_NOT_VERIFIED") setUnverifiedEmail(email);
+        return;
+      }
+      if (body.emailSent === false) {
+        // Stay here: the account exists, and the fix is one click away.
+        setError("Your account was created, but we could not send the verification email.");
+        setUnverifiedEmail(email);
         return;
       }
       // The Toaster lives in the root layout, so the toast survives the navigation.
-      toast.success("Account created. You can now sign in.");
+      toast.success("Account created. Check your email to verify your account.");
       router.push("/sign-in");
     } catch {
       setError("Could not reach the server. Try again.");
@@ -79,6 +91,7 @@ export function RegisterForm() {
             {error}
           </p>
         ) : null}
+        {unverifiedEmail ? <ResendVerificationButton email={unverifiedEmail} /> : null}
         <Button type="submit" size="lg" disabled={pending}>
           {pending ? "Creating account…" : "Create account"}
         </Button>
