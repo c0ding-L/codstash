@@ -1,81 +1,22 @@
-# Current Feature: Email Verification Toggle
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-Make email verification something you can switch off. Resend has no domain linked
-yet, so `onboarding@resend.dev` only delivers to the Resend account's own address.
-That means nobody else can finish registering.
-
-- One server-side env flag, `EMAIL_VERIFICATION_ENABLED`, read in one place
-  (`src/lib/email-verification-flag.ts` or similar), not scattered through
-  `process.env` reads
-- **Off:** registration sends no email, and the account can sign in straight away.
-  `authorize` skips the `emailVerified` check, and the register page toasts
-  "Account created. You can sign in now." instead of "Check your email"
-- **Off:** no verification UI. The sign-in form's "Send it again" link and the
-  `EMAIL_NOT_VERIFIED` 409 branch with its resend button go away, and
-  `POST /api/auth/resend-verification` sends nothing
-- **On:** behaviour is exactly what phase 4 shipped
-- `.env.example` documents the flag (it is gitignored, so only on disk)
-- `npm run build`, `npx tsc --noEmit` and `npm run lint` green; checked in a
-  browser with the flag both off and on
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-### Where the flag has to be honoured
+<!-- Additional context, constraints, or details from spec -->
 
-Checked in the code, not guessed:
+---
 
-- `src/auth.ts:43`: `if (!user.emailVerified) throw new EmailNotVerifiedError()`
-- `src/app/api/auth/register/route.ts:48` (the unverified-duplicate 409) and `:69`
-  (`issueVerificationEmail`). The response's `emailSent` needs a sibling such as
-  `verificationRequired`, so `RegisterForm` knows which toast to show and does not
-  treat "no email sent" as a failure
-- `src/app/api/auth/resend-verification/route.ts:31`: skip the send. Keep the
-  identical `{ success: true }` answer
-- `src/components/auth/SignInForm.tsx:62`: the "Send it again" link. `/sign-in` is
-  a server page, so it can read the flag and pass it down as a prop
-- `/verify-email` can stay working when off. An old link still verifying the
-  account is harmless
-
-### Design decisions (recommended defaults, to confirm on `start`)
-
-- **Leave `emailVerified` unset when off; do not stamp it with `new Date()`.**
-  Stamping would make the column record a verification that never happened. Turn
-  the flag back on and those accounts would pass as verified forever. If the
-  check is skipped instead, re-enabling just puts them back behind verification,
-  and they can recover through the existing resend flow. The cost: turning the
-  flag on locks those users out until they verify.
-- **Default when unset: enabled.** A missing variable then fails safe, and
-  production keeps verifying unless someone opts out on purpose. Only the literal
-  `"false"` disables it, so a typo cannot quietly turn it off. Dev sets
-  `EMAIL_VERIFICATION_ENABLED=false` in `.env`.
-- **Not `NEXT_PUBLIC_`.** Next inlines public vars at build time, so flipping the
-  flag would need a rebuild. Every consumer here is server-side or gets the value
-  as a prop, so a plain server var is read per request. A restart is still
-  needed, because `.env` is loaded at boot.
-- `next start` loads `.env.production`, so the flag has to be set there too for a
-  production-build check. Production is off limits, so that file is not edited
-  without asking.
-
-### Alternatives considered
-
-- **An allowlist** (`EMAIL_VERIFICATION_BYPASS=me@x.com,…`): more targeted, but it
-  still blocks every other real user, which is the actual problem.
-- **Auto-disable when `EMAIL_FROM` is `@resend.dev`**: no new variable, but it is
-  magic, and it breaks the moment someone tests with the sandbox sender on
-  purpose.
-- **A database or admin toggle**: changes at runtime, but there is no admin UI and
-  this is temporary until a domain is linked. Overkill.
-
-### Out of scope
-
-Linking a domain to Resend, and the phase 4 hardening list (rate limiting, the
-`P2002` race, the password length cap, `authorize` timing).
+Previous feature (completed) — Email Verification Toggle: the
+`EMAIL_VERIFICATION_ENABLED` server env flag switches email verification off
+while Resend has no domain linked. Outcome in the History below.
 
 ---
 
@@ -1003,6 +944,13 @@ Open questions:
   `next dev` with a bogus token: the page renders "Link invalid or expired" plus
   "Go to sign in", and no "Send a new verification email". `tsc --noEmit` and lint
   green.
+- 2026-10-04 — Email Verification Toggle completed and merged into `main`
+  (`fab863d`, fast-forward); branch `feature/email-verification-toggle` deleted.
+  `npm run build` and lint green after the `/verify-email` fix. `.env` has the flag
+  off; `.env.production` was not touched, so a production deploy keeps verifying.
+  **Still open:** linking a domain to Resend (then the flag can go back on), and
+  the phase 4 hardening list. `next.config.ts` still carries the author's
+  uncommitted edits.
 
 Left undone by the database feature:
 
