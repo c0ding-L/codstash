@@ -13,10 +13,12 @@ const initialState: SignInState = { error: null, email: "", unverified: false };
 export function SignInForm({
   callbackUrl,
   initialError,
+  verificationEnabled,
 }: Readonly<{
   callbackUrl: string;
   /** From a `?error=` redirect, e.g. a failed GitHub sign-in. */
   initialError: string | null;
+  verificationEnabled: boolean;
 }>) {
   const [state, formAction, pending] = useActionState(signInWithCredentials, initialState);
   const emailRef = useRef<HTMLInputElement>(null);
@@ -59,7 +61,7 @@ export function SignInForm({
         </Button>
       </form>
 
-      {state.unverified ? null : (
+      {!verificationEnabled || state.unverified ? null : (
         <div className="-mt-1 text-center">
           <ResendVerificationButton
             getEmail={() => emailRef.current?.value ?? ""}

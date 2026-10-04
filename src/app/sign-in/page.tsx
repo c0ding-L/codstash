@@ -2,6 +2,7 @@ import { connection } from "next/server";
 
 import { AuthCard } from "@/components/auth/AuthCard";
 import { SignInForm } from "@/components/auth/SignInForm";
+import { isEmailVerificationEnabled } from "@/lib/email-verification-flag";
 
 export default async function SignInPage({
   searchParams,
@@ -17,6 +18,7 @@ export default async function SignInPage({
     <AuthCard title="Sign in to CodStash" description="Use your email and password, or GitHub.">
       <SignInForm
         callbackUrl={callbackUrl ?? "/dashboard"}
+        verificationEnabled={isEmailVerificationEnabled()}
         initialError={error ? "Sign in failed. Check your details and try again." : null}
       />
     </AuthCard>

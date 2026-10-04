@@ -1,16 +1,81 @@
-# Current Feature
+# Current Feature: Email Verification Toggle
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+Make email verification something you can switch off. Resend has no domain linked
+yet, so `onboarding@resend.dev` only delivers to the Resend account's own address.
+That means nobody else can finish registering.
+
+- One server-side env flag, `EMAIL_VERIFICATION_ENABLED`, read in one place
+  (`src/lib/email-verification-flag.ts` or similar), not scattered through
+  `process.env` reads
+- **Off:** registration sends no email, and the account can sign in straight away.
+  `authorize` skips the `emailVerified` check, and the register page toasts
+  "Account created. You can sign in now." instead of "Check your email"
+- **Off:** no verification UI. The sign-in form's "Send it again" link and the
+  `EMAIL_NOT_VERIFIED` 409 branch with its resend button go away, and
+  `POST /api/auth/resend-verification` sends nothing
+- **On:** behaviour is exactly what phase 4 shipped
+- `.env.example` documents the flag (it is gitignored, so only on disk)
+- `npm run build`, `npx tsc --noEmit` and `npm run lint` green; checked in a
+  browser with the flag both off and on
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+### Where the flag has to be honoured
+
+Checked in the code, not guessed:
+
+- `src/auth.ts:43`: `if (!user.emailVerified) throw new EmailNotVerifiedError()`
+- `src/app/api/auth/register/route.ts:48` (the unverified-duplicate 409) and `:69`
+  (`issueVerificationEmail`). The response's `emailSent` needs a sibling such as
+  `verificationRequired`, so `RegisterForm` knows which toast to show and does not
+  treat "no email sent" as a failure
+- `src/app/api/auth/resend-verification/route.ts:31`: skip the send. Keep the
+  identical `{ success: true }` answer
+- `src/components/auth/SignInForm.tsx:62`: the "Send it again" link. `/sign-in` is
+  a server page, so it can read the flag and pass it down as a prop
+- `/verify-email` can stay working when off. An old link still verifying the
+  account is harmless
+
+### Design decisions (recommended defaults, to confirm on `start`)
+
+- **Leave `emailVerified` unset when off; do not stamp it with `new Date()`.**
+  Stamping would make the column record a verification that never happened. Turn
+  the flag back on and those accounts would pass as verified forever. If the
+  check is skipped instead, re-enabling just puts them back behind verification,
+  and they can recover through the existing resend flow. The cost: turning the
+  flag on locks those users out until they verify.
+- **Default when unset: enabled.** A missing variable then fails safe, and
+  production keeps verifying unless someone opts out on purpose. Only the literal
+  `"false"` disables it, so a typo cannot quietly turn it off. Dev sets
+  `EMAIL_VERIFICATION_ENABLED=false` in `.env`.
+- **Not `NEXT_PUBLIC_`.** Next inlines public vars at build time, so flipping the
+  flag would need a rebuild. Every consumer here is server-side or gets the value
+  as a prop, so a plain server var is read per request. A restart is still
+  needed, because `.env` is loaded at boot.
+- `next start` loads `.env.production`, so the flag has to be set there too for a
+  production-build check. Production is off limits, so that file is not edited
+  without asking.
+
+### Alternatives considered
+
+- **An allowlist** (`EMAIL_VERIFICATION_BYPASS=me@x.com,…`): more targeted, but it
+  still blocks every other real user, which is the actual problem.
+- **Auto-disable when `EMAIL_FROM` is `@resend.dev`**: no new variable, but it is
+  magic, and it breaks the moment someone tests with the sandbox sender on
+  purpose.
+- **A database or admin toggle**: changes at runtime, but there is no admin UI and
+  this is temporary until a domain is linked. Overkill.
+
+### Out of scope
+
+Linking a domain to Resend, and the phase 4 hardening list (rate limiting, the
+`P2002` race, the password length cap, `authorize` timing).
 
 ---
 
@@ -910,6 +975,34 @@ Open questions:
   backfilled and production still holds `phase2@test.dev`, `uitest@test.dev`,
   `numtest@test.dev`; `/profile` returns 404; `.env.example` is untracked.
   `next.config.ts` still carries the author's uncommitted edits.
+- 2026-10-04 — Started Email Verification Toggle on branch
+  `feature/email-verification-toggle`, with the recommended defaults: the check is
+  skipped rather than `emailVerified` stamped, and verification stays on unless the
+  value is exactly `"false"`. `src/lib/email-verification-flag.ts` holds
+  `isEmailVerificationEnabled()`. It is honoured in `authorize`, in the register
+  route (no send and no `EMAIL_NOT_VERIFIED` 409 when off, plus a new
+  `verificationRequired` field in the 201), in the resend route (answers
+  `{ success: true }` and does nothing), on `/sign-in` (a prop hides "Send it
+  again") and in `RegisterForm` ("You can sign in now."). `.env` has
+  `EMAIL_VERIFICATION_ENABLED=false`; `.env.example` documents it on disk.
+  `.env.production` was not touched, so production keeps verifying.
+- 2026-10-04 — Verified in a browser against `next dev` on the `.env` database
+  (`ep-little-snow`), not `next start`, which would have loaded `.env.production`.
+  **Off:** no resend link on `/sign-in`; registering toasts "You can sign in now."
+  and the account reaches `/dashboard`; a duplicate gets the plain 409; resend
+  answers `{ success: true }`; the row has `emailVerified` null and no token was
+  created. **On** (`EMAIL_VERIFICATION_ENABLED=true` in the server's environment):
+  the resend link is back, the toast says "Check your email", sign-in is refused
+  with "Verify your email first", a duplicate gets `EMAIL_NOT_VERIFIED`, and the
+  account created while the flag was off is now refused too. Both test users and
+  their token were deleted afterwards (re-query: 0). `tsc --noEmit`, lint and
+  `npm run build` green; `.next` deleted.
+- 2026-10-04 — Review gap fixed: `/verify-email` offered a resend button on an
+  invalid link even with the flag off, and that button would report success while
+  sending nothing. It now shows "Go to sign in" when the flag is off. Checked on
+  `next dev` with a bogus token: the page renders "Link invalid or expired" plus
+  "Go to sign in", and no "Send a new verification email". `tsc --noEmit` and lint
+  green.
 
 Left undone by the database feature:
 

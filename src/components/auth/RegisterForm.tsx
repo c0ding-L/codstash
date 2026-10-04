@@ -43,12 +43,22 @@ export function RegisterForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password, confirmPassword }),
       });
-      const body: { success?: boolean; error?: string; code?: string; emailSent?: boolean } =
-        await response.json().catch(() => ({}));
+      const body: {
+        success?: boolean;
+        error?: string;
+        code?: string;
+        verificationRequired?: boolean;
+        emailSent?: boolean;
+      } = await response.json().catch(() => ({}));
 
       if (!response.ok || !body.success) {
         setError(body.error ?? "Could not create the account. Try again.");
         if (body.code === "EMAIL_NOT_VERIFIED") setUnverifiedEmail(email);
+        return;
+      }
+      if (body.verificationRequired === false) {
+        toast.success("Account created. You can sign in now.");
+        router.push("/sign-in");
         return;
       }
       if (body.emailSent === false) {

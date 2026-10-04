@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { AuthCard } from "@/components/auth/AuthCard";
 import { ResendVerificationButton } from "@/components/auth/ResendVerificationButton";
 import { buttonVariants } from "@/components/ui/button";
+import { isEmailVerificationEnabled } from "@/lib/email-verification-flag";
 import { verifyEmailToken } from "@/lib/verification";
 
 export default async function VerifyEmailPage({
@@ -33,7 +34,7 @@ export default async function VerifyEmailPage({
       title="Link invalid or expired"
       description="This verification link was already used, has expired, or is not valid."
     >
-      {typeof email === "string" && email ? (
+      {isEmailVerificationEnabled() && typeof email === "string" && email ? (
         <ResendVerificationButton email={email} />
       ) : (
         <Link href="/sign-in" className={buttonVariants({ variant: "outline", size: "lg" })}>

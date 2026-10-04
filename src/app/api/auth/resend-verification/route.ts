@@ -1,5 +1,6 @@
 import { after, NextResponse } from "next/server";
 
+import { isEmailVerificationEnabled } from "@/lib/email-verification-flag";
 import { issueVerificationEmail } from "@/lib/verification";
 import { prisma } from "@/lib/prisma";
 
@@ -23,6 +24,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: "Email is not valid." }, { status: 400 });
   }
   const normalizedEmail = email.trim().toLowerCase();
+  if (!isEmailVerificationEnabled()) return NextResponse.json({ success: true });
 
   after(async () => {
     try {
