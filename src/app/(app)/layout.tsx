@@ -4,11 +4,13 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 /**
- * Dashboard shell. SidebarProvider owns the collapsed/expanded state and
- * swaps the sidebar for a drawer on mobile; TooltipProvider is required by the
- * tooltips SidebarMenuButton shows while collapsed.
+ * App shell for every signed-in page (`/dashboard`, `/profile`). `(app)` is a
+ * route group, so it adds no URL segment. SidebarProvider owns the
+ * collapsed/expanded state and swaps the sidebar for a drawer on mobile;
+ * TooltipProvider is required by the tooltips SidebarMenuButton shows while
+ * collapsed.
  */
-export default function DashboardLayout({
+export default function AppLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;

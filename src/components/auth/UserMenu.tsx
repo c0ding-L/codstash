@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronsUpDown, LogOut } from "lucide-react";
+import { ChevronsUpDown, LogOut, UserRound } from "lucide-react";
 
 import { signOutAction } from "@/actions/auth";
 import { UserAvatar } from "@/components/auth/UserAvatar";
@@ -9,6 +9,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarMenuButton } from "@/components/ui/sidebar";
@@ -21,7 +22,7 @@ interface UserMenuProps {
 
 /**
  * Sidebar footer. The avatar links to the profile; the name opens the menu
- * that holds Sign out.
+ * that holds Profile and Sign out.
  */
 export function UserMenu({ name, email, image }: Readonly<UserMenuProps>) {
   const label = name ?? email ?? "Account";
@@ -51,6 +52,11 @@ export function UserMenu({ name, email, image }: Readonly<UserMenuProps>) {
           <ChevronsUpDown aria-hidden className="ml-auto" />
         </DropdownMenuTrigger>
         <DropdownMenuContent side="top" align="start" className="min-w-48">
+          <DropdownMenuItem render={<Link href="/profile" />}>
+            <UserRound aria-hidden />
+            Profile
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => signOutAction()}>
             <LogOut aria-hidden />
             Sign out

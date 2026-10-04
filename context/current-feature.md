@@ -1,16 +1,116 @@
-# Current Feature
+# Current Feature: Profile Page
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+Spec: `@context/features/profile-spec.md`. A `/profile` page with the signed-in
+user's info, usage stats, change password and delete account.
+
+- `/profile` exists (the sidebar footer avatar already links to it and gets a
+  404) and is **protected**: an anonymous request is redirected to `/sign-in`
+  with a `callbackUrl`, like `/dashboard`
+- **User info:** name, email, avatar (the GitHub image if there is one,
+  otherwise initials, through the existing `UserAvatar`), and the account
+  creation date (`User.createdAt`)
+- **Usage stats:** total items, total collections, and a count for each of the
+  7 system types (snippets, prompts, notes, commands, links, files, images),
+  zeros included
+- **Change password:** only shown when `User.password` is set (email/password
+  accounts). Fields: current password, new password, confirm. The current one is
+  checked with bcrypt, and the new one follows the registration rules
+  (min 8, must match)
+- **Delete account:** a confirmation dialog, then the user and everything they
+  own are deleted, the session is ended, and they land on `/sign-in`
+- Async server page with `await connection()`, server actions in
+  `src/actions/profile.ts` returning `{ success, error }` (no `data`: neither
+  action has anything to return), queries in `src/lib/db/`
+- `npm run build`, `npx tsc --noEmit` and `npm run lint` green; checked in a
+  browser
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+### Decided (author, 2026-10-04)
+
+1. **Inside the app shell**: `src/app/dashboard/` moves under the route group
+   `src/app/(app)/`, whose `layout.tsx` holds the sidebar and top bar, with
+   `dashboard/` and `profile/` beneath it. URLs unchanged.
+2. **Stats come from the session user** (`auth()`), not `getDemoUserId()`.
+3. **The dashboard keeps the demo shim for now.** The author will ask for its
+   removal separately. Read as also keeping the demo account undeletable: the
+   shim throws without it, so the delete action refuses `demo@codstash.io`.
+4. **The delete dialog asks for the email to be typed.**
+5. **Add Zod** (`zod`) and validate the profile actions' inputs with it, per
+   `coding-standards.md`. The existing auth routes keep their hand-written
+   checks; converting them is out of scope.
+
+The options as they were presented:
+
+
+1. **Where the page lives: inside the dashboard shell, through a route group
+   (recommended).** Move `src/app/dashboard/` under `src/app/(app)/`, so
+   `(app)/layout.tsx` holds the sidebar + top bar shell, with `dashboard/` and
+   `profile/` beneath it. URLs do not change. This is the backlog's planned fix
+   for the 404 `/items/*` and `/collections` links, so it pays off later too. The
+   cost is a file move of `dashboard/layout.tsx`, `page.tsx` and `error.tsx`.
+   *Alternative:* a standalone `src/app/profile/` in an `AuthCard`-style page with
+   no sidebar. Smaller, but the profile then looks detached from the app.
+2. **Stats use the session user, not the demo shim.** Every dashboard query
+   still goes through `getDemoUserId()`, so a new user sees the demo account's
+   data on `/dashboard`. The profile is about *this* account, so it reads
+   `auth()`. Consequence: a fresh account shows 0 items on `/profile` while
+   `/dashboard` shows 18. That is correct, but it looks inconsistent until the
+   shim is removed (a separate feature).
+3. **The demo account (`demo@codstash.io`) cannot be deleted (recommended).**
+   `getDemoUserId()` throws when it is missing, so deleting it breaks
+   `/dashboard` for everyone, and its password is public. The delete action
+   refuses it with a clear error, and the button is disabled with an
+   explanation. Changing its password stays allowed. *Alternative:* allow both,
+   and re-run `npm run db:seed` after.
+4. **The delete dialog asks for the email to be typed (recommended).** It is a
+   cascade that cannot be undone. Typing the address is a stronger guard than a
+   single "Delete" click, and it works for GitHub users, who have no password to
+   re-enter. *Alternative:* a plain confirm/cancel dialog, which is what the spec
+   literally says.
+5. **Validation: keep the hand-written checks used by the auth routes.**
+   `coding-standards.md` says "Validate all inputs with Zod", but Zod is **not
+   installed** and no existing code uses it. Following the standard means adding
+   the dependency in this feature. Both are reasonable; this is your call.
+
+### Implementation notes (checked in the code)
+
+- **`src/proxy.ts` only matches `/dashboard/:path*`.** `/profile` must be added
+  to the matcher, or the page is public. The page also calls `auth()` and
+  redirects when there is no session, so it does not depend on the proxy alone.
+- **Deleting a user is not a plain `user.delete`.** `Item.typeId` is
+  `onDelete: Restrict`, and the user's custom `ItemType`s cascade at the same
+  time as their items. `scripts/delete-all-users-except-demo.ts` deletes items
+  first for that reason. The action does the same in a transaction: items, then
+  the user (accounts, sessions, collections, tags and types cascade).
+  `VerificationToken` has no foreign key, so the address's verification and
+  `reset@` tokens are deleted explicitly.
+- **JWT sessions outlive the row.** After the delete, the action calls
+  `signOut`, but a session on another device stays valid until it expires, with
+  an id that no longer exists. `/profile` treats a session whose user is
+  missing as signed out. The dashboard still runs on the demo shim, so it does
+  not notice.
+- **Stats queries:** `item.count`, `collection.count`, and one `item.groupBy` on
+  `typeId`, mapped onto the system types from `getItemTypes()` so the 7 rows are
+  always present, in the sidebar order (`sidebarTypes` + Commands).
+- **Avatar:** reuse `UserAvatar` at a larger size. GitHub sets `User.image`
+  through the adapter, and initials come from `initialsFromName`.
+- **No dialog component yet.** Add shadcn's `alert-dialog`. Last time, the
+  shadcn registry files needed fixing by hand (a stray `cn` npm package,
+  `next-themes`), so check what it generates.
+- Changing the password does not sign out other sessions (JWT, no
+  `passwordChangedAt`). That limitation was already noted for the reset flow.
+
+### Out of scope
+
+Editing name or email, uploading an avatar, billing / Pro status, removing the
+demo shim from the dashboard, and session revocation.
 
 ---
 
@@ -1035,6 +1135,102 @@ Open questions:
   reset (needs a `passwordChangedAt` migration), rate limiting beyond the
   per-address throttle, the phase 4 hardening list. `next.config.ts` still
   carries the author's uncommitted edits.
+- 2026-10-04 — Started Profile Page on branch `feature/profile-page`, with the
+  author's decisions (see the Notes). `src/app/dashboard/` moved under the route
+  group `src/app/(app)/`: `layout.tsx` (renamed `AppLayout`) is now the shell for
+  `dashboard/` and the new `profile/`, URLs unchanged, history kept by `git mv`.
+  `src/proxy.ts` matches `/profile/:path*` too. `zod@4.6.5` installed.
+  `alert-dialog` added through shadcn, and the same registry bug as before came
+  back: it imported `cn` from an npm package named `cn` and installed it. The
+  import was pointed at `@/lib/utils` and the package uninstalled. shadcn's
+  prompt to overwrite `button.tsx` was answered no.
+- 2026-10-04 — Data: `src/lib/db/profile.ts` holds `getProfile` (returns
+  `hasPassword`, never the hash; `null` when the row is gone) and
+  `getProfileStats` (two counts plus one `item.groupBy` on `typeId`, folded onto
+  the 7 system slugs in the spec's order; a custom type that reuses a system slug
+  adds to that row). Actions in `src/actions/profile.ts`, validated with Zod and
+  returning `{ success, error }`: `changePassword` (bcrypt check of the current
+  password, 12 rounds, and drops pending `reset@` tokens) and `deleteAccount`
+  (refuses `DEMO_USER_EMAIL`, now exported from `collections.ts`; requires the
+  typed email; one transaction deleting items, then the address's tokens, then
+  the user; `signOut` after, outside the try). The page reads `auth()` and
+  redirects to `/sign-in` when the session has no user row.
+- 2026-10-04 — Verified in a browser (Playwright script) against `next dev` on
+  the `.env` database. An anonymous `/profile` gets a 307 to
+  `/sign-in?callbackUrl=%2Fprofile`. A test user seeded with 2 snippets, 1 link,
+  1 item of a custom `recipe` type and 1 collection showed name, email, "Member
+  since October 4, 2026", initials `PT`, Items 4, Collections 1, and the 7 rows
+  `Snippets 2 / Prompts 0 / Notes 0 / Commands 0 / Links 1 / Files 0 / Images 0`.
+  Change password: a wrong current password, a mismatch and a short one each
+  showed their error; the right one showed the "Password changed." toast,
+  cleared the fields and removed the pending reset token, and the new password
+  signed in. Delete: the button stays disabled while the field is empty or holds
+  another address, the field clears on reopen, and matching is case- and
+  space-insensitive. Deleting landed on `/sign-in`, and left 0 items, 0
+  collections, 0 custom types, 0 tokens and no orphaned rows (so the `Restrict`
+  path held). A second browser still holding the deleted user's JWT is sent to
+  `/sign-in` from `/profile`. Demo account: Items 18, Collections 5, rows
+  4/3/0/5/6/0/0 (sum 18), delete disabled with the explanation. `/dashboard`
+  renders in the shell, and the sidebar avatar opens `/profile` with the sidebar
+  present. No browser console errors. `tsc --noEmit`, lint and `npm run build`
+  green; `.next` deleted.
+- 2026-10-04 — Review fix: the typed-email check lowercased only the typed side.
+  The adapter stores GitHub emails as GitHub returns them, so an address with
+  capitals could never be deleted. Both the dialog and `deleteAccount` now
+  lowercase the stored address too. Also added `(app)/profile/error.tsx` over
+  `ErrorFallback`, so a failing profile query keeps the shell, as
+  `dashboard/error.tsx` does. Verified with a passwordless user stored as
+  `Gh.Test@Example.com`, signed in through a session cookie minted with
+  `encode` from `@auth/core/jwt` (salt and cookie name `authjs.session-token`):
+  `/profile` shows "You sign in with GitHub, so there is no password to change."
+  and no form; typing `gh.test@example.com` enables the delete, which removed the
+  row and landed on `/sign-in`. `tsc --noEmit`, lint and `npm run build` green
+  again. **Not verified:** the server-side demo refusal in `deleteAccount`, since
+  the button is disabled and only the client guard was exercised; a real GitHub
+  OAuth sign-in.
+- 2026-10-04 — Author feedback. (1) The sidebar user dropdown now has a
+  **Profile** item above **Sign out**, with a separator: `DropdownMenuItem`
+  rendered as a `next/link` (`render={<Link href="/profile" />}`), so it is an
+  `<a href="/profile">` with client navigation and the menu closes on click.
+  (2) The page was pinned to the left by `max-w-3xl`, leaving a large empty area
+  on the right. It now uses the full width: the identity card spans it, and
+  from `xl` up Usage and Account sit in two columns (`items-start`, so the shorter
+  column does not stretch); below `xl` they stack. The password form lost its
+  `max-w-sm` so it fills its card. Checked in a browser as the demo user: the
+  menu lists `Profile`, `Sign out`, and the item navigates to `/profile` and
+  closes; at 1440 px the main area is 1184 px wide with the two sections at
+  x=280 and x=864 (552 px each); at 1100 px they stack at 796 px. No console
+  errors. `tsc --noEmit`, lint and `npm run build` green; `.next` deleted.
+- 2026-10-04 — Author feedback: the password form should not sit open on the
+  page. It is now a **Change password** button that opens a modal
+  (`ChangePasswordDialog`, replacing `ChangePasswordForm`), built on shadcn's
+  `dialog`, which had the same `cn` registry bug as `alert-dialog` (fixed the same
+  way, the stray package uninstalled again, `button.tsx` overwrite refused). The
+  form lives inside the popup, so it unmounts on close and every opening starts
+  empty; on success the modal closes and the toast shows. Checked in a browser
+  with a test account: no password inputs on the page until it opens; a wrong
+  current password shows its error inside the modal; Cancel and Escape both
+  close it; reopening is empty with no error; the right password closes it,
+  shows "Password changed." and changes the stored hash. The modal is fully
+  opaque once its open animation ends (an earlier screenshot caught it
+  mid-fade). Test user deleted. `tsc --noEmit`, lint and `npm run build` green;
+  `.next` deleted.
+- 2026-10-04 — `/feature review`: all Goals met, no scope creep. Three fixes,
+  applied at the author's request. (1) `ChangePasswordDialog` passed a new
+  `onSuccess` arrow on every render into the success effect's dependencies. Only
+  one toast showed, but only because the author's uncommitted
+  `reactCompiler: true` memoises it. `onSuccess` is now a `useCallback`. (2)
+  `DeleteAccountDialog` kept its action state outside the popup, so a server
+  error stayed visible after closing and reopening. The form is now a
+  `DeleteAccountForm` inside the popup, like the password modal, which also
+  replaces the manual `onOpenChange` reset. (3) The actions built token
+  identifiers from `user.email` as stored, while `password-reset.ts` lowercases
+  them; both actions now lowercase. Re-checked in a browser: delete (field
+  empty on reopen, disabled until it matches, the account, its 4 items,
+  collection, custom type and seeded `reset@` token all gone), and the password
+  modal flow unchanged. `tsc --noEmit`, lint and `npm run build` green; `.next`
+  deleted. The author asked for `context/features/profile-spec.md` to go into
+  the feature commit.
 
 Left undone by the database feature:
 

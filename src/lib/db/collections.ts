@@ -11,7 +11,7 @@ import { prisma } from "@/lib/prisma";
  * This is the single seam to delete once auth lands: the queries below take a
  * `userId` and know nothing about the demo user.
  */
-const DEMO_USER_EMAIL = "demo@codstash.io";
+export const DEMO_USER_EMAIL = "demo@codstash.io";
 
 // `cache` memoises per request, so the five dashboard components that each ask
 // for the user share one query per render. It never outlives the request.
