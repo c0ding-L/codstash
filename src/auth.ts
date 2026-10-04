@@ -1,6 +1,6 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
-import NextAuth from "next-auth";
+import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 
 import authConfig from "@/auth.config";
@@ -51,6 +51,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
+  logger: {
+    // A refused sign-in (wrong password, unverified email) is handled by the
+    // form, so it is not logged as a server error. Everything else still is.
+    error(error) {
+      if (error instanceof CredentialsSignin) return;
+      console.error("[auth][error]", error);
+    },
+  },
   callbacks: {
     // `user` is only present on the sign-in request, so copy the id into the
     // token then; later requests read it back from the token.

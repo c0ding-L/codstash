@@ -7,7 +7,7 @@ const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 const RESEND_INTERVAL_MS = 60 * 1000;
 
 /** Only the hash is stored, so a database read does not yield a usable link. */
-function hashToken(token: string) {
+export function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
 

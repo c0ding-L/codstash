@@ -31,6 +31,9 @@ export function SignInForm({
         <label className="grid gap-1.5 text-sm font-medium">
           Email
           <Input
+            // Remounted with the returned email rather than changing the
+            // default value of a mounted field, which Base UI warns about.
+            key={state.email}
             ref={emailRef}
             name="email"
             type="email"
@@ -40,16 +43,27 @@ export function SignInForm({
             aria-invalid={error ? true : undefined}
           />
         </label>
-        <label className="grid gap-1.5 text-sm font-medium">
-          Password
+        <div className="grid gap-1.5">
+          <div className="flex items-center justify-between text-sm">
+            <label htmlFor="sign-in-password" className="font-medium">
+              Password
+            </label>
+            <Link
+              href="/forgot-password"
+              className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+            >
+              Forgot password?
+            </Link>
+          </div>
           <Input
+            id="sign-in-password"
             name="password"
             type="password"
             autoComplete="current-password"
             required
             aria-invalid={error ? true : undefined}
           />
-        </label>
+        </div>
         {error ? (
           <p role="alert" className="text-sm text-destructive">
             {error}

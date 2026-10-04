@@ -1,16 +1,103 @@
-# Current Feature
+# Current Feature: Forgot Password
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+A credentials user who forgot their password can set a new one through an
+emailed, single-use link. Tokens live in the existing `VerificationToken` table,
+with no migration.
+
+- A **"Forgot password?"** link on `/sign-in`, next to the password field, going
+  to `/forgot-password`
+- `/forgot-password`: an email field. It submits to
+  `POST /api/auth/forgot-password`, which **always answers the same way** and
+  does the lookup and send in `after()`, as the resend route does. That way
+  neither the body nor the timing shows whether the account exists
+- A link is only sent to an existing user **with a password**. GitHub-only
+  accounts get nothing, behind the same generic answer
+- Token: 32 random bytes in the link, only the SHA-256 hash stored, **1 h**
+  expiry, single use (consumed by a `deleteMany` and its `count`), earlier reset
+  tokens for the address replaced, throttled to one email per address per minute
+- `/reset-password?token=…&email=…`: a dynamic server page that checks the token
+  **without consuming it**. Valid: new password + confirm. Invalid or expired:
+  "Link invalid or expired" with a link back to `/forgot-password`
+- `POST /api/auth/reset-password`: validates the input (min 8 characters,
+  passwords match, as at registration), consumes the token, hashes at 12 rounds,
+  updates `User.password`, then redirects to `/sign-in` with a green toast
+  "Password updated. You can sign in now."
+- A `PasswordResetEmail` React Email template beside `VerificationEmail`
+- `npm run build`, `npx tsc --noEmit` and `npm run lint` green; checked in a
+  browser
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+### Token storage: namespace the identifier (key decision)
+
+Verification tokens use `identifier = <lowercased email>`. Reset tokens **must
+not share that identifier**, or:
+
+- `verifyEmailToken` looks up by `identifier + hash`, so it would accept a reset
+  token as an email verification (and the reverse)
+- issuing one kind of token `deleteMany`s the other kind for the same address
+- the verification throttle's `findFirst({ where: { identifier } })` would read a
+  reset token's expiry
+
+Proposal: `identifier = "reset@" + email` (e.g. `reset@ana@x.com`). The prefix
+has to be something no accepted address can produce. `EMAIL_PATTERN` allows
+exactly one `@` and no whitespace, but `:` and `|` are allowed. So `reset:` would
+collide with a registered `reset:ana@x.com`, while a second `@` never can. It
+stays inside `@@id([identifier, token])`, and the existing verification code
+needs no change. The `email` query parameter in the link stays the bare
+address. The prefix is added server-side.
+
+### Design decisions (recommended defaults, to confirm on `start`)
+
+- **An unverified user who resets is marked verified.** Clicking a link sent to
+  the inbox proves ownership, exactly as `/verify-email` does. Otherwise they
+  would set a password and still be refused at sign-in. Pending verification
+  tokens for that address are deleted at the same time.
+- **The email verification flag does not gate this.** The reset needs an email
+  to work at all. With the flag off, the feature still sends, which means it
+  only reaches the Resend account's own address until a domain is linked (see
+  below).
+- **Shared send helper.** `src/lib/email.tsx` gains `sendPasswordResetEmail`
+  over one private `sendEmail({ to, subject, element })`, so the Resend/render
+  code is not duplicated. That is a small refactor of `sendVerificationEmail`
+  with unchanged behaviour.
+- **Token code in `src/lib/password-reset.ts`**, mirroring `verification.ts`
+  (`issuePasswordResetEmail`, `isPasswordResetTokenValid`,
+  `consumePasswordResetToken`). `hashToken` moves to a shared spot, or is
+  exported from `verification.ts`, rather than being copied.
+- **API route, not a server action**, for the reset submit. It matches
+  `/api/auth/register` and the resend route; the form posts JSON and redirects
+  on success, as `RegisterForm` does.
+
+### Constraints and consequences
+
+- **Delivery:** Resend still has no linked domain, so `onboarding@resend.dev`
+  only delivers to the Resend account's own address. Others will not get the
+  email until a domain is linked. The browser check therefore issues a token
+  with a script against the `.env` database (only the hash is stored, so the link
+  cannot be read back from the table) or uses the account owner's inbox.
+- **Existing sessions survive a reset.** Sessions are JWTs with no server-side
+  record, so a reset does not sign out other devices. Revoking them would need a
+  `passwordChangedAt` column (a migration) checked in the `jwt` callback.
+  **Out of scope unless asked.**
+- `next start` loads `.env.production`, so browser checks run on `next dev`
+  against `.env`, or pass `DATABASE_URL` explicitly. Production is off limits.
+- `src/proxy.ts` matches `/dashboard/:path*` only, so the two new pages are
+  public with no change.
+- No `APP_URL` → nothing is sent, and the failure is logged, same as
+  verification.
+
+### Out of scope
+
+A signed-in "change password" form (`/profile` is still a 404), session
+revocation (above), rate limiting beyond the per-address throttle, and the
+phase 4 hardening list.
 
 ---
 
@@ -951,6 +1038,72 @@ Open questions:
   **Still open:** linking a domain to Resend (then the flag can go back on), and
   the phase 4 hardening list. `next.config.ts` still carries the author's
   uncommitted edits.
+- 2026-10-04 — Started Forgot Password on branch `feature/forgot-password`, with
+  the recommended defaults. Reset tokens go in `VerificationToken` under
+  `identifier = "reset@" + email`. `src/lib/password-reset.ts` holds
+  `issuePasswordResetEmail` (1 h TTL, one email per address per minute),
+  `isPasswordResetTokenValid` (read-only, for the page) and `resetPassword`
+  (consumes the token with `deleteMany`, then sets the hash and, for an
+  unverified account, `emailVerified`, and drops its verification tokens).
+  `hashToken` is exported from `verification.ts` rather than copied.
+  `src/lib/email.tsx` now sends both emails through one private `sendEmail`, and
+  the template styles moved to `src/emails/styles.ts`, shared by
+  `VerificationEmail` and the new `PasswordResetEmail`. Routes:
+  `POST /api/auth/forgot-password` (same answer for any address, lookup and
+  send in `after()`) and `POST /api/auth/reset-password` (400 with code
+  `INVALID_TOKEN` on a bad link). Pages: `/forgot-password` and
+  `/reset-password`, both dynamic, with `ForgotPasswordForm` /
+  `ResetPasswordForm` client leaves. `SignInForm` has a "Forgot password?" link
+  beside the password label.
+- 2026-10-04 — Verified in a browser (Playwright script) against `next dev` on
+  the `.env` database (`ep-little-snow`), with a user registered as
+  `delivered+fpreset@resend.dev` so Resend accepted the real send. The sign-in
+  link opens `/forgot-password`; the request created exactly one
+  `reset@…` token, and a second request a moment later kept it (throttle); an
+  unknown address got the identical `200 {"success":true}`. A bogus, an expired
+  and a verification token on `/reset-password` and a reset token on
+  `/verify-email` all show "Link invalid or expired". Opening a valid link twice
+  did not consume it; mismatched and short passwords were refused in the form;
+  saving showed the "Password updated" toast on `/sign-in`, the hash changed,
+  the unverified account became verified and no tokens were left. The same link
+  then showed "Link invalid or expired" and the API answered `INVALID_TOKEN`; the
+  old password was refused and the new one reached `/dashboard`. A link consumed
+  while its page was open showed the error, the "Send a new reset link" link
+  and a disabled button. The test user was deleted (re-query: gone).
+  `tsc --noEmit`, lint and `npm run build` green; `.next` deleted. After the
+  `sendEmail` refactor, both `sendVerificationEmail` and `sendPasswordResetEmail`
+  were called directly to `delivered+…@resend.dev` and Resend accepted both
+  (`true`/`true`). `IssueResult` is now imported from `verification.ts` rather
+  than redeclared. **Not verified:** a real inbox (the email rendered by a mail
+  client, and its link clicked).
+- 2026-10-04 — The author tested it and received nothing. Cause, read from
+  Resend's own answer: a 403 `validation_error`, "You can only send testing emails
+  to your own email address (murid.dieng@gmail.com)". The only credentials
+  account in the `.env` database is `fallilou_yaram@gmail.com`, so Resend refused
+  the send (and the token was deleted, as designed), while `murid.dieng@gmail.com`
+  has no account, so nothing is sent to it. Not a code bug: to receive a reset
+  in dev, the account must use the Resend owner's address, or a domain must be
+  linked.
+- 2026-10-04 — UX fix from the same test: after submitting, the card still said
+  "Enter your email…" and the confirmation did not repeat the address. The page
+  description is now neutral ("We will email you a link to choose a new one."),
+  the confirmation reads "Check your inbox" with the submitted address, and a
+  "Use a different email" button brings the form back. `tsc --noEmit` and lint
+  green; not re-checked in a browser (the author's dev server holds `.next`).
+- 2026-10-04 — Console noise, added to this branch at the author's request. (1)
+  Auth.js logged every refused sign-in as `[auth][error] CredentialsSignin` with a
+  full stack. `src/auth.ts` now sets `logger.error` to skip `CredentialsSignin`
+  (which also covers `EmailNotVerifiedError`), and passes any other error to
+  `console.error`. The default logger is not exported, so its colour and
+  `[auth][cause]` formatting are not reproduced, but the error object with its
+  stack and cause still is. (2) Base UI warned that the default value of an
+  uncontrolled field changed when the sign-in form put the email back after a
+  failure; the email `Input` now has `key={state.email}`, so it is remounted
+  instead. Checked against the author's running dev server with two wrong-password
+  sign-ins on the demo account: the email is kept, 0 Base UI warnings. Control
+  run without the `key`: 1 warning, so the server had reloaded. The server-side log
+  change is only typechecked here; the author's terminal is what shows it.
+  `tsc --noEmit` and lint green.
 
 Left undone by the database feature:
 

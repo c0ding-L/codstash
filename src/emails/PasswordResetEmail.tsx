@@ -14,16 +14,16 @@ import {
 
 import { styles } from "@/emails/styles";
 
-interface VerificationEmailProps {
+interface PasswordResetEmailProps {
   name: string | null;
   url: string;
 }
 
-export function VerificationEmail({ name, url }: Readonly<VerificationEmailProps>) {
+export function PasswordResetEmail({ name, url }: Readonly<PasswordResetEmailProps>) {
   return (
     <Html lang="en">
       <Head />
-      <Preview>Confirm your email to activate your CodStash account</Preview>
+      <Preview>Reset your CodStash password</Preview>
       <Body style={styles.body}>
         <Container style={styles.card}>
           <Section>
@@ -32,22 +32,22 @@ export function VerificationEmail({ name, url }: Readonly<VerificationEmailProps
           </Section>
 
           <Heading as="h1" style={styles.heading}>
-            Verify your email
+            Reset your password
           </Heading>
           <Text style={styles.text}>{name ? `Hi ${name},` : "Hi,"}</Text>
           <Text style={styles.text}>
-            Thanks for signing up. Confirm your email address to activate your account and start
-            saving snippets, prompts, commands and notes.
+            Someone asked to reset the password for your CodStash account. Choose a new one with
+            the button below.
           </Text>
 
           <Section style={styles.buttonWrap}>
             <Button href={url} style={styles.button}>
-              Verify my email
+              Choose a new password
             </Button>
           </Section>
 
           <Text style={styles.small}>
-            This link works once and expires in 24 hours. If the button does not work, copy this
+            This link works once and expires in 1 hour. If the button does not work, copy this
             address into your browser:
           </Text>
           <Link href={url} style={styles.url}>
@@ -56,7 +56,8 @@ export function VerificationEmail({ name, url }: Readonly<VerificationEmailProps
 
           <Hr style={styles.hr} />
           <Text style={styles.footer}>
-            If you did not create a CodStash account, you can safely ignore this email.
+            If you did not ask for this, you can safely ignore this email. Your password stays the
+            same.
           </Text>
         </Container>
       </Body>
@@ -64,4 +65,4 @@ export function VerificationEmail({ name, url }: Readonly<VerificationEmailProps
   );
 }
 
-export default VerificationEmail;
+export default PasswordResetEmail;
