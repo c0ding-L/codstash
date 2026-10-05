@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useActionState, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { type ActionResult, changePassword } from "@/actions/profile";
@@ -21,9 +22,19 @@ const initialState: ActionResult = { success: false, error: null };
 
 export function ChangePasswordDialog() {
   const [open, setOpen] = useState(false);
-  // Stable, so the success effect below runs once per result rather than on
-  // every re-render while the popup animates closed.
-  const close = useCallback(() => setOpen(false), []);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  // A successful change redirects back here with this flag, which is the only
+  // way the re-issued session reaches the page.
+  const changed = searchParams.get("passwordChanged") === "1";
+  if (changed && open) setOpen(false);
+
+  useEffect(() => {
+    if (!changed) return;
+    toast.success("Password changed. Your other sessions were signed out.", { id: "password-changed" });
+    router.replace("/profile", { scroll: false });
+  }, [changed, router]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -34,20 +45,14 @@ export function ChangePasswordDialog() {
           <DialogDescription>Enter your current password, then choose a new one.</DialogDescription>
         </DialogHeader>
         {/* Inside the popup, so it unmounts on close and every opening starts empty. */}
-        <ChangePasswordForm onSuccess={close} />
+        <ChangePasswordForm />
       </DialogContent>
     </Dialog>
   );
 }
 
-function ChangePasswordForm({ onSuccess }: Readonly<{ onSuccess: () => void }>) {
+function ChangePasswordForm() {
   const [state, formAction, pending] = useActionState(changePassword, initialState);
-
-  useEffect(() => {
-    if (!state.success) return;
-    toast.success("Password changed.");
-    onSuccess();
-  }, [state, onSuccess]);
 
   return (
     <form action={formAction} className="grid gap-3">

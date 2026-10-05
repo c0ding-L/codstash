@@ -18,13 +18,15 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String    @unique
-  emailVerified DateTime?
-  image         String?
+  id                String    @id @default(cuid())
+  name              String?
+  email             String    @unique
+  emailVerified     DateTime?
+  image             String?
   // Null for OAuth-only users.
-  password      String?
+  password          String?
+  // Sessions signed in before this are ended by the `jwt` callback.
+  passwordChangedAt DateTime?
 
   isPro                Boolean @default(false)
   stripeCustomerId     String?

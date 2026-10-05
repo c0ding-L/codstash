@@ -2,15 +2,32 @@
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+Fix three findings from `docs/audit-results/AUTH_SECURITY_REVIEW.md`:
+
+- **Sessions survive a password change / reset (Medium).** Add
+  `User.passwordChangedAt`. The `jwt` callback stamps `authTime` at sign-in and,
+  on later calls, ends the session when the password changed after it (or the
+  user no longer exists). Change password re-issues the current session, so only
+  the other sessions end. Reset sets the column too.
+- **Register reveals existing emails (Medium).** Same status and body whether or
+  not the email is registered. An existing account gets an email instead: a new
+  verification link if it is unverified, otherwise an "account already exists"
+  email pointing at sign-in / forgot password. The `EMAIL_NOT_VERIFIED` code and
+  the resend button on the register form go.
+- **Sign-in timing reveals existing emails (Low).** `authorize` compares against
+  a dummy cost-12 hash when there is no user or no password.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Migration through `prisma migrate dev` on the develop branch only.
+- With verification off the account-exists email is sent after the response so
+  the timing matches a new registration.
+- Deferred: rate limiting (High), delete-account password confirmation (Low).
+  The account-exists email is unthrottled until rate limiting lands.
 
 ---
 
@@ -1188,3 +1205,10 @@ Environment notes that outlive any one feature:
   the cached Chromium) drives the app instead. Wait on `location.pathname`, not
   `waitForURL`, which mishandles Next's soft navigations.
 - Pushing to GitHub is the author's step; WSL has no stored GitHub credentials.
+- 2026-10-05 — Started Auth Audit Fixes on `fix/auth-audit-findings`: sessions
+  end after a password change / reset (`User.passwordChangedAt`, migration
+  `20261005012806_add_password_changed_at` on develop), uniform register
+  response with an account-exists email, dummy-hash compare in `authorize`.
+  Change password re-issues the current session and redirects to
+  `/profile?passwordChanged=1`: re-rendering in place reads the old cookie from
+  the request headers. Build and lint green; two-browser Playwright check passed.

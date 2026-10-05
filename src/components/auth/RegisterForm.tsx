@@ -46,14 +46,12 @@ export function RegisterForm() {
       const body: {
         success?: boolean;
         error?: string;
-        code?: string;
         verificationRequired?: boolean;
         emailSent?: boolean;
       } = await response.json().catch(() => ({}));
 
       if (!response.ok || !body.success) {
         setError(body.error ?? "Could not create the account. Try again.");
-        if (body.code === "EMAIL_NOT_VERIFIED") setUnverifiedEmail(email);
         return;
       }
       if (body.verificationRequired === false) {

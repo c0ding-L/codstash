@@ -87,7 +87,12 @@ export async function resetPassword(email: string, token: string, passwordHash: 
   await prisma.$transaction([
     prisma.user.update({
       where: { id: user.id },
-      data: { password: passwordHash, ...(user.emailVerified ? {} : { emailVerified: new Date() }) },
+      data: {
+        password: passwordHash,
+        // Ends every session signed in before the reset.
+        passwordChangedAt: new Date(),
+        ...(user.emailVerified ? {} : { emailVerified: new Date() }),
+      },
     }),
     prisma.verificationToken.deleteMany({ where: { identifier: normalizedEmail } }),
   ]);

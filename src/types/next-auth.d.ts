@@ -12,5 +12,7 @@ declare module "next-auth" {
 declare module "@auth/core/jwt" {
   interface JWT {
     id: string;
+    /** Sign-in time in ms; absent on tokens issued before it was added. */
+    authTime?: number;
   }
 }

@@ -9,6 +9,13 @@ import { isEmailVerificationEnabled } from "@/lib/email-verification-flag";
 import { prisma } from "@/lib/prisma";
 
 /**
+ * A real cost-12 hash of a random string nobody knows. Comparing against it when
+ * there is no account keeps sign-in as slow as a wrong password, so the response
+ * time does not reveal which emails are registered.
+ */
+const DUMMY_PASSWORD_HASH = "$2b$12$4Zg1Vf0KNkLo4pW5dRE1EOgppJQCQw4caOJzNweX3Uwt4mSrmUTf2";
+
+/**
  * Full auth config. JWT sessions keep the proxy free of database calls; the
  * adapter still persists users and their GitHub accounts on first sign-in,
  * while the `Session` table stays unused. Credentials sign-in requires JWT
@@ -35,9 +42,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { email: email.trim().toLowerCase() },
         });
         // GitHub-only users have no password, so they cannot sign in this way.
-        if (!user?.password) return null;
-
-        if (!(await bcrypt.compare(password, user.password))) return null;
+        const matches = await bcrypt.compare(password, user?.password ?? DUMMY_PASSWORD_HASH);
+        if (!user?.password || !matches) return null;
 
         // Only after the password is right, so this cannot be used to find out
         // which emails are registered.
@@ -60,10 +66,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
   callbacks: {
-    // `user` is only present on the sign-in request, so copy the id into the
-    // token then; later requests read it back from the token.
-    jwt({ token, user }) {
-      if (user?.id) token.id = user.id;
+    // `user` is only present on the sign-in request, so copy the id and the
+    // sign-in time into the token then. On later requests, returning null ends
+    // the session: the account is gone, or its password changed after this
+    // sign-in. Change password signs the current session in again first.
+    async jwt({ token, user }) {
+      if (user?.id) {
+        token.id = user.id;
+        token.authTime = Date.now();
+        return token;
+      }
+
+      const account = await prisma.user.findUnique({
+        where: { id: token.id },
+        select: { passwordChangedAt: true },
+      });
+      if (!account) return null;
+      if (account.passwordChangedAt && account.passwordChangedAt.getTime() > (token.authTime ?? 0)) return null;
       return token;
     },
     session({ session, token }) {

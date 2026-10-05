@@ -1,9 +1,10 @@
 "use server";
 
 import bcrypt from "bcryptjs";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { auth, signOut } from "@/auth";
+import { auth, signIn, signOut } from "@/auth";
 import { DEMO_USER_EMAIL } from "@/lib/db/collections";
 import { prisma } from "@/lib/prisma";
 
@@ -36,6 +37,7 @@ export async function changePassword(_previous: ActionResult, formData: FormData
   });
   if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
 
+  let email: string;
   try {
     const session = await auth();
     if (!session?.user?.id) return { success: false, error: "You are not signed in." };
@@ -50,16 +52,32 @@ export async function changePassword(_previous: ActionResult, formData: FormData
     await prisma.$transaction([
       prisma.user.update({
         where: { id: user.id },
-        data: { password: await bcrypt.hash(parsed.data.newPassword, BCRYPT_ROUNDS) },
+        // Ends every session signed in before now, this one included.
+        data: {
+          password: await bcrypt.hash(parsed.data.newPassword, BCRYPT_ROUNDS),
+          passwordChangedAt: new Date(),
+        },
       }),
       // A reset link requested earlier would otherwise still set a password.
       prisma.verificationToken.deleteMany({ where: { identifier: `reset@${user.email.toLowerCase()}` } }),
     ]);
-    return { success: true, error: null };
+    email = user.email;
   } catch (error) {
     console.error("[profile] changePassword failed:", error);
     return { success: false, error: "Could not change the password. Try again." };
   }
+
+  // Signs this browser in again, so only the other sessions end. If that
+  // fails, this session has ended too, so clear it and go to sign-in.
+  try {
+    await signIn("credentials", { email, password: parsed.data.newPassword, redirect: false });
+  } catch (error) {
+    console.error("[profile] signing in again after the password change failed:", error);
+    await signOut({ redirectTo: "/sign-in" });
+  }
+  // Re-rendering this page in place would still read the old, now ended,
+  // session from the request headers; a redirect carries the new cookie.
+  redirect("/profile?passwordChanged=1");
 }
 
 const deleteAccountSchema = z.object({

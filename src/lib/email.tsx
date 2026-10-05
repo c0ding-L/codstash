@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { render } from "react-email";
 import { Resend } from "resend";
 
+import { AccountExistsEmail } from "@/emails/AccountExistsEmail";
 import { PasswordResetEmail } from "@/emails/PasswordResetEmail";
 import { VerificationEmail } from "@/emails/VerificationEmail";
 
@@ -55,5 +56,23 @@ export function sendPasswordResetEmail({ to, name, url }: LinkEmailParams) {
     to,
     subject: "Reset your CodStash password",
     email: <PasswordResetEmail name={name} url={url} />,
+  });
+}
+
+export function sendAccountExistsEmail({
+  to,
+  name,
+  signInUrl,
+  resetUrl,
+}: {
+  to: string;
+  name: string | null;
+  signInUrl: string;
+  resetUrl: string | null;
+}) {
+  return sendEmail({
+    to,
+    subject: "You already have a CodStash account",
+    email: <AccountExistsEmail name={name} signInUrl={signInUrl} resetUrl={resetUrl} />,
   });
 }
