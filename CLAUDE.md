@@ -53,16 +53,13 @@ the required root layout; it loads Geist/Geist Mono via `next/font/google` and i
 ## Styling
 
 Tailwind v4 is configured **entirely in CSS** — there is no `tailwind.config.ts`. `src/app/globals.css`
-currently contains only `@import "tailwindcss";`. Theme tokens, if you need them, go in a
-`@theme` block in that file rather than a JS config.
+imports `tailwindcss`, `tw-animate-css` and `shadcn/tailwind.css`, then holds the theme tokens in
+an `@theme inline` block and the light/dark palettes as CSS variables. New tokens go there, not in
+a JS config.
 
-Two consequences of that bare globals.css worth knowing before you style anything:
-
-- Tailwind's preflight resets headings, so `<h1>` renders at body size and weight until you
-  add utilities.
-- `layout.tsx` still sets `--font-geist-sans` / `--font-geist-mono` on `<html>`, but nothing
-  maps them to Tailwind's `font-sans` / `font-mono`. Using those utilities gets the default
-  stacks, not Geist, unless you add the `@theme` mapping back.
+The `@theme` block maps `--font-sans` / `--font-heading` to `--font-geist-sans` and `--font-mono` to
+`--font-geist-mono` (set on `<html>` by `layout.tsx`). Keep those pointing at the Geist variables:
+shadcn scaffolds them as `var(--font-sans)`, which is self-referential and silently drops the font.
 
 ## Neon MCP
 

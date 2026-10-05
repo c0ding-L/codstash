@@ -21,8 +21,7 @@ Do NOT report things that are not implemented yet. If there is no authentication
 
 - `src/generated/prisma/**` — generated and gitignored. Exclude it from every scan (including `@ts-nocheck` hits).
 - `src/components/ui/*` — shadcn-generated. Do not flag style, decomposition or quality. `src/hooks/use-mobile.ts` was hand-rewritten and is fair game.
-- `src/lib/mock-data.ts` — being phased out on purpose; `format.ts` still imports `MOCK_NOW` from it. Not dead code.
-- `getDemoUserId()` / `getDemoUser` and the unconfigured NextAuth (no `auth.ts`, no session) — this is the "no authentication" case above.
+- `getDemoUserId()` / `getDemoUser` in the dashboard components — the dashboard still shows the demo account's items and collections to every signed-in user until its queries move to `session.user.id`. Known; not a finding. Authentication itself is in place (NextAuth v5 in `src/auth.ts`, `src/proxy.ts` guarding `/dashboard` and `/profile`), so auth code is in scope; for a dedicated auth review use the `auth-auditor` agent.
 - `/items/*` and `/collections` returning 404 — known backlog.
 - No test framework is installed. Do not recommend adding tests; `npm run build` and `npm run lint` are the checks.
 
