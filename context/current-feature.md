@@ -1,62 +1,23 @@
-# Current Feature: Rate Limiting for Auth
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-Rate-limit the auth endpoints against brute force, credential stuffing and abuse
-of the email-sending routes. Spec: `@context/features/rate-limiting-spec.md`.
-
-- A reusable `src/lib/rate-limit.ts` built on Upstash Redis + `@upstash/ratelimit`,
-  sliding-window, returning `{ success, remaining, reset }`
-- IP taken from `x-forwarded-for` (Vercel), combined with the email where the
-  table says so
-- Limits per endpoint:
-
-  | Endpoint | Limit | Window | Key by |
-  |----------|-------|--------|--------|
-  | Credentials sign-in | 5 | 15 min | IP + email |
-  | `/api/auth/register` | 3 | 1 hour | IP |
-  | `/api/auth/forgot-password` | 3 | 1 hour | IP |
-  | `/api/auth/reset-password` | 5 | 15 min | IP |
-  | `/api/auth/resend-verification` | 3 | 15 min | IP + email |
-
-- Over the limit, the four API routes return **429** with a `Retry-After` header and
-  `{ error: "Too many attempts. Please try again in X minutes." }`
-- The frontend shows that message as a toast (`sonner` is already installed)
-- Fails open: if Upstash is unreachable or unconfigured, the request goes through
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- New env vars: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`. Upstash
-  free tier (10k requests/day) is enough for auth limiting.
-- **Sign-in limit goes in the Credentials `authorize()`** (`src/auth.ts:37`), not
-  in a route or the server action. Credentials sign-in reaches `authorize()` by
-  two paths, both NextAuth:
-  - the form → `signInWithCredentials` server action (`src/actions/auth.ts:30`)
-    → server-side `signIn()` — the path the app uses;
-  - `POST /api/auth/callback/credentials` — exposed automatically by the
-    `[...nextauth]` catch-all because the Credentials provider is registered.
-    The app never calls it, but anyone can (CSRF token from `/api/auth/csrf`).
+<!-- Additional context, constraints, or details from spec -->
 
-  A limit in the server action alone would be bypassed through the HTTP route;
-  `authorize()` covers both. Over the limit it throws a dedicated error (same
-  pattern as `src/lib/auth-errors.ts`), which the server action turns into the
-  "Too many attempts…" message for the toast — no 429 on this path.
-- **Checked:** the `request` passed to `authorize(credentials, request)` carries
-  the caller's headers on both paths — server-side `signIn` copies
-  `next/headers` into the request it builds (`next-auth/lib/actions.js`), so
-  `x-forwarded-for` is readable in `authorize()` either way. Server-side
-  `signIn` also rethrows the thrown error instance unchanged, so
-  `RateLimitedError.reset` reaches the action.
-- The four other routes exist under `src/app/api/auth/*/route.ts`.
-- `changePassword` in `src/actions/profile.ts` also calls `signIn("credentials")`,
-  so it goes through `authorize()` too and will count against the same IP + email
-  bucket. Acceptable (authenticated user, one call per change); no separate
-  limit planned for it.
-- Middleware-based limiting is a later consideration, not part of this feature.
+---
+
+Previous feature (completed) — Rate Limiting for Auth: Upstash sliding-window
+limits on sign-in and the four auth API routes, 429 + `Retry-After`, toasts on
+the forms, fail-open. Spec: `@context/features/rate-limiting-spec.md`. Outcome
+in the History below.
 
 ---
 
@@ -1252,3 +1213,17 @@ Environment notes that outlive any one feature:
   needs migration `20261005012806_add_password_changed_at`. Still open from the
   audit: rate limiting (High) and password confirmation on account deletion
   (Low). Feature completed.
+- 2026-10-05 — Rate Limiting for Auth merged into `main`. `src/lib/rate-limit.ts`
+  (`@upstash/ratelimit`, sliding window, fail-open, 2 s timeout). Sign-in is
+  limited inside the Credentials `authorize()` (IP + normalized email), which
+  covers both the `signInWithCredentials` action and a direct POST to
+  `/api/auth/callback/credentials`; `RateLimitedError` carries `reset` to the
+  action, and the form shows it as a toast. Register / forgot-password /
+  reset-password are limited by IP before the body is read, resend-verification
+  by IP + email; they answer 429 with `Retry-After`. Verified on the dev server
+  with curl, Playwright and a bogus token (fail-open). The IP comes from
+  `x-forwarded-for`, which Vercel overwrites, so it is only spoof-proof there.
+  Production needs `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` set on
+  Vercel, otherwise limiting is silently off. `.env.example` (gitignored) lists
+  them locally. Still open from the audit: password confirmation on account
+  deletion (Low). Feature completed.
