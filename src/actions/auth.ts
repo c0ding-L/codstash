@@ -3,7 +3,8 @@
 import { AuthError, CredentialsSignin } from "next-auth";
 
 import { signIn, signOut } from "@/auth";
-import { EMAIL_NOT_VERIFIED_CODE } from "@/lib/auth-errors";
+import { EMAIL_NOT_VERIFIED_CODE, RateLimitedError } from "@/lib/auth-errors";
+import { tooManyAttemptsMessage } from "@/lib/rate-limit";
 
 export interface SignInState {
   error: string | null;
@@ -11,6 +12,8 @@ export interface SignInState {
   email: string;
   /** The password was right but the email has not been verified yet. */
   unverified: boolean;
+  /** Too many attempts; the form shows `error` as a toast instead of inline. */
+  rateLimited?: boolean;
 }
 
 const DEFAULT_REDIRECT = "/dashboard";
@@ -49,6 +52,10 @@ export async function signInWithCredentials(
       redirectTo: safeRedirect(formData.get("callbackUrl")),
     });
   } catch (error) {
+    // Before the generic branch: this is a `CredentialsSignin` too.
+    if (error instanceof RateLimitedError) {
+      return { error: tooManyAttemptsMessage(error.reset), email, unverified: false, rateLimited: true };
+    }
     if (error instanceof CredentialsSignin && error.code === EMAIL_NOT_VERIFIED_CODE) {
       return {
         error: "Verify your email first. Check your inbox for the link, or send a new one.",

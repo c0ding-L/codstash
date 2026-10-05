@@ -50,6 +50,10 @@ export function RegisterForm() {
         emailSent?: boolean;
       } = await response.json().catch(() => ({}));
 
+      if (response.status === 429) {
+        toast.error(body.error ?? "Too many attempts. Try again later.");
+        return;
+      }
       if (!response.ok || !body.success) {
         setError(body.error ?? "Could not create the account. Try again.");
         return;

@@ -40,6 +40,10 @@ export function ResetPasswordForm({ email, token }: Readonly<{ email: string; to
         .json()
         .catch(() => ({}));
 
+      if (response.status === 429) {
+        toast.error(body.error ?? "Too many attempts. Try again later.");
+        return;
+      }
       if (!response.ok || !body.success) {
         setError(body.error ?? "Could not reset the password. Try again.");
         if (body.code === "INVALID_TOKEN") setInvalidToken(true);

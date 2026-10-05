@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,10 @@ export function ForgotPasswordForm() {
         body: JSON.stringify({ email }),
       });
       const body: { success?: boolean; error?: string } = await response.json().catch(() => ({}));
+      if (response.status === 429) {
+        toast.error(body.error ?? "Too many attempts. Try again later.");
+        return;
+      }
       if (!response.ok || !body.success) {
         setError(body.error ?? "Could not send the reset link. Try again.");
         return;

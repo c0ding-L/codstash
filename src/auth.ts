@@ -4,9 +4,10 @@ import NextAuth, { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 
 import authConfig from "@/auth.config";
-import { EmailNotVerifiedError } from "@/lib/auth-errors";
+import { EmailNotVerifiedError, RateLimitedError } from "@/lib/auth-errors";
 import { isEmailVerificationEnabled } from "@/lib/email-verification-flag";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 /**
  * A real cost-12 hash of a random string nobody knows. Comparing against it when
@@ -34,12 +35,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      // Both the sign-in server action and a direct POST to
+      // /api/auth/callback/credentials land here, so the limit covers both.
+      // `request` carries the caller's headers on either path.
+      async authorize(credentials, request) {
         const { email, password } = credentials ?? {};
         if (typeof email !== "string" || typeof password !== "string") return null;
+        const normalizedEmail = email.trim().toLowerCase();
+
+        const limit = await checkRateLimit("signIn", `${getClientIp(request.headers)}:${normalizedEmail}`);
+        if (!limit.success) throw new RateLimitedError(limit.reset);
 
         const user = await prisma.user.findUnique({
-          where: { email: email.trim().toLowerCase() },
+          where: { email: normalizedEmail },
         });
         // GitHub-only users have no password, so they cannot sign in this way.
         const matches = await bcrypt.compare(password, user?.password ?? DUMMY_PASSWORD_HASH);

@@ -4,6 +4,7 @@ import { after, NextResponse } from "next/server";
 import type { User } from "@/generated/prisma/client";
 import { sendAccountExistsEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, getClientIp, tooManyAttemptsResponse } from "@/lib/rate-limit";
 import { isEmailVerificationEnabled } from "@/lib/email-verification-flag";
 import { issueVerificationEmail } from "@/lib/verification";
 
@@ -44,6 +45,9 @@ async function notifyExistingAccount(user: User, verificationRequired: boolean) 
  * used to probe for accounts; the owner of an existing one is emailed instead.
  */
 export async function POST(request: Request) {
+  const limit = await checkRateLimit("register", getClientIp(request.headers));
+  if (!limit.success) return tooManyAttemptsResponse(limit.reset);
+
   let body: unknown;
   try {
     body = await request.json();

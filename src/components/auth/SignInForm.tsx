@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useRef } from "react";
+import { useActionState, useEffect, useRef } from "react";
+import { toast } from "sonner";
 
 import { signInWithCredentials, signInWithGitHub, type SignInState } from "@/actions/auth";
 import { ResendVerificationButton } from "@/components/auth/ResendVerificationButton";
@@ -22,7 +23,13 @@ export function SignInForm({
 }>) {
   const [state, formAction, pending] = useActionState(signInWithCredentials, initialState);
   const emailRef = useRef<HTMLInputElement>(null);
-  const error = state.error ?? initialError;
+  // A rate-limit message is shown as a toast, not inline. Each submission
+  // returns a new state object, so every refused attempt toasts again.
+  const error = state.rateLimited ? null : (state.error ?? initialError);
+
+  useEffect(() => {
+    if (state.rateLimited && state.error) toast.error(state.error);
+  }, [state]);
 
   return (
     <>

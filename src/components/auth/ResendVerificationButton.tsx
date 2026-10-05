@@ -37,7 +37,10 @@ export function ResendVerificationButton({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: address }),
       });
-      if (response.ok) {
+      if (response.status === 429) {
+        const body: { error?: string } = await response.json().catch(() => ({}));
+        toast.error(body.error ?? "Too many attempts. Try again later.");
+      } else if (response.ok) {
         toast.success("If this account is waiting for verification, a new email is on its way.");
       } else {
         toast.error("Could not send the email. Try again.");

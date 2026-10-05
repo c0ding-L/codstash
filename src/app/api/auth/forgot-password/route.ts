@@ -2,6 +2,7 @@ import { after, NextResponse } from "next/server";
 
 import { issuePasswordResetEmail } from "@/lib/password-reset";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, getClientIp, tooManyAttemptsResponse } from "@/lib/rate-limit";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -11,6 +12,9 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * response, so the timing does not give it away either.
  */
 export async function POST(request: Request) {
+  const limit = await checkRateLimit("forgotPassword", getClientIp(request.headers));
+  if (!limit.success) return tooManyAttemptsResponse(limit.reset);
+
   let body: unknown;
   try {
     body = await request.json();

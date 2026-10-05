@@ -3,6 +3,7 @@ import { after, NextResponse } from "next/server";
 import { isEmailVerificationEnabled } from "@/lib/email-verification-flag";
 import { issueVerificationEmail } from "@/lib/verification";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit, getClientIp, tooManyAttemptsResponse } from "@/lib/rate-limit";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -24,6 +25,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, error: "Email is not valid." }, { status: 400 });
   }
   const normalizedEmail = email.trim().toLowerCase();
+
+  const limit = await checkRateLimit("resendVerification", `${getClientIp(request.headers)}:${normalizedEmail}`);
+  if (!limit.success) return tooManyAttemptsResponse(limit.reset);
+
   if (!isEmailVerificationEnabled()) return NextResponse.json({ success: true });
 
   after(async () => {

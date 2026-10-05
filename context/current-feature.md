@@ -1,16 +1,62 @@
-# Current Feature
+# Current Feature: Rate Limiting for Auth
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+Rate-limit the auth endpoints against brute force, credential stuffing and abuse
+of the email-sending routes. Spec: `@context/features/rate-limiting-spec.md`.
+
+- A reusable `src/lib/rate-limit.ts` built on Upstash Redis + `@upstash/ratelimit`,
+  sliding-window, returning `{ success, remaining, reset }`
+- IP taken from `x-forwarded-for` (Vercel), combined with the email where the
+  table says so
+- Limits per endpoint:
+
+  | Endpoint | Limit | Window | Key by |
+  |----------|-------|--------|--------|
+  | Credentials sign-in | 5 | 15 min | IP + email |
+  | `/api/auth/register` | 3 | 1 hour | IP |
+  | `/api/auth/forgot-password` | 3 | 1 hour | IP |
+  | `/api/auth/reset-password` | 5 | 15 min | IP |
+  | `/api/auth/resend-verification` | 3 | 15 min | IP + email |
+
+- Over the limit, the four API routes return **429** with a `Retry-After` header and
+  `{ error: "Too many attempts. Please try again in X minutes." }`
+- The frontend shows that message as a toast (`sonner` is already installed)
+- Fails open: if Upstash is unreachable or unconfigured, the request goes through
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- New env vars: `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`. Upstash
+  free tier (10k requests/day) is enough for auth limiting.
+- **Sign-in limit goes in the Credentials `authorize()`** (`src/auth.ts:37`), not
+  in a route or the server action. Credentials sign-in reaches `authorize()` by
+  two paths, both NextAuth:
+  - the form → `signInWithCredentials` server action (`src/actions/auth.ts:30`)
+    → server-side `signIn()` — the path the app uses;
+  - `POST /api/auth/callback/credentials` — exposed automatically by the
+    `[...nextauth]` catch-all because the Credentials provider is registered.
+    The app never calls it, but anyone can (CSRF token from `/api/auth/csrf`).
+
+  A limit in the server action alone would be bypassed through the HTTP route;
+  `authorize()` covers both. Over the limit it throws a dedicated error (same
+  pattern as `src/lib/auth-errors.ts`), which the server action turns into the
+  "Too many attempts…" message for the toast — no 429 on this path.
+- **Checked:** the `request` passed to `authorize(credentials, request)` carries
+  the caller's headers on both paths — server-side `signIn` copies
+  `next/headers` into the request it builds (`next-auth/lib/actions.js`), so
+  `x-forwarded-for` is readable in `authorize()` either way. Server-side
+  `signIn` also rethrows the thrown error instance unchanged, so
+  `RateLimitedError.reset` reaches the action.
+- The four other routes exist under `src/app/api/auth/*/route.ts`.
+- `changePassword` in `src/actions/profile.ts` also calls `signIn("credentials")`,
+  so it goes through `authorize()` too and will count against the same IP + email
+  bucket. Acceptable (authenticated user, one call per change); no separate
+  limit planned for it.
+- Middleware-based limiting is a later consideration, not part of this feature.
 
 ---
 
