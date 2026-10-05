@@ -2,32 +2,22 @@
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-Fix three findings from `docs/audit-results/AUTH_SECURITY_REVIEW.md`:
-
-- **Sessions survive a password change / reset (Medium).** Add
-  `User.passwordChangedAt`. The `jwt` callback stamps `authTime` at sign-in and,
-  on later calls, ends the session when the password changed after it (or the
-  user no longer exists). Change password re-issues the current session, so only
-  the other sessions end. Reset sets the column too.
-- **Register reveals existing emails (Medium).** Same status and body whether or
-  not the email is registered. An existing account gets an email instead: a new
-  verification link if it is unverified, otherwise an "account already exists"
-  email pointing at sign-in / forgot password. The `EMAIL_NOT_VERIFIED` code and
-  the resend button on the register form go.
-- **Sign-in timing reveals existing emails (Low).** `authorize` compares against
-  a dummy cost-12 hash when there is no user or no password.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Migration through `prisma migrate dev` on the develop branch only.
-- With verification off the account-exists email is sent after the response so
-  the timing matches a new registration.
-- Deferred: rate limiting (High), delete-account password confirmation (Low).
-  The account-exists email is unthrottled until rate limiting lands.
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — Auth Audit Fixes: sessions end after a password
+change or reset, register answers the same for new and existing emails, and
+sign-in timing no longer reveals registered emails. Findings from
+`docs/audit-results/AUTH_SECURITY_REVIEW.md`. Outcome in the History below.
 
 ---
 
@@ -1212,3 +1202,7 @@ Environment notes that outlive any one feature:
   Change password re-issues the current session and redirects to
   `/profile?passwordChanged=1`: re-rendering in place reads the old cookie from
   the request headers. Build and lint green; two-browser Playwright check passed.
+- 2026-10-05 — Auth Audit Fixes merged into `main` and pushed. Production still
+  needs migration `20261005012806_add_password_changed_at`. Still open from the
+  audit: rate limiting (High) and password confirmation on account deletion
+  (Low). Feature completed.
