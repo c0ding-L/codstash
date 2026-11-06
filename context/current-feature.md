@@ -1,16 +1,48 @@
-# Current Feature
+# Current Feature: Items List View
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Dynamic route `/items/[type]` exists (e.g. `/items/snippets`, `/items/notes`)
+- The page fetches and displays only items of that type
+- Items render as a responsive grid of `ItemCard` components, with two columns
+  on medium screens and up
+- Each card has a left border colored by its item type
+- The code follows existing codebase patterns
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+Spec: `@context/features/item-list-view-spec.md`.
+
+What the code looks like today:
+
+- **URLs are plural, slugs are singular.** `itemTypeHref` builds `/items/snippets`
+  from `typePluralNames`, so the route has to map the plural back to a slug.
+  `src/lib/item-type-ui.ts` has no reverse lookup yet.
+- **`ItemCard` does not exist.** The closest component is `ItemRow`, which reuses
+  the shared type icon and color maps.
+- **Border classes need a new map.** Tailwind can't see interpolated class names,
+  so the left border colors have to be spelled out like `colorClasses`.
+- **The route needs auth.** The `src/proxy.ts` matcher only covers `/dashboard`
+  and `/profile`, so `/items` has to be added.
+- **Pages are dynamic server components.** Use `await connection()`, and keep
+  queries in `src/lib/db`. `src/lib/db/items.ts` has no query by type yet.
+
+Defaults used where the spec is silent (the questions were not answered, so these
+are open to change):
+
+- **Which user's items?** The session user, like `/profile`. Dashboard components
+  still read the demo account through `getDemoUserId`, so the two can differ for
+  anyone other than the demo user.
+- **Unknown type.** `/items/whatever` returns a 404.
+- **Empty state.** A short "No notes yet" message. The seed has no notes, files or
+  images, so those three pages are empty on the demo account.
+
+Out of scope: `sidebarTypes` omits Command, so `/items/commands` works but has no
+sidebar link, although the design mockup shows one.
 
 ---
 

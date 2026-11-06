@@ -1,5 +1,6 @@
 import { clampLimit, MAX_ITEM_LIMIT } from "@/lib/db/limits";
 import { prisma } from "@/lib/prisma";
+import type { ItemTypeSlug } from "@/types/item-type";
 
 /** Everything a row on the dashboard renders, flattened out of the relations. */
 export interface DashboardItem {
@@ -73,6 +74,30 @@ export async function getRecentItems(
       select: dashboardItemSelect,
     }),
     prisma.item.count({ where: { userId } }),
+  ]);
+
+  return { items: items.map(toDashboardItem), totalCount };
+}
+
+/**
+ * The user's items of one type, most recently updated first, plus the total so
+ * the page can say when the ceiling cut the list short. Filters on the slug, so
+ * a custom type reusing a system slug lists with it, as in the profile counts.
+ */
+export async function getItemsByType(
+  userId: string,
+  slug: ItemTypeSlug,
+): Promise<{ items: DashboardItem[]; totalCount: number }> {
+  const where = { userId, type: { slug } };
+
+  const [items, totalCount] = await Promise.all([
+    prisma.item.findMany({
+      where,
+      orderBy: { updatedAt: "desc" },
+      take: MAX_ITEM_LIMIT,
+      select: dashboardItemSelect,
+    }),
+    prisma.item.count({ where }),
   ]);
 
   return { items: items.map(toDashboardItem), totalCount };

@@ -79,6 +79,17 @@ export const ringClasses: Record<ColorToken, string> = {
   yellow: "hover:ring-yellow-400/40",
 };
 
+/** Left edge of an item card. Spelled out for the same reason as `colorClasses`. */
+export const borderClasses: Record<ColorToken, string> = {
+  emerald: "border-l-emerald-400",
+  amber: "border-l-amber-400",
+  blue: "border-l-blue-400",
+  cyan: "border-l-cyan-400",
+  rose: "border-l-rose-400",
+  violet: "border-l-violet-400",
+  yellow: "border-l-yellow-400",
+};
+
 /** Sidebar labels and href segments — the schema has no `pluralName` column. */
 export const typePluralNames: Record<ItemTypeSlug, string> = {
   snippet: "Snippets",
@@ -119,6 +130,12 @@ export function toColorToken(color: string | null): ColorToken | null {
 /** Routes types to `/items/snippets`, etc. — plural and lowercased. */
 export function itemTypeHref(slug: ItemTypeSlug) {
   return `/items/${typePluralNames[slug].toLowerCase()}`;
+}
+
+/** The reverse of `itemTypeHref`: null for a URL segment that names no type. */
+export function itemTypeFromSegment(segment: string): ItemTypeSlug | null {
+  const slugs = Object.keys(typePluralNames) as ItemTypeSlug[];
+  return slugs.find((slug) => typePluralNames[slug].toLowerCase() === segment) ?? null;
 }
 
 /** Derive avatar initials from a display name when the user has no image. */
