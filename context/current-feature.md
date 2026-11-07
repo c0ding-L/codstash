@@ -1,20 +1,21 @@
-# Current Feature: Token Flow and Account Isolation Tests
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- `src/lib/verification.ts` and `src/lib/password-reset.ts` have unit tests, including
-  expired, reused and unknown tokens
-- The `src/lib/db` queries are tested to always filter by the given user
-- Isolation is checked once in a browser with a second account
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-Tests only, unless they uncover a bug. Unit tests with a mocked Prisma prove the filter is
-sent, not what the database returns, so the browser check covers the rest.
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — Token Flow and Account Isolation Tests: 59 more unit tests
+and a browser check with a second account. Outcome in the History below.
 
 ---
 
@@ -1293,3 +1294,9 @@ Environment notes that outlive any one feature:
   GitHub-only accounts was only covered at the action level. Still open: password checks in
   `deleteAccount` and `changePassword` have no attempt limit, and the sidebar's `/collections`
   link has no route. Feature completed.
+- 2026-11-07 — Token Flow and Account Isolation Tests merged into `main`. 162 tests in total,
+  with no source changes and no new bugs in the token flows. A browser check on `develop` with
+  a throwaway second account showed `/items` and `/profile` keep accounts apart. It also
+  confirmed the dashboard and sidebar still read the demo account through `getDemoUserId` for
+  everyone, so a new user sees demo data there and not their own items. Fix that before a real
+  launch. Feature completed.
