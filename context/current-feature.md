@@ -1,24 +1,22 @@
-# Current Feature: Vitest Unit Testing
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Vitest is installed and `npm test` runs the suite
-- Only server actions and utilities are tested, not components
-- Tests can never reach a real database, auth provider or Redis
-- The workflow and project docs describe how testing works now
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-Components stay out of scope, so the jsdom, Testing Library and React plugin setup from
-the Next.js guide is not needed: tests run in Vitest's Node environment.
+<!-- Additional context, constraints, or details from spec -->
 
-Vitest is pinned to `~4.0.18`. npm crashes resolving 4.1.12 in this project, from both
-Windows and WSL, and 5.x needs `@types/node` 22 or newer (the project has `^20`).
-Install from Windows npm so the Windows binaries are present.
+---
+
+Previous feature (completed) — Vitest Unit Testing: `npm test` covers server actions
+and utilities, not components, and the workflow now requires it before a commit.
+Outcome in the History below.
 
 ---
 
@@ -1266,3 +1264,13 @@ Environment notes that outlive any one feature:
   Playwright against a production build using the develop database. Still open: the
   sidebar's `/collections` link has no route, and its prefetch requests stay open.
   Feature completed.
+- 2026-11-07 — Vitest Unit Testing merged into `main`. 93 tests in `src/actions` and
+  `src/lib`, in a Node environment with the database, Upstash and Resend credentials
+  blanked. Pinned to `~4.0.18`: npm crashes resolving 4.1.12 here, and 5.x needs
+  `@types/node` 22. Installed and run through Windows npm, because Rollup's Linux binary
+  is not in `node_modules`. `/feature complete` now runs tests, build and lint first and
+  stages files by name. Not covered yet: `verification.ts`, `password-reset.ts`, the
+  `src/lib/db` queries other than `limits.ts`, and Upstash erroring once configured.
+  `.test.tsx` files are ignored. Known bug, not fixed: `toItemTypeSlug` and `toColorToken`
+  use `in`, so they accept inherited keys like `constructor`; nothing can reach this
+  until custom types exist. Feature completed.
