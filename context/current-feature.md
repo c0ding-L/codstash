@@ -1,16 +1,25 @@
-# Current Feature
+# Current Feature: Item Type Color Fixes
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Prompt and Link are clearly different colors: Link moves from `yellow` to `lime`,
+  everywhere the type appears
+- `/items/[type]` cards use the same style as the dashboard's collection cards: a 6%
+  background tint and a 40% ring on hover, with no left border
+- `@context/features/item-list-view-spec.md` and `docs/item-types.md` match the result
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+Reported by the author after Items List View. `amber` and `yellow` are only about 8°
+of hue apart, so the 6% tint makes them look the same.
+
+`ItemType.color` lives in the database, and `toColorToken` rejects a token it doesn't
+know, so a row still on `yellow` loses its accent. A data migration moves the system
+`link` row, so production gets it through `prisma migrate deploy`.
 
 ---
 

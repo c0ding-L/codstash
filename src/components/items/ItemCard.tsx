@@ -4,12 +4,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import type { DashboardItem } from "@/lib/db/items";
 import { formatFileSize, formatRelativeTime } from "@/lib/format";
 import {
-  borderClasses,
   colorClasses,
+  ringClasses,
   surfaceClasses,
   toColorToken,
   toItemTypeSlug,
   typeIcons,
+  washClasses,
 } from "@/lib/item-type-ui";
 import { cn } from "@/lib/utils";
 
@@ -25,8 +26,16 @@ export function ItemCard({ item, now }: ItemCardProps) {
   const Icon = slug ? typeIcons[slug] : Clock;
 
   return (
-    <Card className={cn("h-full border-l-4", color ? borderClasses[color] : "border-l-border")}>
-      <CardContent className="flex h-full items-start gap-3">
+    <Card className={cn("relative h-full transition-shadow", color && ringClasses[color])}>
+      {/* Its own layer, as in RecentCollections: the tint sits over `bg-card`. */}
+      {color ? (
+        <span
+          className={cn("pointer-events-none absolute inset-0", washClasses[color])}
+          aria-hidden
+        />
+      ) : null}
+
+      <CardContent className="relative flex h-full items-start gap-3">
         <span
           className={cn(
             "flex size-9 shrink-0 items-center justify-center rounded-lg",

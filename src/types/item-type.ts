@@ -16,4 +16,4 @@ export type ColorToken =
   | "cyan"
   | "rose"
   | "violet"
-  | "yellow";
+  | "lime";

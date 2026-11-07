@@ -186,7 +186,7 @@ export const itemTypes: ItemType[] = [
     name: "Link",
     pluralName: "Links",
     icon: "Link",
-    color: "yellow",
+    color: "lime",
     isSystem: true,
     userId: null,
   },

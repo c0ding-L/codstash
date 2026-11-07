@@ -38,7 +38,7 @@ const SYSTEM_ITEM_TYPES = [
   { id: "typ_command", slug: "command", name: "Command", icon: "SquareTerminal", color: "cyan" },
   { id: "typ_file", slug: "file", name: "File", icon: "File", color: "rose" },
   { id: "typ_image", slug: "image", name: "Image", icon: "Image", color: "violet" },
-  { id: "typ_link", slug: "link", name: "Link", icon: "Link", color: "yellow" },
+  { id: "typ_link", slug: "link", name: "Link", icon: "Link", color: "lime" },
 ] as const;
 
 type TypeSlug = (typeof SYSTEM_ITEM_TYPES)[number]["slug"];

@@ -34,7 +34,7 @@ export const colorClasses: Record<ColorToken, string> = {
   cyan: "text-cyan-400",
   rose: "text-rose-400",
   violet: "text-violet-400",
-  yellow: "text-yellow-400",
+  lime: "text-lime-400",
 };
 
 /** Background wash used behind a type's icon on cards. */
@@ -45,7 +45,7 @@ export const surfaceClasses: Record<ColorToken, string> = {
   cyan: "bg-cyan-400/10",
   rose: "bg-rose-400/10",
   violet: "bg-violet-400/10",
-  yellow: "bg-yellow-400/10",
+  lime: "bg-lime-400/10",
 };
 
 /**
@@ -62,7 +62,7 @@ export const washClasses: Record<ColorToken, string> = {
   cyan: "bg-cyan-400/[0.06]",
   rose: "bg-rose-400/[0.06]",
   violet: "bg-violet-400/[0.06]",
-  yellow: "bg-yellow-400/[0.06]",
+  lime: "bg-lime-400/[0.06]",
 };
 
 /**
@@ -76,18 +76,7 @@ export const ringClasses: Record<ColorToken, string> = {
   cyan: "hover:ring-cyan-400/40",
   rose: "hover:ring-rose-400/40",
   violet: "hover:ring-violet-400/40",
-  yellow: "hover:ring-yellow-400/40",
-};
-
-/** Left edge of an item card. Spelled out for the same reason as `colorClasses`. */
-export const borderClasses: Record<ColorToken, string> = {
-  emerald: "border-l-emerald-400",
-  amber: "border-l-amber-400",
-  blue: "border-l-blue-400",
-  cyan: "border-l-cyan-400",
-  rose: "border-l-rose-400",
-  violet: "border-l-violet-400",
-  yellow: "border-l-yellow-400",
+  lime: "hover:ring-lime-400/40",
 };
 
 /** Sidebar labels and href segments — the schema has no `pluralName` column. */

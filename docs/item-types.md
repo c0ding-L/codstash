@@ -23,7 +23,7 @@ components and queries that render types.
 | Command | `command` | `SquareTerminal` | `cyan`      | `text-cyan-400`    | `#00d3f2` | Text              |
 | File    | `file`    | `File`           | `rose`      | `text-rose-400`    | `#ff637e` | File              |
 | Image   | `image`   | `Image`          | `violet`    | `text-violet-400`  | `#a684ff` | File              |
-| Link    | `link`    | `Link`           | `yellow`    | `text-yellow-400`  | `#fdc700` | URL               |
+| Link    | `link`    | `Link`           | `lime`      | `text-lime-400`    | `#9ae600` | URL               |
 
 ### About the colors
 
@@ -39,15 +39,15 @@ Tailwind v4 (4.3.3 here) defines those colors in OKLCH, so OKLCH is the real val
 | `cyan`    | `oklch(78.9% 0.154 211.53)`                         |
 | `rose`    | `oklch(71.2% 0.194 13.428)`                         |
 | `violet`  | `oklch(70.2% 0.183 293.541)`                        |
-| `yellow`  | `oklch(85.2% 0.199 91.936)`                         |
+| `lime`    | `oklch(84.1% 0.238 128.85)`                         |
 
 The hex values were converted from these for reference. All seven fall slightly outside the
 sRGB range and were clipped to fit, so they are approximate. Don't store hex in
 `ItemType.color`: `toColorToken` would reject it and the type would lose its accent.
 
 `context/features/item-type-card-color-handler.md` proposes a different palette
-(`--snippet`, `--file` and so on, with file orange-red, image magenta and link lime). It was
-never implemented: `src/app/globals.css` defines none of those tokens, and the comment on
+(`--snippet`, `--file` and so on, with file orange-red and image magenta). It was never
+implemented: `src/app/globals.css` defines none of those tokens, and the comment on
 `washClasses` in `item-type-ui.ts` explains why.
 
 ## The types
@@ -146,8 +146,8 @@ the Markdown editor and the full-screen item editor are in the spec but not buil
 | ------------------------ | ------------------------------------------------------------------ | --------------------- |
 | Icon and type label      | Full accent color (`text-*-400`)                                   | `colorClasses`        |
 | Icon chip                | Accent at 10% behind the icon                                      | `surfaceClasses`      |
-| Collection card tint     | Accent at 6% over the card                                         | `washClasses`         |
-| Collection card on hover | Ring at 40%                                                        | `ringClasses`         |
+| Collection and item card tint | Accent at 6% over the card                                    | `washClasses`         |
+| Collection and item card hover | Ring at 40%                                                  | `ringClasses`         |
 | Sidebar                  | Plural label, plus a `PRO` badge on Files and Images               | `AppSidebar.tsx`      |
 | Item row                 | Shows `fileSize` when it is set, which in practice means File/Image | `ItemRow.tsx`         |
 
