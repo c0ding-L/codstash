@@ -23,6 +23,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `npm run build` | Production build (compiles + typechecks) |
 | `npm run start` | Serve the production build               |
 | `npm run lint`  | ESLint                                   |
+| `npm test`      | Unit tests (Vitest)                      |
 
 ## Documentation
 

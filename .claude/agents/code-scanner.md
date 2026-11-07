@@ -22,8 +22,8 @@ Do NOT report things that are not implemented yet. If there is no authentication
 - `src/generated/prisma/**` — generated and gitignored. Exclude it from every scan (including `@ts-nocheck` hits).
 - `src/components/ui/*` — shadcn-generated. Do not flag style, decomposition or quality. `src/hooks/use-mobile.ts` was hand-rewritten and is fair game.
 - `getDemoUserId()` / `getDemoUser` in the dashboard components — the dashboard still shows the demo account's items and collections to every signed-in user until its queries move to `session.user.id`. Known; not a finding. Authentication itself is in place (NextAuth v5 in `src/auth.ts`, `src/proxy.ts` guarding `/dashboard` and `/profile`), so auth code is in scope; for a dedicated auth review use the `auth-auditor` agent.
-- `/items/*` and `/collections` returning 404 — known backlog.
-- No test framework is installed. Do not recommend adding tests; `npm run build` and `npm run lint` are the checks.
+- `/collections` returning 404 — known backlog.
+- Missing tests for components. Vitest covers server actions and utilities only, on purpose. `npm test`, `npm run build` and `npm run lint` are the checks.
 
 ## Environment files
 

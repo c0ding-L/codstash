@@ -22,17 +22,35 @@ Read these for full project context:
 
 ```bash
 npm run dev     # dev server on :3000
-npm run build   # production build — the real typecheck (runs tsc) and the closest thing to a test suite
+npm run build   # production build — the real typecheck (runs tsc)
 npm run start   # serve the production build
 npm run lint    # eslint (flat config)
+npm test        # unit tests, one run (Vitest)
+npm run test:watch  # unit tests, re-run on change
 ```
 
-There is **no test framework installed** — no `npm test`, no vitest/jest/playwright. Do not
-invent a test command. To verify a change, run `npm run build` (it compiles, typechecks, and
-prerenders every route) and `npm run lint`.
+To verify a change, run `npm test`, `npm run build` (it compiles, typechecks, and prerenders
+every route) and `npm run lint`.
 
 `tsc` is not exposed as a script; `npx tsc --noEmit` works if you want typecheck without the
 full build.
+
+## Testing
+
+Vitest runs in a Node environment and only picks up `src/actions/**/*.test.ts` and
+`src/lib/**/*.test.ts`. **Server actions and utilities only — components are not tested**, so
+there is no jsdom or Testing Library. Tests sit next to the file they cover.
+
+- Mock `@/auth`, `@/lib/prisma` and `next/navigation` with `vi.mock`. Tests must never reach a
+  real service: `vitest.config.mts` blanks `DATABASE_URL`, `RESEND_API_KEY` and the Upstash
+  variables.
+- `mockReset` is on, so set a mock's return value in the test or in `beforeEach`, not at module
+  level.
+- Vitest is pinned to `~4.0.18`. npm crashes resolving 4.1.12 in this project (`Cannot read
+  properties of null (reading 'edgesOut')`), and 5.x needs `@types/node` 22 or newer.
+- The author works on Windows, so `node_modules` is installed from there. Run `npm install` and
+  `npm test` through Windows npm, because Rollup's Linux binary is not installed:
+  `cmd.exe /c "E: && cd \PROGRAMMING\CODE\codstash && npm test"`.
 
 ## Stack
 

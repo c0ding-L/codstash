@@ -90,6 +90,15 @@ Example v4 configuration:
 - Return `{ success, data, error }` pattern from actions
 - Display user-friendly error messages via toast
 
+## Testing
+
+- Use Vitest, and run it with `npm test`
+- Test server actions and utilities only, not components
+- Put tests next to the code: `src/lib/format.test.ts`, `src/actions/auth.test.ts`
+- Mock `@/auth`, `@/lib/prisma` and `next/navigation`; tests never reach a real service
+- Cover the happy path and the error cases
+- Only write tests for logic that can really break, not just to raise a number
+
 ## Code Quality
 
 - No commented-out code unless specified

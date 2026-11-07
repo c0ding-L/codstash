@@ -213,6 +213,7 @@ model ItemTag {
 | AI           | OpenAI gpt-5-nano            |
 | Deployment   | Vercel (likely)              |
 | Monitoring   | Sentry (later)               |
+| Unit Testing | Vitest                       |
 
 ---
 

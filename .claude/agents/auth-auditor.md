@@ -40,7 +40,7 @@ Things that are **not** findings:
 - Style, naming, decomposition, or "could be cleaner".
 - Theoretical issues that need the attacker to already have database, server or inbox access.
 - Generic best-practice checklists not tied to a line of code in this repo.
-- Recommending tests — no test framework is installed on purpose.
+- Recommending tests — this audit reports security findings, not test coverage.
 
 ## Do NOT flag — NextAuth already handles these
 

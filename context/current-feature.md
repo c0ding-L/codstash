@@ -1,16 +1,24 @@
-# Current Feature
+# Current Feature: Vitest Unit Testing
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Vitest is installed and `npm test` runs the suite
+- Only server actions and utilities are tested, not components
+- Tests can never reach a real database, auth provider or Redis
+- The workflow and project docs describe how testing works now
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+Components stay out of scope, so the jsdom, Testing Library and React plugin setup from
+the Next.js guide is not needed: tests run in Vitest's Node environment.
+
+Vitest is pinned to `~4.0.18`. npm crashes resolving 4.1.12 in this project, from both
+Windows and WSL, and 5.x needs `@types/node` 22 or newer (the project has `^20`).
+Install from Windows npm so the Windows binaries are present.
 
 ---
 
