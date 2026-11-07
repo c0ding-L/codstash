@@ -1,48 +1,22 @@
-# Current Feature: Items List View
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Dynamic route `/items/[type]` exists (e.g. `/items/snippets`, `/items/notes`)
-- The page fetches and displays only items of that type
-- Items render as a responsive grid of `ItemCard` components, with two columns
-  on medium screens and up
-- Each card has a left border colored by its item type
-- The code follows existing codebase patterns
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-Spec: `@context/features/item-list-view-spec.md`.
+<!-- Additional context, constraints, or details from spec -->
 
-What the code looks like today:
+---
 
-- **URLs are plural, slugs are singular.** `itemTypeHref` builds `/items/snippets`
-  from `typePluralNames`, so the route has to map the plural back to a slug.
-  `src/lib/item-type-ui.ts` has no reverse lookup yet.
-- **`ItemCard` does not exist.** The closest component is `ItemRow`, which reuses
-  the shared type icon and color maps.
-- **Border classes need a new map.** Tailwind can't see interpolated class names,
-  so the left border colors have to be spelled out like `colorClasses`.
-- **The route needs auth.** The `src/proxy.ts` matcher only covers `/dashboard`
-  and `/profile`, so `/items` has to be added.
-- **Pages are dynamic server components.** Use `await connection()`, and keep
-  queries in `src/lib/db`. `src/lib/db/items.ts` has no query by type yet.
-
-Defaults used where the spec is silent (the questions were not answered, so these
-are open to change):
-
-- **Which user's items?** The session user, like `/profile`. Dashboard components
-  still read the demo account through `getDemoUserId`, so the two can differ for
-  anyone other than the demo user.
-- **Unknown type.** `/items/whatever` returns a 404.
-- **Empty state.** A short "No notes yet" message. The seed has no notes, files or
-  images, so those three pages are empty on the demo account.
-
-Out of scope: `sidebarTypes` omits Command, so `/items/commands` works but has no
-sidebar link, although the design mockup shows one.
+Previous feature (completed) — Items List View: `/items/[type]` lists the signed-in
+user's items of one type in a grid of `ItemCard`s with a colored left border. Spec:
+`@context/features/item-list-view-spec.md`. Outcome in the History below.
 
 ---
 
@@ -1259,3 +1233,13 @@ Environment notes that outlive any one feature:
   Vercel, otherwise limiting is silently off. `.env.example` (gitignored) lists
   them locally. Still open from the audit: password confirmation on account
   deletion (Low). Feature completed.
+- 2026-11-06 — Items List View merged into `main`. `/items/[type]` maps the plural
+  URL segment back to a slug with `itemTypeFromSegment`, reads through
+  `getItemsByType` (capped at `MAX_ITEM_LIMIT`, no pagination yet) and renders
+  `ItemCard`s, two columns from `md` up, with the left border from `borderClasses`.
+  `/items` joined the proxy matcher. The spec was silent on three things, and the
+  defaults were never confirmed: the session user's items (the dashboard still
+  reads the demo account), a 404 for an unknown type, and a "No notes yet." empty
+  state. Verified with Playwright as the demo user only, so isolation between
+  accounts and the file size line on cards were not exercised. `sidebarTypes` still
+  omits Command, so `/items/commands` has no sidebar link. Feature completed.
