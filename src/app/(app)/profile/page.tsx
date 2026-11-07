@@ -133,7 +133,11 @@ export default async function ProfilePage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <DeleteAccountDialog email={profile.email} isDemo={profile.email === DEMO_USER_EMAIL} />
+              <DeleteAccountDialog
+                email={profile.email}
+                isDemo={profile.email === DEMO_USER_EMAIL}
+                hasPassword={profile.hasPassword}
+              />
             </CardContent>
           </Card>
         </section>

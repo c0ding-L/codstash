@@ -18,12 +18,18 @@ import { Input } from "@/components/ui/input";
 
 const initialState: ActionResult = { success: false, error: null };
 
+interface DeleteAccountDialogProps {
+  email: string;
+  isDemo: boolean;
+  /** False for GitHub-only accounts, which have no password to re-enter. */
+  hasPassword: boolean;
+}
+
 /**
- * The delete button only unlocks once the account's email is typed, which
- * works for GitHub accounts too (they have no password to re-enter). The server
- * action checks the same thing again.
+ * The delete button only unlocks once the account's email is typed, along with
+ * the password if the account has one. The server action checks both again.
  */
-export function DeleteAccountDialog({ email, isDemo }: Readonly<{ email: string; isDemo: boolean }>) {
+export function DeleteAccountDialog({ email, isDemo, hasPassword }: Readonly<DeleteAccountDialogProps>) {
   if (isDemo) {
     return (
       <div className="grid gap-2">
@@ -41,19 +47,21 @@ export function DeleteAccountDialog({ email, isDemo }: Readonly<{ email: string;
     <AlertDialog>
       <AlertDialogTrigger render={<Button variant="destructive" />}>Delete account</AlertDialogTrigger>
       <AlertDialogContent>
-        {/* Inside the popup, so it unmounts on close: the typed email and any
+        {/* Inside the popup, so it unmounts on close: what was typed and any
             error from the server are gone when it is reopened. */}
-        <DeleteAccountForm email={email} />
+        <DeleteAccountForm email={email} hasPassword={hasPassword} />
       </AlertDialogContent>
     </AlertDialog>
   );
 }
 
-function DeleteAccountForm({ email }: Readonly<{ email: string }>) {
+function DeleteAccountForm({ email, hasPassword }: Readonly<{ email: string; hasPassword: boolean }>) {
   const [state, formAction, pending] = useActionState(deleteAccount, initialState);
   const [typed, setTyped] = useState("");
+  const [password, setPassword] = useState("");
   // GitHub may store the address with capitals; credentials emails are lowercased.
   const matches = typed.trim().toLowerCase() === email.toLowerCase();
+  const ready = matches && (!hasPassword || password.length > 0);
 
   return (
     <form action={formAction} className="grid gap-4">
@@ -72,6 +80,18 @@ function DeleteAccountForm({ email }: Readonly<{ email: string }>) {
         value={typed}
         onChange={(event) => setTyped(event.target.value)}
       />
+      {hasPassword ? (
+        <label className="grid gap-1.5 text-sm font-medium">
+          Your password
+          <Input
+            name="password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+          />
+        </label>
+      ) : null}
       {state.error ? (
         <p role="alert" className="text-sm text-destructive">
           {state.error}
@@ -79,7 +99,7 @@ function DeleteAccountForm({ email }: Readonly<{ email: string }>) {
       ) : null}
       <AlertDialogFooter>
         <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
-        <Button type="submit" variant="destructive" disabled={!matches || pending}>
+        <Button type="submit" variant="destructive" disabled={!ready || pending}>
           {pending ? "Deleting…" : "Delete account"}
         </Button>
       </AlertDialogFooter>

@@ -133,7 +133,7 @@ describe("changePassword", () => {
 });
 
 describe("deleteAccount", () => {
-  const confirm = { confirmEmail: "ada@example.com" };
+  const confirm = { confirmEmail: "ada@example.com", password: "correct-password" };
 
   it("asks for the email before reading the session", async () => {
     const result = await deleteAccount(INITIAL, form({ confirmEmail: "   " }));
@@ -171,8 +171,41 @@ describe("deleteAccount", () => {
     expect(signOut).not.toHaveBeenCalled();
   });
 
+  it("deletes nothing when the password is wrong", async () => {
+    compare.mockResolvedValue(false);
+
+    const result = await deleteAccount(INITIAL, form(confirm));
+
+    expect(compare).toHaveBeenCalledWith(confirm.password, USER.password);
+    expect(result).toEqual({ success: false, error: "Password is incorrect." });
+    expect(transaction).not.toHaveBeenCalled();
+    expect(signOut).not.toHaveBeenCalled();
+  });
+
+  // Someone posting to the action directly can leave the field out altogether.
+  it.each([
+    ["missing", { confirmEmail: confirm.confirmEmail }],
+    ["empty", { ...confirm, password: "" }],
+  ])("deletes nothing when the password is %s", async (_label, fields) => {
+    const result = await deleteAccount(INITIAL, form(fields));
+
+    expect(result.error).toBe("Password is incorrect.");
+    expect(compare).not.toHaveBeenCalled();
+    expect(transaction).not.toHaveBeenCalled();
+  });
+
+  it("asks a GitHub-only account for its email alone", async () => {
+    findUser.mockResolvedValue({ ...USER, password: null });
+
+    const result = await deleteAccount(INITIAL, form({ confirmEmail: confirm.confirmEmail }));
+
+    expect(compare).not.toHaveBeenCalled();
+    expect(transaction).toHaveBeenCalledOnce();
+    expect(result).toEqual({ success: true, error: null });
+  });
+
   it("deletes the session user's data, whatever the email's case, and signs out", async () => {
-    const result = await deleteAccount(INITIAL, form({ confirmEmail: "  ADA@example.COM " }));
+    const result = await deleteAccount(INITIAL, form({ ...confirm, confirmEmail: "  ADA@example.COM " }));
 
     expect(prisma.item.deleteMany).toHaveBeenCalledWith({ where: { userId: USER.id } });
     expect(prisma.verificationToken.deleteMany).toHaveBeenCalledWith({

@@ -82,17 +82,25 @@ export async function changePassword(_previous: ActionResult, formData: FormData
 
 const deleteAccountSchema = z.object({
   confirmEmail: z.string().trim().toLowerCase().min(1, "Type your email to confirm."),
+  // Null when the field is absent, as on the form for GitHub-only accounts.
+  password: z.string().nullable(),
 });
 
 export async function deleteAccount(_previous: ActionResult, formData: FormData): Promise<ActionResult> {
-  const parsed = deleteAccountSchema.safeParse({ confirmEmail: formData.get("confirmEmail") });
+  const parsed = deleteAccountSchema.safeParse({
+    confirmEmail: formData.get("confirmEmail"),
+    password: formData.get("password"),
+  });
   if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
 
   try {
     const session = await auth();
     if (!session?.user?.id) return { success: false, error: "You are not signed in." };
 
-    const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { id: true, email: true } });
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, email: true, password: true },
+    });
     if (!user) return { success: false, error: "This account no longer exists." };
 
     // The dashboard still reads the demo account's data for everyone.
@@ -102,6 +110,14 @@ export async function deleteAccount(_previous: ActionResult, formData: FormData)
     const email = user.email.toLowerCase();
     if (parsed.data.confirmEmail !== email) {
       return { success: false, error: "The email does not match your account." };
+    }
+    // The email is on the profile page, so on its own it proves nothing about who
+    // holds the session. GitHub-only accounts have no password to ask for.
+    if (user.password) {
+      const { password } = parsed.data;
+      if (!password || !(await bcrypt.compare(password, user.password))) {
+        return { success: false, error: "Password is incorrect." };
+      }
     }
 
     await prisma.$transaction([
