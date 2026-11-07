@@ -1,21 +1,22 @@
-# Current Feature: Account Deletion, Commands Sidebar and Slug Fixes
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Deleting an account that has a password requires that password, checked on the server.
-  GitHub-only accounts keep the email confirmation
-- Commands appears in the sidebar between Notes and Files, as in the design mockup
-- `toItemTypeSlug` and `toColorToken` reject inherited keys such as `constructor`
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-The first goal closes the last open finding in
-`docs/audit-results/AUTH_SECURITY_REVIEW.md`. That report still lists findings that have
-since been fixed, so it needs a fresh audit run before anyone publishes it.
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — Account Deletion, Commands Sidebar and Slug Fixes:
+deleting an account now requires its password, Commands is in the sidebar, and the type
+helpers reject inherited keys. Outcome in the History below.
 
 ---
 
@@ -1279,3 +1280,12 @@ Environment notes that outlive any one feature:
   `.test.tsx` files are ignored. Known bug, not fixed: `toItemTypeSlug` and `toColorToken`
   use `in`, so they accept inherited keys like `constructor`; nothing can reach this
   until custom types exist. Feature completed.
+- 2026-11-07 — Account Deletion, Commands Sidebar and Slug Fixes merged into `main`.
+  `deleteAccount` requires the password for accounts that have one, which closes the last
+  open finding in `docs/audit-results/AUTH_SECURITY_REVIEW.md`. That report still lists
+  fixed findings and needs a fresh audit run before it is published. `sidebarTypes` now
+  includes Command, and `toItemTypeSlug` and `toColorToken` use `Object.hasOwn`. Verified
+  in a browser on `develop` with a throwaway account, removed afterwards. The dialog for
+  GitHub-only accounts was only covered at the action level. Still open: password checks in
+  `deleteAccount` and `changePassword` have no attempt limit, and the sidebar's `/collections`
+  link has no route. Feature completed.
