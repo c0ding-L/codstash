@@ -163,23 +163,17 @@ the Markdown editor and the full-screen item editor are in the spec but not buil
 
 These are recorded for follow-up. Nothing was changed.
 
-1. **Command is missing from the sidebar.** `sidebarTypes` (`src/lib/item-type-ui.ts:97`) lists
-   six types without Command, although it is seeded and appears in the profile breakdown. The
-   design mockup (`context/screenshots/dashboard-ui-main.png`) shows all seven, with Commands
-   between Notes and Files.
-2. **The specs disagree on whether Images are Pro.** `context/features/add-pro-badge-sidebar.md`
+1. **The specs disagree on whether Images are Pro.** `context/features/add-pro-badge-sidebar.md`
    asks for the badge on Files and Images, and `proTypeSlugs` (`src/lib/item-type-ui.ts:94`)
    follows it. The plan table in `project-overview.md` includes image uploads in the Free plan
    and lists only file uploads as Pro. The badge is only visual so far, because the app has no
    item creation or upload code to gate.
-3. **Sidebar type links have no destination.** `itemTypeHref` builds `/items/<plural>` links, but
-   there is no `items` route under `src/app/`.
-4. **The name differs.** The spec calls the seventh type "URL", while the slug, name and UI all
+2. **The name differs.** The spec calls the seventh type "URL", while the slug, name and UI all
    use "Link".
-5. **The order differs by location:**
-   - **Sidebar:** snippet, prompt, note, file, image, link.
+3. **The order differs by location:**
+   - **Sidebar:** snippet, prompt, note, command, file, image, link.
    - **Profile:** snippet, prompt, note, command, link, file, image.
    - **`getItemTypes`:** sorted alphabetically by slug.
-6. **The icon chip differs from its spec.** The code uses a 10% background, and
+4. **The icon chip differs from its spec.** The code uses a 10% background, and
    `item-type-card-color-handler.md` says 15%. The spec also names `StickyNote` for notes, where
    the code uses `FileText`.

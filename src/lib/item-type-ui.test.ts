@@ -4,6 +4,7 @@ import {
   initialsFromName,
   itemTypeFromSegment,
   itemTypeHref,
+  sidebarTypes,
   toColorToken,
   toItemTypeSlug,
   typePluralNames,
@@ -11,6 +12,20 @@ import {
 import type { ItemTypeSlug } from "@/types/item-type";
 
 const SLUGS = Object.keys(typePluralNames) as ItemTypeSlug[];
+
+describe("sidebarTypes", () => {
+  it("lists every type in the design's order", () => {
+    expect(sidebarTypes.map(({ slug }) => slug)).toEqual([
+      "snippet",
+      "prompt",
+      "note",
+      "command",
+      "file",
+      "image",
+      "link",
+    ]);
+  });
+});
 
 describe("itemTypeFromSegment", () => {
   it.each(SLUGS)("round-trips %s through its href", (slug) => {
@@ -32,8 +47,9 @@ describe("toItemTypeSlug", () => {
     expect(toItemTypeSlug("link")).toBe("link");
   });
 
-  it("returns null for a custom slug", () => {
-    expect(toItemTypeSlug("podcast")).toBeNull();
+  // Inherited keys would otherwise pass as types, with `Object` as their icon.
+  it.each(["podcast", "constructor", "toString", "__proto__"])("returns null for %s", (slug) => {
+    expect(toItemTypeSlug(slug)).toBeNull();
   });
 });
 
@@ -44,7 +60,7 @@ describe("toColorToken", () => {
 
   // A row still on the retired `yellow` token, or with a hex value, loses its
   // accent rather than breaking the page.
-  it.each(["yellow", "#ffb900", null])("returns null for %j", (color) => {
+  it.each(["yellow", "#ffb900", "constructor", "toString", null])("returns null for %j", (color) => {
     expect(toColorToken(color)).toBeNull();
   });
 });

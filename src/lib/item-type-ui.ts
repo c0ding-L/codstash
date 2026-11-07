@@ -98,6 +98,7 @@ export const sidebarTypes: { slug: ItemTypeSlug; label: string }[] = [
   { slug: "snippet", label: "Snippets" },
   { slug: "prompt", label: "Prompts" },
   { slug: "note", label: "Notes" },
+  { slug: "command", label: "Commands" },
   { slug: "file", label: "Files" },
   { slug: "image", label: "Images" },
   { slug: "link", label: "Links" },
@@ -109,11 +110,11 @@ export const sidebarTypes: { slug: ItemTypeSlug; label: string }[] = [
  * custom type cannot crash the UI.
  */
 export function toItemTypeSlug(slug: string): ItemTypeSlug | null {
-  return slug in typeIcons ? (slug as ItemTypeSlug) : null;
+  return Object.hasOwn(typeIcons, slug) ? (slug as ItemTypeSlug) : null;
 }
 
 export function toColorToken(color: string | null): ColorToken | null {
-  return color !== null && color in colorClasses ? (color as ColorToken) : null;
+  return color !== null && Object.hasOwn(colorClasses, color) ? (color as ColorToken) : null;
 }
 
 /** Routes types to `/items/snippets`, etc. — plural and lowercased. */

@@ -1,16 +1,21 @@
-# Current Feature
+# Current Feature: Account Deletion, Commands Sidebar and Slug Fixes
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Deleting an account that has a password requires that password, checked on the server.
+  GitHub-only accounts keep the email confirmation
+- Commands appears in the sidebar between Notes and Files, as in the design mockup
+- `toItemTypeSlug` and `toColorToken` reject inherited keys such as `constructor`
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+The first goal closes the last open finding in
+`docs/audit-results/AUTH_SECURITY_REVIEW.md`. That report still lists findings that have
+since been fixed, so it needs a fresh audit run before anyone publishes it.
 
 ---
 
