@@ -1,16 +1,69 @@
-# Current Feature
+# Current Feature: Item Drawer
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+Spec: `@context/features/item-drawer-spec.md`.
+
+- Clicking an item opens a right-side shadcn `Sheet` with that item's full data, with no page
+  navigation. The drawer is the item detail view; there is no separate item page
+- Works on both the dashboard and the items list pages
+- A client wrapper holds the drawer state, and the pages stay server components
+- Card data is still fetched by the server components. Full detail (content, collections,
+  language, etc.) is fetched on click from `/api/items/[id]`
+- The query function lives in `src/lib/db/items.ts`, and the API route calls it with an auth check
+- The drawer shows a skeleton while fetching
+- Action bar: Favorite (star, yellow when active), Pin, Copy, Edit (pencil) and Delete (trash,
+  right-aligned)
+- Out of scope for now: the code editor and item-specific extras. This round is the details
+  display
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+### Defaults taken, awaiting the author's confirmation
+
+The feature was started without answers to these, so the recommended option was used for each.
+
+1. **The dashboard's item lists now read the session.** The page calls `auth()` once and passes
+   `userId` to `RecentItems` and `PinnedItems`, because the route checks ownership against the
+   session. `StatsCards`, `RecentCollections` and `AppSidebar` still use `getDemoUserId()`, so
+   anyone but the demo user sees their own items beside the demo account's stats, collections
+   and sidebar until the shim is removed.
+2. **Only Copy works in the action bar.** It copies `content`, or `url` if there is no content.
+   Favorite, Pin, Edit and Delete are disabled, since no item mutations exist. Favorite and Pin
+   still show the item's current state.
+3. **The layout comes from the spec's text.** `context/screenshots/dashboard-ui-drawer.png` does
+   not exist and is not in git history, so the drawer has not been compared with the design.
+
+### Adaptations of the spec
+
+- **The dashboard does not render `ItemCard`.** It renders `ItemRow`; only `/items/[type]` uses
+  `ItemCard`. Both need to open the drawer, or the dashboard requirement is not met.
+- **Tags are not card data today.** The spec lists them, but `dashboardItemSelect` has no tags
+  and the seed created none. They belong in the detail query, and the display needs an empty
+  state.
+- **"Collections" is singular in the schema.** `Item.collectionId` is one nullable relation, so
+  an item has at most one collection.
+- **An API route departs from `coding-standards.md:84`**, which has client components use Server
+  Actions. The spec names the route explicitly, so the spec wins.
+
+### Constraints to carry into implementation
+
+- **The proxy does not cover `/api/items`.** Its matcher is `/dashboard`, `/profile` and
+  `/items`, so the route must check the session itself. That suits a `fetch`, which should get a
+  401 rather than a redirect to the sign-in page.
+- **Ownership belongs in the query.** Filter on `{ id, userId }` and answer 404 for a missing
+  item or someone else's, so the response does not reveal which ids exist.
+- **Fast clicks can race.** Opening item B while A is still loading must not end with A's data in
+  the drawer, so abort or ignore the stale request.
+- **Dates arrive as strings.** The detail response is JSON, unlike `DashboardItem`'s `Date`
+  fields.
+- **Tests:** Vitest only picks up `src/actions` and `src/lib`, so the query function gets tests in
+  `src/lib/db/items.test.ts`, but the route handler would not be collected without a config
+  change. The route's auth and 404 paths need a browser or HTTP check instead.
 
 ---
 
@@ -1316,3 +1369,42 @@ Environment notes that outlive any one feature:
   it in `.env`, and blocking from the 6th attempt was confirmed. Vercel's values are unchecked.
   Still open: a database outage lands on the sign-in page instead of an error, a 6 px overflow on
   phones after navigating, and the collapsed sidebar not persisting. Feature completed.
+- 2026-11-07 — Started Item Drawer on branch `feature/item-drawer`. Added `getItemDetail` (looks up
+  by id and owner together), `GET /api/items/[id]` (401 when signed out, 404 for a missing item or
+  someone else's) and `ItemDrawerProvider`, `ItemDrawerTrigger` and `ItemDetails`. The trigger is an
+  overlay button because a button may not contain the cards' headings. The provider wraps the lists
+  on each page rather than sitting in `(app)/layout.tsx`, so the drawer closes on navigation without
+  extra code. `/dashboard` now awaits `auth()` before rendering, which adds one user lookup ahead of
+  every section; the cost was not measured. Verified: 166 unit tests, typecheck, lint and the build
+  (`ƒ /api/items/[id]`), then 27 Playwright checks under `next start` with `.env`'s `DATABASE_URL`,
+  covering the skeleton, copy, keyboard and focus, a stale response, the error state, mobile, and a
+  throwaway second user, deleted afterwards and confirmed gone. **Not verified:** the layout against
+  the design, as the screenshot is missing; the route handler has no unit test, as Vitest does not
+  collect it. **Found on the way, not caused by this:** under `next start`, Upstash answers
+  `WRONGPASS` to the token from `.env.production`, so sign-in rate limiting fails open there.
+- 2026-11-07 — Drawer speed. The author saw the content take about 1 s. Measured on a production
+  build: 720 ms for clicks in quick succession and **1.7 s after a 20 s pause**, which is what a
+  person actually does. Each statement is a 160-170 ms round trip from this machine, and the session
+  check costs one. `getItemDetail` cost three, because Prisma loads a nested select level by level (5
+  statements, even for an id that does not exist). After a pause the pool also has to reconnect,
+  about 1 s more. A benchmark that clicks back to back hides that entirely. Fixed the first cause:
+  the drawer now takes the whole card from the trigger and shows its fields at once (5-30 ms), and
+  `getItemDetail` runs two flat queries in parallel, both filtered by owner. Content now arrives in
+  about 415 ms back to back and 1.35 s after a pause. **Left for a separate fix:** a longer
+  `idleTimeoutMillis` in `src/lib/prisma.ts`. In a script, with the 5-minute test value, it brought the
+  server time after a pause from 1 260 ms to about 340 ms, but it affects the whole app and has not
+  been tried on Vercel. Also from the review: `No items yet.` replaces the empty `0 of 0`,
+  `contentType` and `fileUrl` are no longer returned, and the skeleton has `role="status"`. `isWebUrl`
+  moved to `src/lib/utils.ts` so it could be tested. Verified: 180 unit tests, typecheck, lint, the
+  build, and 30 Playwright checks, including the back button, long content, real sorted tags and
+  isolation in both directions, with throwaway accounts deleted afterwards. File rows and an unsafe
+  URL were only checked with a mocked response.
+- 2026-11-07 — Double click fix. A double click on an item opened the drawer and closed it at once:
+  the second click landed on the backdrop the first one had just opened, and Base UI closed on that
+  `outside-press` (a `click` event with `detail` 2, confirmed by tracing the events and the
+  `onOpenChange` reason). `handleOpenChange` now cancels an outside press whose `detail` is above 1.
+  A single click on the backdrop, the close button and Escape still close it, and checking the click
+  count avoids a timing guess. Verified in dev with 8 Playwright checks, plus tests and the build.
+  Not tested: a double tap on a touch screen. Earlier the author also reported the content stuck on
+  the skeleton and a 404 on `/dashboard`. Neither could be reproduced, both went away without a code
+  change, and the cause is unknown.

@@ -102,3 +102,44 @@ export async function getItemsByType(
 
   return { items: items.map(toDashboardItem), totalCount };
 }
+
+/**
+ * What the drawer needs on top of the card, which it already has. Left out of
+ * `DashboardItem` because `content` can be large and lists never show it.
+ */
+export interface ItemDetail {
+  content: string | null;
+  url: string | null;
+  fileName: string | null;
+  language: string | null;
+  createdAt: Date;
+  /** Tag names, sorted. */
+  tags: string[];
+}
+
+/** An `ItemDetail` as it arrives from `/api/items/[id]`: JSON turns dates into strings. */
+export type ItemDetailJson = Omit<ItemDetail, "createdAt"> & { createdAt: string };
+
+/**
+ * The item's detail, or null both when it does not exist and when it belongs to
+ * someone else, so a caller cannot tell the two apart.
+ *
+ * Two flat queries in parallel, because each level of a nested select costs
+ * Prisma another round trip: selecting the tags through the item took three.
+ */
+export async function getItemDetail(userId: string, id: string): Promise<ItemDetail | null> {
+  const [item, tags] = await Promise.all([
+    prisma.item.findFirst({
+      where: { id, userId },
+      select: { content: true, url: true, fileName: true, language: true, createdAt: true },
+    }),
+    prisma.tag.findMany({
+      where: { userId, items: { some: { itemId: id } } },
+      select: { name: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
+  if (!item) return null;
+
+  return { ...item, tags: tags.map(({ name }) => name) };
+}

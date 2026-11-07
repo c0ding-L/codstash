@@ -1,5 +1,6 @@
 import { Clock, Pin, Star } from "lucide-react";
 
+import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
 import type { DashboardItem } from "@/lib/db/items";
 import { formatFileSize, formatRelativeTime } from "@/lib/format";
 import {
@@ -18,7 +19,9 @@ export function ItemRow({ item, now }: { item: DashboardItem; now: string }) {
   const Icon = slug ? typeIcons[slug] : Clock;
 
   return (
-    <li className="flex items-start gap-3 rounded-lg border border-border p-3">
+    <li className="relative flex items-start gap-3 rounded-lg border border-border p-3 transition-colors hover:bg-muted/50">
+      <ItemDrawerTrigger item={item} />
+
       <span
         className={cn(
           "flex size-8 shrink-0 items-center justify-center rounded-lg",

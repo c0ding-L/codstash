@@ -1,5 +1,6 @@
 import { Clock, Pin, Star } from "lucide-react";
 
+import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
 import { Card, CardContent } from "@/components/ui/card";
 import type { DashboardItem } from "@/lib/db/items";
 import { formatFileSize, formatRelativeTime } from "@/lib/format";
@@ -34,6 +35,8 @@ export function ItemCard({ item, now }: ItemCardProps) {
           aria-hidden
         />
       ) : null}
+
+      <ItemDrawerTrigger item={item} />
 
       <CardContent className="relative flex h-full items-start gap-3">
         <span

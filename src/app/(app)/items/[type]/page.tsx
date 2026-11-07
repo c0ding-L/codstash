@@ -4,6 +4,7 @@ import { connection } from "next/server";
 
 import { auth } from "@/auth";
 import { ItemCard } from "@/components/items/ItemCard";
+import { ItemDrawerProvider } from "@/components/items/ItemDrawerProvider";
 import { getItemsByType } from "@/lib/db/items";
 import { itemTypeFromSegment, itemTypeHref, typePluralNames } from "@/lib/item-type-ui";
 
@@ -44,13 +45,15 @@ export default async function ItemsPage({ params }: ItemsPageProps) {
       </div>
 
       {items.length > 0 ? (
-        <ul className="grid gap-4 md:grid-cols-2">
-          {items.map((item) => (
-            <li key={item.id}>
-              <ItemCard item={item} now={now} />
-            </li>
-          ))}
-        </ul>
+        <ItemDrawerProvider>
+          <ul className="grid gap-4 md:grid-cols-2">
+            {items.map((item) => (
+              <li key={item.id}>
+                <ItemCard item={item} now={now} />
+              </li>
+            ))}
+          </ul>
+        </ItemDrawerProvider>
       ) : (
         <p className="text-sm text-muted-foreground">No {label.toLowerCase()} yet.</p>
       )}

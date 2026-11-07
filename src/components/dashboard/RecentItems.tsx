@@ -2,14 +2,12 @@ import { Clock } from "lucide-react";
 import { connection } from "next/server";
 
 import { ItemRow } from "@/components/dashboard/ItemRow";
-import { getDemoUserId } from "@/lib/db/collections";
 import { getRecentItems } from "@/lib/db/items";
 
-export async function RecentItems() {
+export async function RecentItems({ userId }: { userId: string }) {
   // A Prisma query does not opt the route out of prerendering on its own.
   await connection();
 
-  const userId = await getDemoUserId();
   const { items, totalCount } = await getRecentItems(userId);
   const now = new Date().toISOString();
 
@@ -20,16 +18,22 @@ export async function RecentItems() {
           <Clock className="size-4 text-muted-foreground" aria-hidden />
           Recent items
         </h2>
-        <span className="text-sm text-muted-foreground">
-          {items.length} of {totalCount}
-        </span>
+        {items.length > 0 ? (
+          <span className="text-sm text-muted-foreground">
+            {items.length} of {totalCount}
+          </span>
+        ) : null}
       </div>
 
-      <ul className="flex flex-col gap-2">
-        {items.map((item) => (
-          <ItemRow key={item.id} item={item} now={now} />
-        ))}
-      </ul>
+      {items.length > 0 ? (
+        <ul className="flex flex-col gap-2">
+          {items.map((item) => (
+            <ItemRow key={item.id} item={item} now={now} />
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-muted-foreground">No items yet.</p>
+      )}
     </section>
   );
 }

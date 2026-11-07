@@ -2,14 +2,12 @@ import { Pin } from "lucide-react";
 import { connection } from "next/server";
 
 import { ItemRow } from "@/components/dashboard/ItemRow";
-import { getDemoUserId } from "@/lib/db/collections";
 import { getPinnedItems } from "@/lib/db/items";
 
-export async function PinnedItems() {
+export async function PinnedItems({ userId }: { userId: string }) {
   // A Prisma query does not opt the route out of prerendering on its own.
   await connection();
 
-  const userId = await getDemoUserId();
   const items = await getPinnedItems(userId);
 
   // The spec asks for nothing at all when nothing is pinned — heading included,
