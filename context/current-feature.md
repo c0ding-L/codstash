@@ -1,25 +1,22 @@
-# Current Feature: Item Type Color Fixes
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Prompt and Link are clearly different colors: Link moves from `yellow` to `lime`,
-  everywhere the type appears
-- `/items/[type]` cards use the same style as the dashboard's collection cards: a 6%
-  background tint and a 40% ring on hover, with no left border
-- `@context/features/item-list-view-spec.md` and `docs/item-types.md` match the result
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-Reported by the author after Items List View. `amber` and `yellow` are only about 8°
-of hue apart, so the 6% tint makes them look the same.
+<!-- Additional context, constraints, or details from spec -->
 
-`ItemType.color` lives in the database, and `toColorToken` rejects a token it doesn't
-know, so a row still on `yellow` loses its accent. A data migration moves the system
-`link` row, so production gets it through `prisma migrate deploy`.
+---
+
+Previous feature (completed) — Item Type Color Fixes: Link moved from `yellow` to
+`lime`, and `/items/[type]` cards traded the left border for the dashboard's tint
+and hover ring. Outcome in the History below.
 
 ---
 
@@ -1252,3 +1249,12 @@ Environment notes that outlive any one feature:
   state. Verified with Playwright as the demo user only, so isolation between
   accounts and the file size line on cards were not exercised. `sidebarTypes` still
   omits Command, so `/items/commands` has no sidebar link. Feature completed.
+- 2026-11-07 — Item Type Color Fixes merged into `main`. `amber` and `yellow` were
+  about 8° of hue apart and looked the same at the 6% tint, so Link moved to `lime`.
+  `ItemCard` now uses `washClasses` and `ringClasses`, and `borderClasses` is gone.
+  Migration `20261107000000_link_color_lime` updates the system row and is applied
+  on `develop` only. Production needs `prisma migrate deploy`, because `next build`
+  does not run it and a row still on `yellow` loses its accent. Verified with
+  Playwright against a production build using the develop database. Still open: the
+  sidebar's `/collections` link has no route, and its prefetch requests stay open.
+  Feature completed.
