@@ -1,16 +1,20 @@
-# Current Feature
+# Current Feature: Token Flow and Account Isolation Tests
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- `src/lib/verification.ts` and `src/lib/password-reset.ts` have unit tests, including
+  expired, reused and unknown tokens
+- The `src/lib/db` queries are tested to always filter by the given user
+- Isolation is checked once in a browser with a second account
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+Tests only, unless they uncover a bug. Unit tests with a mocked Prisma prove the filter is
+sent, not what the database returns, so the browser check covers the rest.
 
 ---
 
