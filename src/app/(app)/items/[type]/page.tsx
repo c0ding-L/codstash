@@ -20,6 +20,7 @@ export default async function ItemsPage({ params }: ItemsPageProps) {
   // Rendered per request, like every other page.
   await connection();
 
+  // `layout.tsx` has already answered 404 for an unknown type. This narrows the slug.
   const slug = itemTypeFromSegment((await params).type);
   if (!slug) notFound();
 

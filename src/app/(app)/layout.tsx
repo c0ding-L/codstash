@@ -9,6 +9,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
  * collapsed/expanded state and swaps the sidebar for a drawer on mobile;
  * TooltipProvider is required by the tooltips SidebarMenuButton shows while
  * collapsed.
+ *
+ * `loading.tsx` sits below this layout, so nothing here may wait on data: that
+ * would hold its fallback back. `AppSidebar` has its own boundary for that reason.
  */
 export default function AppLayout({
   children,

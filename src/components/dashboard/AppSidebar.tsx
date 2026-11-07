@@ -2,9 +2,11 @@ import Link from "next/link";
 import { Clock, Code2, FolderOpen, Settings, Star } from "lucide-react";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
+import { Suspense } from "react";
 
 import { auth } from "@/auth";
 import { UserMenu } from "@/components/auth/UserMenu";
+import { AppSidebarSkeleton } from "@/components/dashboard/AppSidebarSkeleton";
 import { Badge } from "@/components/ui/badge";
 import {
   Sidebar,
@@ -36,7 +38,36 @@ import {
 } from "@/lib/item-type-ui";
 import { cn } from "@/lib/utils";
 
-export async function AppSidebar() {
+/**
+ * `Sidebar` stays outside the boundary. It renders differently on phones once
+ * `SidebarProvider` has measured the viewport, and a boundary around it would
+ * hydrate after that change and no longer match the server's desktop HTML.
+ */
+export function AppSidebar() {
+  return (
+    <Sidebar collapsible="icon">
+      <SidebarHeader>
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-2 overflow-hidden rounded-md p-1"
+        >
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <Code2 className="size-4" aria-hidden />
+          </span>
+          <span className="truncate font-semibold group-data-[collapsible=icon]:hidden">
+            CodStash
+          </span>
+        </Link>
+      </SidebarHeader>
+
+      <Suspense fallback={<AppSidebarSkeleton />}>
+        <AppSidebarBody />
+      </Suspense>
+    </Sidebar>
+  );
+}
+
+async function AppSidebarBody() {
   // A Prisma query does not opt the layout out of prerendering on its own.
   await connection();
 
@@ -58,21 +89,7 @@ export async function AppSidebar() {
   const typeBySlug = new Map(itemTypes.map((type) => [type.slug, type]));
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <Link
-          href="/dashboard"
-          className="flex items-center gap-2 overflow-hidden rounded-md p-1"
-        >
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Code2 className="size-4" aria-hidden />
-          </span>
-          <span className="truncate font-semibold group-data-[collapsible=icon]:hidden">
-            CodStash
-          </span>
-        </Link>
-      </SidebarHeader>
-
+    <>
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Types</SidebarGroupLabel>
@@ -210,6 +227,6 @@ export async function AppSidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
-    </Sidebar>
+    </>
   );
 }

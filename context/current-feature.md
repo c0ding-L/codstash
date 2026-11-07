@@ -1,16 +1,19 @@
-# Current Feature
+# Current Feature: Instant Navigation Feedback
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Clicking a sidebar link shows a loading state right away, instead of nothing for about 0.85 s
+- The sidebar and top bar stay on screen while the page loads
+- The sidebar's own data no longer holds back the rest of the app shell
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+Reported by the author. A production build measured about 0.85 s per sidebar click, with no
+visual feedback in between. This changes how fast navigation feels, not how long the data takes.
 
 ---
 
