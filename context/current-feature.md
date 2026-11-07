@@ -1,69 +1,22 @@
-# Current Feature: Item Drawer
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-Spec: `@context/features/item-drawer-spec.md`.
-
-- Clicking an item opens a right-side shadcn `Sheet` with that item's full data, with no page
-  navigation. The drawer is the item detail view; there is no separate item page
-- Works on both the dashboard and the items list pages
-- A client wrapper holds the drawer state, and the pages stay server components
-- Card data is still fetched by the server components. Full detail (content, collections,
-  language, etc.) is fetched on click from `/api/items/[id]`
-- The query function lives in `src/lib/db/items.ts`, and the API route calls it with an auth check
-- The drawer shows a skeleton while fetching
-- Action bar: Favorite (star, yellow when active), Pin, Copy, Edit (pencil) and Delete (trash,
-  right-aligned)
-- Out of scope for now: the code editor and item-specific extras. This round is the details
-  display
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-### Defaults taken, awaiting the author's confirmation
+<!-- Additional context, constraints, or details from spec -->
 
-The feature was started without answers to these, so the recommended option was used for each.
+---
 
-1. **The dashboard's item lists now read the session.** The page calls `auth()` once and passes
-   `userId` to `RecentItems` and `PinnedItems`, because the route checks ownership against the
-   session. `StatsCards`, `RecentCollections` and `AppSidebar` still use `getDemoUserId()`, so
-   anyone but the demo user sees their own items beside the demo account's stats, collections
-   and sidebar until the shim is removed.
-2. **Only Copy works in the action bar.** It copies `content`, or `url` if there is no content.
-   Favorite, Pin, Edit and Delete are disabled, since no item mutations exist. Favorite and Pin
-   still show the item's current state.
-3. **The layout comes from the spec's text.** `context/screenshots/dashboard-ui-drawer.png` does
-   not exist and is not in git history, so the drawer has not been compared with the design.
-
-### Adaptations of the spec
-
-- **The dashboard does not render `ItemCard`.** It renders `ItemRow`; only `/items/[type]` uses
-  `ItemCard`. Both need to open the drawer, or the dashboard requirement is not met.
-- **Tags are not card data today.** The spec lists them, but `dashboardItemSelect` has no tags
-  and the seed created none. They belong in the detail query, and the display needs an empty
-  state.
-- **"Collections" is singular in the schema.** `Item.collectionId` is one nullable relation, so
-  an item has at most one collection.
-- **An API route departs from `coding-standards.md:84`**, which has client components use Server
-  Actions. The spec names the route explicitly, so the spec wins.
-
-### Constraints to carry into implementation
-
-- **The proxy does not cover `/api/items`.** Its matcher is `/dashboard`, `/profile` and
-  `/items`, so the route must check the session itself. That suits a `fetch`, which should get a
-  401 rather than a redirect to the sign-in page.
-- **Ownership belongs in the query.** Filter on `{ id, userId }` and answer 404 for a missing
-  item or someone else's, so the response does not reveal which ids exist.
-- **Fast clicks can race.** Opening item B while A is still loading must not end with A's data in
-  the drawer, so abort or ignore the stale request.
-- **Dates arrive as strings.** The detail response is JSON, unlike `DashboardItem`'s `Date`
-  fields.
-- **Tests:** Vitest only picks up `src/actions` and `src/lib`, so the query function gets tests in
-  `src/lib/db/items.test.ts`, but the route handler would not be collected without a config
-  change. The route's auth and 404 paths need a browser or HTTP check instead.
+Previous feature (completed) — Item Drawer: clicking an item opens a right-side drawer with its
+full detail instead of navigating. Spec: `@context/features/item-drawer-spec.md`. Outcome in the
+History below.
 
 ---
 
@@ -1408,3 +1361,15 @@ Environment notes that outlive any one feature:
   Not tested: a double tap on a touch screen. Earlier the author also reported the content stuck on
   the skeleton and a 404 on `/dashboard`. Neither could be reproduced, both went away without a code
   change, and the cause is unknown.
+- 2026-11-07 — Item Drawer completed and merged into `main` (`1965c5f`, fast-forward); branch
+  `feature/item-drawer` deleted. It was never pushed. Shipped: `GET /api/items/[id]`,
+  `getItemDetail` (two flat queries in parallel, both filtered by owner), `ItemDrawerProvider`,
+  `ItemDrawerTrigger`, `ItemDetails`, and `isWebUrl` in `src/lib/utils.ts`; 180 unit tests. The
+  author ran `complete` without answering the three defaults explicitly, so they stand as built:
+  only Copy works, the dashboard's item lists read the session while stats, collections and the
+  sidebar still read the demo account, and the layout was never compared with a design.
+  **Still open:** the connection-pool fix (`idleTimeoutMillis`, to be tried on Vercel), which
+  would bring content after an idle pause from about 1.35 s down toward 0.4 s; a unit test for the
+  route handler, which needs a Vitest config change; a double tap on touch screens; and removing
+  the demo-user shim. A `.git/index.lock` held by another process blocked the merge once and
+  cleared by itself; it was not deleted.
