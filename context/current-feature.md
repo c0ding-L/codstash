@@ -1,19 +1,21 @@
-# Current Feature: Instant Navigation Feedback
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Clicking a sidebar link shows a loading state right away, instead of nothing for about 0.85 s
-- The sidebar and top bar stay on screen while the page loads
-- The sidebar's own data no longer holds back the rest of the app shell
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-Reported by the author. A production build measured about 0.85 s per sidebar click, with no
-visual feedback in between. This changes how fast navigation feels, not how long the data takes.
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — Instant Navigation Feedback: sidebar clicks show a skeleton
+right away, and the sidebar's data no longer holds back the page. Outcome in the History below.
 
 ---
 
@@ -1303,3 +1305,14 @@ Environment notes that outlive any one feature:
   confirmed the dashboard and sidebar still read the demo account through `getDemoUserId` for
   everyone, so a new user sees demo data there and not their own items. Fix that before a real
   launch. Feature completed.
+- 2026-11-07 — Instant Navigation Feedback merged into `main`. A sidebar click now shows
+  `PageSkeleton` in 60-85 ms; the content still takes about 0.85 s from a local machine, mostly
+  round trips to `us-east-2`. `loading.tsx` is per route because in `(app)` it did not show
+  again between item types. The type check moved to `items/[type]/layout.tsx`, above the
+  boundary, to keep a real 404. The sidebar's `Suspense` is inside `Sidebar`, because around it
+  the mobile variant caused hydration error #418. A session whose account is gone now gets a 200
+  and a client redirect rather than a 307. The same investigation found the old Upstash host no
+  longer existed, which cost seconds per sign-in and left rate limiting off; the author replaced
+  it in `.env`, and blocking from the 6th attempt was confirmed. Vercel's values are unchecked.
+  Still open: a database outage lands on the sign-in page instead of an error, a 6 px overflow on
+  phones after navigating, and the collapsed sidebar not persisting. Feature completed.
