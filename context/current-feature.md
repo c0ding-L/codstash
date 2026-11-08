@@ -14,6 +14,12 @@ Not Started
 
 ---
 
+Previous feature (completed) — Item Drawer Edit Mode: the pencil button turns the drawer into an
+edit form, saved through the `updateItem` server action. Spec:
+`@context/features/item-drawer-edit-spec.md`. Outcome in the History below.
+
+---
+
 Previous feature (completed) — Item Drawer: clicking an item opens a right-side drawer with its
 full detail instead of navigating. Spec: `@context/features/item-drawer-spec.md`. Outcome in the
 History below.
@@ -1373,3 +1379,20 @@ Environment notes that outlive any one feature:
   route handler, which needs a Vitest config change; a double tap on touch screens; and removing
   the demo-user shim. A `.git/index.lock` held by another process blocked the merge once and
   cleared by itself; it was not deleted.
+- 2026-11-08 — Item Drawer Edit Mode completed and merged into `main` (`b0844ae`, fast-forward);
+  branch `feature/item-drawer-edit` deleted. It was never pushed. Shipped: the `updateItem` server
+  action (`src/actions/items.ts`, Zod-validated, returns the field at fault on a validation error)
+  and the `updateItem` query (one `update` filtered by owner, tags replaced via `connectOrCreate`
+  scoped to the user, returns `{ card, detail }` rather than the spec's `ItemDetail` so the drawer
+  heading refreshes), `ItemEditForm`, a `Textarea` primitive; 198 unit tests. Content is kept as
+  typed (only whitespace-only clears it); the advisor caught an early version that trimmed it.
+  Design pass approved by the author: type-colored icon in the header, "Edit <type>" heading,
+  Save/Cancel footer, errors at the field plus a toast, tag badges while typing, tooltips on the
+  icon buttons (also the disabled ones), icons on the detail rows. App-wide, toasts moved to the
+  bottom left and errors are red. Verified with Playwright on `next start` against the develop
+  branch (`AUTH_TRUST_HOST=true` and `.env`'s `DATABASE_URL` passed explicitly). A test run removed
+  the author's `docker` tag from the Dockerfile snippet; it was relinked and the test tag
+  `e2e-tag` deleted, with the author's approval. **Known and accepted:** at phone width the toast
+  covers the Save/Cancel footer for about 4 s. **Not tested:** the stale-save guard, notes, files
+  and images (the demo account has none), and a real save of content with leading or trailing
+  whitespace.
