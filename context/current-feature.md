@@ -14,6 +14,11 @@ Not Started
 
 ---
 
+Previous feature (completed) — Item Delete: the drawer's trash button deletes the item after a
+confirmation dialog, with a toast on success. Outcome in the History below.
+
+---
+
 Previous feature (completed) — Item Drawer Edit Mode: the pencil button turns the drawer into an
 edit form, saved through the `updateItem` server action. Spec:
 `@context/features/item-drawer-edit-spec.md`. Outcome in the History below.
@@ -1396,3 +1401,18 @@ Environment notes that outlive any one feature:
   covers the Save/Cancel footer for about 4 s. **Not tested:** the stale-save guard, notes, files
   and images (the demo account has none), and a real save of content with leading or trailing
   whitespace.
+- 2026-11-08 — Item Delete completed and merged into `main` (`0bc274b`, fast-forward); branch
+  `feature/item-delete` deleted. It was never pushed. Shipped: the `deleteItem` server action
+  (`src/actions/items.ts`) and the `deleteItem` query (one `delete` filtered by owner, so another
+  user's item or a missing one is P2025 → "This item no longer exists."), `ItemDeleteDialog`
+  (controlled `AlertDialog`, pending state, cannot close while the delete runs), and an
+  `onDeleted` callback that closes the drawer, guarded like `handleSaved`; 204 unit tests (6 new).
+  Verified with Playwright on `next start` against the develop branch, using a throwaway item
+  that was then removed: Escape/Cancel close only the dialog, a backdrop click closes neither,
+  the row and its `ItemTag` link are gone while the tag stays, Recent goes from "10 of 19" to
+  "10 of 18", and a row removed behind the UI gives the error toast with the dialog still open.
+  **Known:** the deleted card stays on the dashboard for about 3.6 s until `router.refresh()`
+  lands, and opening it then shows "could not be loaded"; removing it optimistically would fix
+  that. After a P2025 the dialog stays open on the missing item (Cancel only). **Not tested:**
+  the stats card numbers (inferred to update with the same refresh) and reaching
+  `/items/[type]` by a sidebar click rather than a fresh load.
