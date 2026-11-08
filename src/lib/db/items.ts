@@ -215,6 +215,58 @@ export async function updateItem(
   };
 }
 
+/** The fields of a new item. Those its type does not use are left out. */
+export interface ItemCreate {
+  /** A system type's slug. */
+  type: ItemTypeSlug;
+  title: string;
+  description?: string | null;
+  content?: string | null;
+  url?: string | null;
+  language?: string | null;
+  tags: string[];
+}
+
+/**
+ * Creates the item under the system type of that slug and returns its card.
+ * Throws when no such system type exists. The lookup filters on a null owner
+ * because the `[userId, slug]` unique cannot be queried with a null.
+ */
+export async function createItem(
+  userId: string,
+  { type: slug, tags, ...fields }: ItemCreate,
+): Promise<DashboardItem> {
+  const type = await prisma.itemType.findFirst({
+    where: { slug, userId: null, isSystem: true },
+    select: { id: true },
+  });
+  if (!type) throw new Error(`No system item type "${slug}".`);
+
+  // A repeated name would link the same tag twice, which the join's key forbids.
+  const names = [...new Set(tags)];
+
+  const created = await prisma.item.create({
+    data: {
+      ...fields,
+      user: { connect: { id: userId } },
+      type: { connect: { id: type.id } },
+      tags: {
+        create: names.map((name) => ({
+          tag: {
+            connectOrCreate: {
+              where: { userId_name: { userId, name } },
+              create: { name, userId },
+            },
+          },
+        })),
+      },
+    },
+    select: dashboardItemSelect,
+  });
+
+  return toDashboardItem(created);
+}
+
 /**
  * Deletes the item. Filtered on the owner, so another user's item throws
  * Prisma's P2025 just as a missing one does. Its tag links cascade; the tags stay.

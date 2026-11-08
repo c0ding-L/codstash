@@ -1,12 +1,12 @@
-import { Plus, Search } from "lucide-react";
+import { Search } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { NewItemDialog } from "@/components/items/NewItemDialog";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
 /**
- * Dashboard top bar. Search and "New Item" are display only; the trigger is
- * live — it collapses the sidebar on desktop and opens the drawer on mobile.
+ * Dashboard top bar. Search is display only. The trigger collapses the sidebar
+ * on desktop and opens the drawer on mobile; "New Item" opens the create dialog.
  */
 export function TopBar() {
   return (
@@ -26,10 +26,7 @@ export function TopBar() {
         />
       </div>
 
-      <Button size="lg" className="ml-auto">
-        <Plus aria-hidden />
-        New Item
-      </Button>
+      <NewItemDialog />
     </header>
   );
 }

@@ -41,7 +41,7 @@ interface FieldProps {
   children: React.ReactNode;
 }
 
-function Field({ id, label, error, hint, children }: FieldProps) {
+export function Field({ id, label, error, hint, children }: FieldProps) {
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor={id} className="text-xs font-medium text-muted-foreground">
@@ -62,7 +62,7 @@ function Field({ id, label, error, hint, children }: FieldProps) {
 }
 
 /** The tags as they will be saved: trimmed, without blanks or repeats. */
-function toTags(text: string) {
+export function toTags(text: string) {
   const tags = text
     .split(",")
     .map((tag) => tag.trim())

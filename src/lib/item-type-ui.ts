@@ -26,6 +26,21 @@ export const typeIcons: Record<ItemTypeSlug, LucideIcon> = {
   link: LinkIcon,
 };
 
+/**
+ * The system types' colours, as seeded. For places that render before any type
+ * row is loaded, like the create dialog in the top bar. Elsewhere the row's
+ * own `color` is used.
+ */
+export const typeColors: Record<ItemTypeSlug, ColorToken> = {
+  snippet: "emerald",
+  prompt: "amber",
+  note: "blue",
+  command: "cyan",
+  file: "rose",
+  image: "violet",
+  link: "lime",
+};
+
 /** Tailwind cannot see interpolated class names, so the tokens are spelled out. */
 export const colorClasses: Record<ColorToken, string> = {
   emerald: "text-emerald-400",

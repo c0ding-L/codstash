@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import {
+  createItem,
   deleteItem,
   getItemDetail,
   getItemsByType,
@@ -13,7 +14,15 @@ import { prisma } from "@/lib/prisma";
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
-    item: { findMany: vi.fn(), findFirst: vi.fn(), count: vi.fn(), update: vi.fn(), delete: vi.fn() },
+    item: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      count: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    },
+    itemType: { findFirst: vi.fn() },
     tag: { findMany: vi.fn() },
   },
 }));
@@ -24,6 +33,8 @@ const count = prisma.item.count as unknown as Mock;
 const findTags = prisma.tag.findMany as unknown as Mock;
 const update = prisma.item.update as unknown as Mock;
 const remove = prisma.item.delete as unknown as Mock;
+const create = prisma.item.create as unknown as Mock;
+const findType = prisma.itemType.findFirst as unknown as Mock;
 
 const USER = "user_a";
 
@@ -244,5 +255,74 @@ describe("deleteItem", () => {
     remove.mockRejectedValue(Object.assign(new Error("not found"), { code: "P2025" }));
 
     await expect(deleteItem(USER, "someone_elses")).rejects.toMatchObject({ code: "P2025" });
+  });
+});
+
+describe("createItem", () => {
+  const row = {
+    id: "item_new",
+    title: "Title",
+    description: null,
+    fileSize: null,
+    isPinned: false,
+    isFavorite: false,
+    updatedAt: new Date(1),
+    type: { slug: "note", name: "Note", color: "amber" },
+    collection: null,
+  };
+
+  beforeEach(() => {
+    findType.mockResolvedValue({ id: "type_note" });
+    create.mockResolvedValue(row);
+  });
+
+  it("looks up the system type of that slug, never a user's own", async () => {
+    await createItem(USER, { type: "note", title: "Title", tags: [] });
+
+    expect(findType.mock.calls[0]![0].where).toEqual({ slug: "note", userId: null, isSystem: true });
+  });
+
+  it("throws, creating nothing, when there is no such system type", async () => {
+    findType.mockResolvedValue(null);
+
+    await expect(createItem(USER, { type: "note", title: "Title", tags: [] })).rejects.toThrow();
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("creates the item for that owner, under that type, with its fields", async () => {
+    await createItem(USER, { type: "note", title: "Title", content: "body", tags: [] });
+
+    const { data } = create.mock.calls[0]![0];
+    expect(data).toMatchObject({
+      title: "Title",
+      content: "body",
+      user: { connect: { id: USER } },
+      type: { connect: { id: "type_note" } },
+    });
+    expect(data).not.toHaveProperty("userId");
+  });
+
+  it("links each tag once, to that user's tag of that name", async () => {
+    await createItem(USER, { type: "note", title: "Title", tags: ["bash", "bash"] });
+
+    expect(create.mock.calls[0]![0].data.tags).toEqual({
+      create: [
+        {
+          tag: {
+            connectOrCreate: {
+              where: { userId_name: { userId: USER, name: "bash" } },
+              create: { name: "bash", userId: USER },
+            },
+          },
+        },
+      ],
+    });
+  });
+
+  it("returns the card with the collection flattened", async () => {
+    const card = await createItem(USER, { type: "note", title: "Title", tags: [] });
+
+    expect(card).toMatchObject({ id: "item_new", collectionName: null });
+    expect(card).not.toHaveProperty("collection");
   });
 });
