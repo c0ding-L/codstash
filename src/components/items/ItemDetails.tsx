@@ -20,6 +20,7 @@ import {
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { ItemDeleteDialog } from "@/components/items/ItemDeleteDialog";
 import { ItemEditForm, type SavedItem } from "@/components/items/ItemEditForm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -99,13 +100,15 @@ interface ActionBarProps {
   detail: ItemDetailJson | null;
   /** Null until the detail has loaded: the form starts from it. */
   onEdit: (() => void) | null;
+  /** Null until the detail has loaded, like `onEdit`. */
+  onDelete: (() => void) | null;
 }
 
 /**
- * Favorite, Pin and Delete do not work yet. Favorite and Pin stay at full
+ * Favorite and Pin do not work yet. Favorite and Pin stay at full
  * opacity while disabled, because they still report the item's current state.
  */
-function ActionBar({ card, detail, onEdit }: ActionBarProps) {
+function ActionBar({ card, detail, onEdit, onDelete }: ActionBarProps) {
   const copyText = detail ? detail.content || detail.url : null;
 
   return (
@@ -141,7 +144,13 @@ function ActionBar({ card, detail, onEdit }: ActionBarProps) {
       <IconAction label="Edit" hint="Edit" disabled={!onEdit} onClick={() => onEdit?.()}>
         <Pencil aria-hidden />
       </IconAction>
-      <IconAction label="Delete" hint="Deleting is not available yet." disabled wrapperClassName="ml-auto">
+      <IconAction
+        label="Delete"
+        hint="Delete"
+        disabled={!onDelete}
+        onClick={() => onDelete?.()}
+        wrapperClassName="ml-auto"
+      >
         <Trash2 aria-hidden />
       </IconAction>
     </div>
@@ -210,10 +219,12 @@ interface ItemDetailsProps {
   card: DashboardItem;
   state: ItemDetailState;
   onSaved: (saved: SavedItem) => void;
+  onDeleted: (itemId: string) => void;
 }
 
-export function ItemDetails({ card, state, onSaved }: ItemDetailsProps) {
+export function ItemDetails({ card, state, onSaved, onDeleted }: ItemDetailsProps) {
   const [editing, setEditing] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const slug = toItemTypeSlug(card.type.slug);
   const color = toColorToken(card.type.color);
   const TypeIcon = slug ? typeIcons[slug] : Clock;
@@ -269,7 +280,18 @@ export function ItemDetails({ card, state, onSaved }: ItemDetailsProps) {
     <>
       <DrawerHeader card={card} title={card.title} />
 
-      <ActionBar card={card} detail={detail} onEdit={detail ? () => setEditing(true) : null} />
+      <ActionBar
+        card={card}
+        detail={detail}
+        onEdit={detail ? () => setEditing(true) : null}
+        onDelete={detail ? () => setConfirmingDelete(true) : null}
+      />
+      <ItemDeleteDialog
+        card={card}
+        open={confirmingDelete}
+        onOpenChange={setConfirmingDelete}
+        onDeleted={onDeleted}
+      />
 
       <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
         {card.description ? <p className="text-muted-foreground">{card.description}</p> : null}

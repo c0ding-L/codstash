@@ -3,7 +3,12 @@
 import { z } from "zod";
 
 import { auth } from "@/auth";
-import { updateItem as updateItemQuery, type DashboardItem, type ItemDetailJson } from "@/lib/db/items";
+import {
+  deleteItem as deleteItemQuery,
+  updateItem as updateItemQuery,
+  type DashboardItem,
+  type ItemDetailJson,
+} from "@/lib/db/items";
 
 /** What the drawer sends. A field the item's type does not use is left out, not null. */
 export interface UpdateItemInput {
@@ -77,5 +82,22 @@ export async function updateItem(itemId: string, input: UpdateItemInput): Promis
     if (isNotFound(error)) return { success: false, data: null, error: "This item no longer exists." };
     console.error("[items] updateItem failed:", error);
     return { success: false, data: null, error: "Could not save the item. Try again." };
+  }
+}
+
+export type DeleteItemResult = { success: true; data: null; error: null } | { success: false; data: null; error: string };
+
+export async function deleteItem(itemId: string): Promise<DeleteItemResult> {
+  try {
+    const session = await auth();
+    if (!session?.user?.id) return { success: false, data: null, error: "You are not signed in." };
+
+    // The query filters on the owner, so another user's item is not found either.
+    await deleteItemQuery(session.user.id, itemId);
+    return { success: true, data: null, error: null };
+  } catch (error) {
+    if (isNotFound(error)) return { success: false, data: null, error: "This item no longer exists." };
+    console.error("[items] deleteItem failed:", error);
+    return { success: false, data: null, error: "Could not delete the item. Try again." };
   }
 }

@@ -214,3 +214,11 @@ export async function updateItem(
     },
   };
 }
+
+/**
+ * Deletes the item. Filtered on the owner, so another user's item throws
+ * Prisma's P2025 just as a missing one does. Its tag links cascade; the tags stay.
+ */
+export async function deleteItem(userId: string, id: string): Promise<void> {
+  await prisma.item.delete({ where: { id, userId }, select: { id: true } });
+}

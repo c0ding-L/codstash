@@ -1,12 +1,19 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
-import { getItemDetail, getItemsByType, getPinnedItems, getRecentItems, updateItem } from "@/lib/db/items";
+import {
+  deleteItem,
+  getItemDetail,
+  getItemsByType,
+  getPinnedItems,
+  getRecentItems,
+  updateItem,
+} from "@/lib/db/items";
 import { MAX_ITEM_LIMIT } from "@/lib/db/limits";
 import { prisma } from "@/lib/prisma";
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
-    item: { findMany: vi.fn(), findFirst: vi.fn(), count: vi.fn(), update: vi.fn() },
+    item: { findMany: vi.fn(), findFirst: vi.fn(), count: vi.fn(), update: vi.fn(), delete: vi.fn() },
     tag: { findMany: vi.fn() },
   },
 }));
@@ -16,6 +23,7 @@ const findFirst = prisma.item.findFirst as unknown as Mock;
 const count = prisma.item.count as unknown as Mock;
 const findTags = prisma.tag.findMany as unknown as Mock;
 const update = prisma.item.update as unknown as Mock;
+const remove = prisma.item.delete as unknown as Mock;
 
 const USER = "user_a";
 
@@ -218,5 +226,23 @@ describe("updateItem", () => {
     update.mockRejectedValue(Object.assign(new Error("not found"), { code: "P2025" }));
 
     await expect(updateItem(USER, "someone_elses", { title: "t", tags: [] })).rejects.toMatchObject({ code: "P2025" });
+  });
+});
+
+describe("deleteItem", () => {
+  beforeEach(() => {
+    remove.mockResolvedValue({ id: "item_1" });
+  });
+
+  it("deletes only that owner's item", async () => {
+    await deleteItem(USER, "item_1");
+
+    expect(remove.mock.calls[0]![0].where).toEqual({ id: "item_1", userId: USER });
+  });
+
+  it("passes Prisma's error through when no item of that owner matches", async () => {
+    remove.mockRejectedValue(Object.assign(new Error("not found"), { code: "P2025" }));
+
+    await expect(deleteItem(USER, "someone_elses")).rejects.toMatchObject({ code: "P2025" });
   });
 });

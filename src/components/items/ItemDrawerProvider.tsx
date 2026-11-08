@@ -79,13 +79,20 @@ export function ItemDrawerProvider({ children }: { children: React.ReactNode }) 
     setDetail({ status: "ready", detail: savedDetail });
   }, []);
 
+  // A delete that finishes after another item opened leaves the drawer alone.
+  const handleDeleted = useCallback((itemId: string) => {
+    if (itemId !== currentId.current) return;
+    request.current?.abort();
+    setOpen(false);
+  }, []);
+
   return (
     <OpenItemContext.Provider value={openItem}>
       {children}
 
       <Sheet open={open} onOpenChange={handleOpenChange}>
         <SheetContent className="gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-lg">
-          {card ? <ItemDetails key={openCount} card={card} state={detail} onSaved={handleSaved} /> : null}
+          {card ? <ItemDetails key={openCount} card={card} state={detail} onSaved={handleSaved} onDeleted={handleDeleted} /> : null}
         </SheetContent>
       </Sheet>
     </OpenItemContext.Provider>

@@ -1,14 +1,15 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
-import { updateItem } from "@/actions/items";
+import { deleteItem, updateItem } from "@/actions/items";
 import { auth } from "@/auth";
-import { updateItem as updateItemQuery } from "@/lib/db/items";
+import { deleteItem as deleteItemQuery, updateItem as updateItemQuery } from "@/lib/db/items";
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
-vi.mock("@/lib/db/items", () => ({ updateItem: vi.fn() }));
+vi.mock("@/lib/db/items", () => ({ updateItem: vi.fn(), deleteItem: vi.fn() }));
 
 const session = auth as unknown as Mock;
 const query = updateItemQuery as unknown as Mock;
+const deleteQuery = deleteItemQuery as unknown as Mock;
 
 const USER_ID = "user_1";
 
@@ -28,6 +29,7 @@ const detail = { content: "body", url: null, fileName: null, language: null, cre
 beforeEach(() => {
   session.mockResolvedValue({ user: { id: USER_ID } });
   query.mockResolvedValue({ card, detail });
+  deleteQuery.mockResolvedValue(undefined);
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -115,5 +117,40 @@ describe("updateItem", () => {
     const result = await updateItem("item_1", { title: "Title", tags: [] });
 
     expect(result).toEqual({ success: false, data: null, error: "Could not save the item. Try again." });
+  });
+});
+
+describe("deleteItem", () => {
+  it("refuses when not signed in", async () => {
+    session.mockResolvedValue(null);
+
+    const result = await deleteItem("item_1");
+
+    expect(result).toEqual({ success: false, data: null, error: "You are not signed in." });
+    expect(deleteQuery).not.toHaveBeenCalled();
+  });
+
+  it("deletes the item as the signed-in user", async () => {
+    const result = await deleteItem("item_1");
+
+    expect(result).toEqual({ success: true, data: null, error: null });
+    expect(deleteQuery).toHaveBeenCalledWith(USER_ID, "item_1");
+  });
+
+  it("reports an item that is missing or another user's as gone", async () => {
+    deleteQuery.mockRejectedValue(Object.assign(new Error("not found"), { code: "P2025" }));
+
+    const result = await deleteItem("item_1");
+
+    expect(result).toEqual({ success: false, data: null, error: "This item no longer exists." });
+  });
+
+  it("hides an unexpected database error behind a generic message", async () => {
+    deleteQuery.mockRejectedValue(new Error("connection lost"));
+
+    const result = await deleteItem("item_1");
+
+    expect(result).toEqual({ success: false, data: null, error: "Could not delete the item. Try again." });
+    expect(console.error).toHaveBeenCalled();
   });
 });
