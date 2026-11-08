@@ -14,6 +14,12 @@ Not Started
 
 ---
 
+Previous feature (completed) — Item Create: the top bar's "New Item" button opens a dialog that
+creates an item of a chosen type through the `createItem` server action. Spec:
+`@context/features/item-create-spec.md`. Outcome in the History below.
+
+---
+
 Previous feature (completed) — Item Delete: the drawer's trash button deletes the item after a
 confirmation dialog, with a toast on success. Outcome in the History below.
 
@@ -1416,3 +1422,22 @@ Environment notes that outlive any one feature:
   that. After a P2025 the dialog stays open on the missing item (Cancel only). **Not tested:**
   the stats card numbers (inferred to update with the same refresh) and reaching
   `/items/[type]` by a sidebar click rather than a fresh load.
+- 2026-11-08 — Item Create completed and merged into `main` (`aab5ad8` feat, `35de7dc` fix,
+  fast-forward); branch `feature/item-create` deleted. It was never pushed. Shipped: the
+  `createItem` server action (`src/actions/items.ts`), a Zod discriminated union with one shape per
+  type (snippet, prompt, command, note, link), so unused fields are stripped and file, image and
+  custom types are refused; a blank link URL gives "URL is required.". The `createItem` query
+  resolves the system `ItemType` with `findFirst({ slug, userId: null, isSystem: true })` (the
+  `[userId, slug]` unique cannot be queried with a null) and links deduplicated tags with
+  `connectOrCreate`. `NewItemDialog` (client leaf in the server `TopBar`): coloured type radios from
+  a new `typeColors` map in `item-type-ui.ts` (a copy of the seeded colours, since the top bar
+  cannot wait on data), fields per type, `Field`/`toTags` reused from `ItemEditForm`, cannot close
+  while saving. 229 unit tests (24 new). Also, in a separate `fix:` commit requested during the
+  feature: drawer actions show icon + label (Delete stays icon only, red on hover), and the delete
+  confirmation has a red warning icon and a solid red Delete button. Verified with Playwright on
+  the author's `next dev` (develop branch): fields per type, the disabled Create, the invalid-URL
+  error, toast + close + refresh, the drawer showing the new link and its deduplicated tag, the red
+  hover and confirmation; test items were deleted through the UI. **Known:** the dashboard
+  overflows horizontally at 375 px (622 px wide), from the item cards, before this feature too.
+  `DeleteAccountDialog` still uses the tinted `destructive` button. The type radios have no
+  arrow-key navigation. The Free plan's 50-item limit is not enforced on create.
