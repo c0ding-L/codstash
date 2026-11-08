@@ -48,3 +48,6 @@ next-env.d.ts
 
 # local MCP config (holds API keys) — copy from .mcp-example.json
 .mcp.json
+
+# playwright mcp
+/.playwright-mcp/
