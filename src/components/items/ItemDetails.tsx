@@ -1,15 +1,35 @@
 "use client";
 
-import { Clock, Copy, Pencil, Pin, Star, Trash2 } from "lucide-react";
+import {
+  Braces,
+  CalendarClock,
+  CalendarPlus,
+  Clock,
+  Copy,
+  Folder,
+  HardDrive,
+  type LucideIcon,
+  Paperclip,
+  Pencil,
+  Pin,
+  Shapes,
+  Star,
+  Tag,
+  Trash2,
+} from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
+import { ItemEditForm, type SavedItem } from "@/components/items/ItemEditForm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { DashboardItem, ItemDetailJson } from "@/lib/db/items";
 import { formatFileSize } from "@/lib/format";
-import { colorClasses, toColorToken, toItemTypeSlug, typeIcons } from "@/lib/item-type-ui";
+import { colorClasses, surfaceClasses, toColorToken, toItemTypeSlug, typeIcons } from "@/lib/item-type-ui";
 import { cn, isWebUrl } from "@/lib/utils";
 
 export type ItemDetailState =
@@ -30,58 +50,111 @@ async function copyToClipboard(text: string) {
   }
 }
 
+/** The drawer's title, next to the type's icon in the type's color, as on the cards. */
+function DrawerHeader({ card, title }: { card: DashboardItem; title: string }) {
+  const slug = toItemTypeSlug(card.type.slug);
+  const color = toColorToken(card.type.color);
+  const Icon = slug ? typeIcons[slug] : Clock;
+
+  return (
+    <SheetHeader className="flex-row items-center gap-3 pr-12">
+      <span
+        className={cn(
+          "flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground",
+          color && [surfaceClasses[color], colorClasses[color]],
+        )}
+        aria-hidden
+      >
+        <Icon className="size-4.5" />
+      </span>
+      <SheetTitle className="min-w-0 text-lg leading-snug font-semibold break-words">{title}</SheetTitle>
+    </SheetHeader>
+  );
+}
+
+interface IconActionProps extends React.ComponentProps<typeof Button> {
+  label: string;
+  /** What the tooltip says: the label, or why the action is not available. */
+  hint: string;
+  wrapperClassName?: string;
+}
+
 /**
- * Only Copy works so far: no item mutations exist yet. Favorite and Pin stay at
- * full opacity while disabled, because they still report the item's current state.
+ * An icon button with a tooltip. The tooltip hangs on a wrapper because a
+ * disabled button takes no pointer events, and these still need to explain why.
  */
-function ActionBar({ card, copyText }: { card: DashboardItem; copyText: string | null }) {
+function IconAction({ label, hint, wrapperClassName, ...props }: IconActionProps) {
+  return (
+    <Tooltip>
+      <TooltipTrigger render={<span className={cn("inline-flex", wrapperClassName)} />}>
+        <Button variant="ghost" size="icon" aria-label={label} {...props} />
+      </TooltipTrigger>
+      <TooltipContent side="bottom">{hint}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+interface ActionBarProps {
+  card: DashboardItem;
+  detail: ItemDetailJson | null;
+  /** Null until the detail has loaded: the form starts from it. */
+  onEdit: (() => void) | null;
+}
+
+/**
+ * Favorite, Pin and Delete do not work yet. Favorite and Pin stay at full
+ * opacity while disabled, because they still report the item's current state.
+ */
+function ActionBar({ card, detail, onEdit }: ActionBarProps) {
+  const copyText = detail ? detail.content || detail.url : null;
+
   return (
     <div className="flex items-center gap-1 border-y border-border px-4 py-2">
-      <Button
-        variant="ghost"
-        size="icon"
+      <IconAction
+        label="Favorite"
+        hint={card.isFavorite ? "Favorite. Changing it is not available yet." : "Favorites are not available yet."}
         disabled
-        aria-label="Favorite"
         aria-pressed={card.isFavorite}
         className={cn(card.isFavorite && "disabled:opacity-100")}
       >
         <Star className={cn(card.isFavorite && "fill-amber-400 text-amber-400")} aria-hidden />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
+      </IconAction>
+      <IconAction
+        label="Pin"
+        hint={card.isPinned ? "Pinned. Changing it is not available yet." : "Pinning is not available yet."}
         disabled
-        aria-label="Pin"
         aria-pressed={card.isPinned}
         className={cn(card.isPinned && "disabled:opacity-100")}
       >
         <Pin className={cn(card.isPinned && "fill-current")} aria-hidden />
-      </Button>
-      <Button
-        variant="ghost"
-        size="icon"
+      </IconAction>
+      <IconAction
+        label="Copy"
+        hint={!copyText ? "Nothing to copy" : detail?.content ? "Copy content" : "Copy URL"}
         disabled={!copyText}
-        aria-label="Copy"
         onClick={() => {
           if (copyText) void copyToClipboard(copyText);
         }}
       >
         <Copy aria-hidden />
-      </Button>
-      <Button variant="ghost" size="icon" disabled aria-label="Edit">
+      </IconAction>
+      <IconAction label="Edit" hint="Edit" disabled={!onEdit} onClick={() => onEdit?.()}>
         <Pencil aria-hidden />
-      </Button>
-      <Button variant="ghost" size="icon" disabled aria-label="Delete" className="ml-auto">
+      </IconAction>
+      <IconAction label="Delete" hint="Deleting is not available yet." disabled wrapperClassName="ml-auto">
         <Trash2 aria-hidden />
-      </Button>
+      </IconAction>
     </div>
   );
 }
 
-function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
+function DetailRow({ icon: Icon, label, children }: { icon: LucideIcon; label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-4">
-      <dt className="shrink-0 text-muted-foreground">{label}</dt>
+      <dt className="inline-flex shrink-0 items-center gap-2 self-center text-muted-foreground">
+        <Icon className="size-3.5" aria-hidden />
+        {label}
+      </dt>
       <dd className="min-w-0 text-right break-words">{children}</dd>
     </div>
   );
@@ -133,15 +206,70 @@ function ItemBody({ state }: { state: ItemDetailState }) {
   );
 }
 
-export function ItemDetails({ card, state }: { card: DashboardItem; state: ItemDetailState }) {
+interface ItemDetailsProps {
+  card: DashboardItem;
+  state: ItemDetailState;
+  onSaved: (saved: SavedItem) => void;
+}
+
+export function ItemDetails({ card, state, onSaved }: ItemDetailsProps) {
+  const [editing, setEditing] = useState(false);
   const slug = toItemTypeSlug(card.type.slug);
   const color = toColorToken(card.type.color);
-  const Icon = slug ? typeIcons[slug] : Clock;
+  const TypeIcon = slug ? typeIcons[slug] : Clock;
   const detail = state.status === "ready" ? state.detail : null;
+
+  const typeRow = (
+    <DetailRow icon={Shapes} label="Type">
+      <span className={cn("inline-flex items-center gap-1.5", color && colorClasses[color])}>
+        <TypeIcon className="size-3.5" aria-hidden />
+        {card.type.name}
+      </span>
+    </DetailRow>
+  );
+  const collectionRow = card.collectionName ? (
+    <DetailRow icon={Folder} label="Collection">
+      {card.collectionName}
+    </DetailRow>
+  ) : null;
+  const updatedRow = (
+    <DetailRow icon={CalendarClock} label="Updated">
+      {formatDate(card.updatedAt)}
+    </DetailRow>
+  );
+
+  if (editing && detail) {
+    return (
+      <>
+        <DrawerHeader card={card} title={`Edit ${card.type.name.toLowerCase()}`} />
+        <ItemEditForm
+          card={card}
+          detail={detail}
+          slug={slug}
+          onCancel={() => setEditing(false)}
+          onSaved={(saved) => {
+            onSaved(saved);
+            setEditing(false);
+          }}
+        >
+          <dl className="flex flex-col gap-2">
+            {typeRow}
+            {collectionRow}
+            <DetailRow icon={CalendarPlus} label="Created">
+              {formatDate(detail.createdAt)}
+            </DetailRow>
+            {updatedRow}
+          </dl>
+        </ItemEditForm>
+      </>
+    );
+  }
 
   return (
     <>
-      <ActionBar card={card} copyText={detail ? detail.content || detail.url : null} />
+      <DrawerHeader card={card} title={card.title} />
+
+      <ActionBar card={card} detail={detail} onEdit={detail ? () => setEditing(true) : null} />
 
       <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
         {card.description ? <p className="text-muted-foreground">{card.description}</p> : null}
@@ -151,29 +279,36 @@ export function ItemDetails({ card, state }: { card: DashboardItem; state: ItemD
         <Separator />
 
         <dl className="flex flex-col gap-2">
-          <DetailRow label="Type">
-            <span className={cn("inline-flex items-center gap-1.5", color && colorClasses[color])}>
-              <Icon className="size-3.5" aria-hidden />
-              {card.type.name}
-            </span>
-          </DetailRow>
-          {card.collectionName ? <DetailRow label="Collection">{card.collectionName}</DetailRow> : null}
-          {detail?.language ? <DetailRow label="Language">{detail.language}</DetailRow> : null}
-          {detail?.fileName ? <DetailRow label="File">{detail.fileName}</DetailRow> : null}
-          {card.fileSize ? <DetailRow label="Size">{formatFileSize(card.fileSize)}</DetailRow> : null}
+          {typeRow}
+          {collectionRow}
+          {detail?.language ? (
+            <DetailRow icon={Braces} label="Language">
+              {detail.language}
+            </DetailRow>
+          ) : null}
+          {detail?.fileName ? (
+            <DetailRow icon={Paperclip} label="File">
+              {detail.fileName}
+            </DetailRow>
+          ) : null}
+          {card.fileSize ? (
+            <DetailRow icon={HardDrive} label="Size">
+              {formatFileSize(card.fileSize)}
+            </DetailRow>
+          ) : null}
           {state.status === "loading" ? (
             <>
-              <DetailRow label="Tags">
+              <DetailRow icon={Tag} label="Tags">
                 <Skeleton className="h-4 w-16" />
               </DetailRow>
-              <DetailRow label="Created">
+              <DetailRow icon={CalendarPlus} label="Created">
                 <Skeleton className="h-4 w-20" />
               </DetailRow>
             </>
           ) : null}
           {detail ? (
             <>
-              <DetailRow label="Tags">
+              <DetailRow icon={Tag} label="Tags">
                 {detail.tags.length > 0 ? (
                   <span className="inline-flex flex-wrap justify-end gap-1">
                     {detail.tags.map((tag) => (
@@ -186,10 +321,12 @@ export function ItemDetails({ card, state }: { card: DashboardItem; state: ItemD
                   <span className="text-muted-foreground">None</span>
                 )}
               </DetailRow>
-              <DetailRow label="Created">{formatDate(detail.createdAt)}</DetailRow>
+              <DetailRow icon={CalendarPlus} label="Created">
+                {formatDate(detail.createdAt)}
+              </DetailRow>
             </>
           ) : null}
-          <DetailRow label="Updated">{formatDate(card.updatedAt)}</DetailRow>
+          {updatedRow}
         </dl>
       </div>
     </>

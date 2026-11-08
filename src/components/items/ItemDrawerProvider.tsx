@@ -4,7 +4,8 @@ import type { Dialog } from "@base-ui/react/dialog";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
 import { ItemDetails, type ItemDetailState } from "@/components/items/ItemDetails";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import type { SavedItem } from "@/components/items/ItemEditForm";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import type { DashboardItem, ItemDetailJson } from "@/lib/db/items";
 
 type OpenItem = (item: DashboardItem) => void;
@@ -25,7 +26,11 @@ export function ItemDrawerProvider({ children }: { children: React.ReactNode }) 
   const [open, setOpen] = useState(false);
   const [card, setCard] = useState<DashboardItem | null>(null);
   const [detail, setDetail] = useState<ItemDetailState>({ status: "loading" });
+  // Bumped on every open, so the details remount and never reopen in edit mode.
+  const [openCount, setOpenCount] = useState(0);
   const request = useRef<AbortController | null>(null);
+  // The item on show now: a save that finishes after another item opened is dropped.
+  const currentId = useRef<string | null>(null);
 
   useEffect(() => () => request.current?.abort(), []);
 
@@ -35,8 +40,10 @@ export function ItemDrawerProvider({ children }: { children: React.ReactNode }) 
     const controller = new AbortController();
     request.current = controller;
 
+    currentId.current = item.id;
     setCard(item);
     setDetail({ status: "loading" });
+    setOpenCount((count) => count + 1);
     setOpen(true);
 
     try {
@@ -65,20 +72,20 @@ export function ItemDrawerProvider({ children }: { children: React.ReactNode }) 
     if (!next) request.current?.abort();
   }
 
+  // The saved item replaces both halves, so the drawer shows it without a refetch.
+  const handleSaved = useCallback(({ card: saved, detail: savedDetail }: SavedItem) => {
+    if (saved.id !== currentId.current) return;
+    setCard(saved);
+    setDetail({ status: "ready", detail: savedDetail });
+  }, []);
+
   return (
     <OpenItemContext.Provider value={openItem}>
       {children}
 
       <Sheet open={open} onOpenChange={handleOpenChange}>
         <SheetContent className="gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-lg">
-          {card ? (
-            <>
-              <SheetHeader className="pr-12">
-                <SheetTitle className="text-lg font-semibold">{card.title}</SheetTitle>
-              </SheetHeader>
-              <ItemDetails card={card} state={detail} />
-            </>
-          ) : null}
+          {card ? <ItemDetails key={openCount} card={card} state={detail} onSaved={handleSaved} /> : null}
         </SheetContent>
       </Sheet>
     </OpenItemContext.Provider>

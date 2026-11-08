@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
-import { getItemDetail, getItemsByType, getPinnedItems, getRecentItems } from "@/lib/db/items";
+import { getItemDetail, getItemsByType, getPinnedItems, getRecentItems, updateItem } from "@/lib/db/items";
 import { MAX_ITEM_LIMIT } from "@/lib/db/limits";
 import { prisma } from "@/lib/prisma";
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
-    item: { findMany: vi.fn(), findFirst: vi.fn(), count: vi.fn() },
+    item: { findMany: vi.fn(), findFirst: vi.fn(), count: vi.fn(), update: vi.fn() },
     tag: { findMany: vi.fn() },
   },
 }));
@@ -15,6 +15,7 @@ const findMany = prisma.item.findMany as unknown as Mock;
 const findFirst = prisma.item.findFirst as unknown as Mock;
 const count = prisma.item.count as unknown as Mock;
 const findTags = prisma.tag.findMany as unknown as Mock;
+const update = prisma.item.update as unknown as Mock;
 
 const USER = "user_a";
 
@@ -121,5 +122,101 @@ describe("getItemDetail", () => {
       language: true,
       createdAt: true,
     });
+  });
+});
+
+describe("updateItem", () => {
+  const row = {
+    id: "item_1",
+    title: "New title",
+    description: null,
+    fileSize: null,
+    isPinned: false,
+    isFavorite: true,
+    updatedAt: new Date(1),
+    type: { slug: "snippet", name: "Snippet", color: "blue" },
+    collection: { name: "DevOps" },
+    content: "body",
+    url: null,
+    fileName: null,
+    language: "bash",
+    createdAt: new Date(0),
+    tags: [{ tag: { name: "ci" } }, { tag: { name: "bash" } }],
+  };
+
+  beforeEach(() => {
+    update.mockResolvedValue(row);
+  });
+
+  it("updates only that owner's item", async () => {
+    await updateItem(USER, "item_1", { title: "New title", tags: [] });
+
+    expect(update.mock.calls[0]![0].where).toEqual({ id: "item_1", userId: USER });
+  });
+
+  it("replaces the tags, linking each name to that user's tag", async () => {
+    await updateItem(USER, "item_1", { title: "t", tags: ["bash"] });
+
+    expect(update.mock.calls[0]![0].data.tags).toEqual({
+      deleteMany: {},
+      create: [
+        {
+          tag: {
+            connectOrCreate: {
+              where: { userId_name: { userId: USER, name: "bash" } },
+              create: { name: "bash", userId: USER },
+            },
+          },
+        },
+      ],
+    });
+  });
+
+  it("links a repeated tag name once", async () => {
+    await updateItem(USER, "item_1", { title: "t", tags: ["bash", "ci", "bash"] });
+
+    const created = update.mock.calls[0]![0].data.tags.create;
+    expect(created.map((link: { tag: { connectOrCreate: { create: { name: string } } } }) =>
+      link.tag.connectOrCreate.create.name)).toEqual(["bash", "ci"]);
+  });
+
+  it("leaves fields that were not sent out of the write, and writes null to clear one", async () => {
+    await updateItem(USER, "item_1", { title: "t", description: null, tags: [] });
+
+    const { data } = update.mock.calls[0]![0];
+    expect(data).toMatchObject({ title: "t", description: null });
+    expect(data).not.toHaveProperty("content");
+    expect(data).not.toHaveProperty("url");
+    expect(data).not.toHaveProperty("language");
+  });
+
+  it("returns the card and the detail, with the tags sorted", async () => {
+    const result = await updateItem(USER, "item_1", { title: "New title", tags: ["ci", "bash"] });
+
+    expect(result.card).toEqual({
+      id: "item_1",
+      title: "New title",
+      description: null,
+      fileSize: null,
+      isPinned: false,
+      isFavorite: true,
+      updatedAt: new Date(1),
+      type: { slug: "snippet", name: "Snippet", color: "blue" },
+      collectionName: "DevOps",
+    });
+    expect(result.detail).toEqual({
+      content: "body",
+      url: null,
+      fileName: null,
+      language: "bash",
+      createdAt: new Date(0),
+      tags: ["bash", "ci"],
+    });
+  });
+
+  it("passes Prisma's error through when no item of that owner matches", async () => {
+    update.mockRejectedValue(Object.assign(new Error("not found"), { code: "P2025" }));
+
+    await expect(updateItem(USER, "someone_elses", { title: "t", tags: [] })).rejects.toMatchObject({ code: "P2025" });
   });
 });

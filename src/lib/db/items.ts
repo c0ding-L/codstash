@@ -143,3 +143,74 @@ export async function getItemDetail(userId: string, id: string): Promise<ItemDet
 
   return { ...item, tags: tags.map(({ name }) => name) };
 }
+
+/**
+ * The fields the drawer edits. An absent field is left as it is, while null
+ * clears it, so a caller sends only the fields the item's type uses.
+ */
+export interface ItemUpdate {
+  title: string;
+  description?: string | null;
+  content?: string | null;
+  url?: string | null;
+  language?: string | null;
+  /** Replaces every tag on the item. */
+  tags: string[];
+}
+
+/**
+ * Updates the item and returns both halves the drawer shows: the card and the
+ * detail. One `update` filtered on the owner, so another user's item throws
+ * Prisma's P2025 just as a missing one does, and nothing is read beforehand.
+ *
+ * Tags are rewritten in the same write: every link is dropped, then each name
+ * is linked to this user's tag of that name, created if they have none.
+ */
+export async function updateItem(
+  userId: string,
+  id: string,
+  { tags, ...fields }: ItemUpdate,
+): Promise<{ card: DashboardItem; detail: ItemDetail }> {
+  // A repeated name would link the same tag twice, which the join's key forbids.
+  const names = [...new Set(tags)];
+
+  const updated = await prisma.item.update({
+    where: { id, userId },
+    data: {
+      ...fields,
+      tags: {
+        deleteMany: {},
+        create: names.map((name) => ({
+          tag: {
+            connectOrCreate: {
+              where: { userId_name: { userId, name } },
+              create: { name, userId },
+            },
+          },
+        })),
+      },
+    },
+    select: {
+      ...dashboardItemSelect,
+      content: true,
+      url: true,
+      fileName: true,
+      language: true,
+      createdAt: true,
+      tags: { select: { tag: { select: { name: true } } } },
+    },
+  });
+
+  const { content, url, fileName, language, createdAt, tags: links, ...card } = updated;
+  return {
+    card: toDashboardItem(card),
+    detail: {
+      content,
+      url,
+      fileName,
+      language,
+      createdAt,
+      tags: links.map(({ tag }) => tag.name).sort((a, b) => a.localeCompare(b)),
+    },
+  };
+}
