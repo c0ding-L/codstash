@@ -1,5 +1,6 @@
 "use client";
 
+import { TriangleAlert } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "sonner";
@@ -12,6 +13,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogMedia,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
@@ -49,6 +51,9 @@ export function ItemDeleteDialog({ card, open, onOpenChange, onDeleted }: ItemDe
     <AlertDialog open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
       <AlertDialogContent>
         <AlertDialogHeader>
+          <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20">
+            <TriangleAlert aria-hidden />
+          </AlertDialogMedia>
           <AlertDialogTitle>Delete this item?</AlertDialogTitle>
           <AlertDialogDescription>
             <span className="font-medium break-words text-foreground">{card.title}</span> will be deleted for
@@ -57,7 +62,13 @@ export function ItemDeleteDialog({ card, open, onOpenChange, onDeleted }: ItemDe
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
-          <Button variant="destructive" disabled={pending} onClick={handleDelete}>
+          {/* Solid red: the `destructive` variant is only a tint, too quiet for a delete that cannot be undone. */}
+          <Button
+            variant="destructive"
+            className="bg-destructive text-white hover:bg-destructive/90 dark:bg-destructive dark:hover:bg-destructive/90"
+            disabled={pending}
+            onClick={handleDelete}
+          >
             {pending ? "Deleting…" : "Delete"}
           </Button>
         </AlertDialogFooter>

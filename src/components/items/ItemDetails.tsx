@@ -77,18 +77,29 @@ interface IconActionProps extends React.ComponentProps<typeof Button> {
   label: string;
   /** What the tooltip says: the label, or why the action is not available. */
   hint: string;
+  /** Icon only, with the label as its accessible name. Otherwise the label shows beside the icon. */
+  iconOnly?: boolean;
   wrapperClassName?: string;
 }
 
 /**
- * An icon button with a tooltip. The tooltip hangs on a wrapper because a
+ * An action button with a tooltip. The tooltip hangs on a wrapper because a
  * disabled button takes no pointer events, and these still need to explain why.
  */
-function IconAction({ label, hint, wrapperClassName, ...props }: IconActionProps) {
+function IconAction({ label, hint, iconOnly = false, wrapperClassName, children, ...props }: IconActionProps) {
   return (
     <Tooltip>
       <TooltipTrigger render={<span className={cn("inline-flex", wrapperClassName)} />}>
-        <Button variant="ghost" size="icon" aria-label={label} {...props} />
+        {iconOnly ? (
+          <Button variant="ghost" size="icon" aria-label={label} {...props}>
+            {children}
+          </Button>
+        ) : (
+          <Button variant="ghost" size="sm" {...props}>
+            {children}
+            {label}
+          </Button>
+        )}
       </TooltipTrigger>
       <TooltipContent side="bottom">{hint}</TooltipContent>
     </Tooltip>
@@ -147,8 +158,10 @@ function ActionBar({ card, detail, onEdit, onDelete }: ActionBarProps) {
       <IconAction
         label="Delete"
         hint="Delete"
+        iconOnly
         disabled={!onDelete}
         onClick={() => onDelete?.()}
+        className="hover:bg-destructive/10 hover:text-destructive dark:hover:bg-destructive/20"
         wrapperClassName="ml-auto"
       >
         <Trash2 aria-hidden />
