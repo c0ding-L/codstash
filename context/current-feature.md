@@ -1,16 +1,26 @@
-# Current Feature
+# Current Feature: Fix Firefox Reload Loop
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Signed-in pages no longer reload in a loop in Firefox under `next dev`
+- `next` and `eslint-config-next` upgraded from 16.2.12 to 16.4.6
+- Tests, build and lint still pass; pages still work in Chromium
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Cause: in 16.2.12, `node_modules/next/dist/client/dev/debug-channel.js` treats a document with
+  `performance.getEntriesByType("navigation")[0].transferSize === 0` as served from cache, tries
+  to restore React's debug channel from `sessionStorage`, and calls `location.reload()` when it
+  cannot. Firefox reports `transferSize` 0 while a streamed document is still arriving, so every
+  streamed (signed-in) page reloads forever. `/sign-in` is not streamed and is unaffected.
+  Chromium reports the real size. Dev only.
+- 16.4.6 removed that `transferSize` / `sessionStorage` / `location.reload()` logic.
+- Install through Windows npm. Read the 16.3 / 16.4 upgrade notes in `node_modules/next/dist/docs/`
+  for breaking changes.
 
 ---
 
