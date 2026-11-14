@@ -130,3 +130,100 @@
     @apply font-sans;
     }
 }
+
+/* Rendered Markdown in MarkdownEditor. Always on its dark #1e1e1e surface, so the colours are fixed. */
+@layer components {
+  .markdown-preview {
+    @apply text-sm leading-relaxed break-words text-neutral-200;
+  }
+  .markdown-preview > :first-child {
+    @apply mt-0;
+  }
+  .markdown-preview > :last-child {
+    @apply mb-0;
+  }
+  .markdown-preview :is(h1, h2, h3, h4, h5, h6) {
+    @apply mt-5 mb-2 leading-tight font-semibold text-neutral-50;
+  }
+  .markdown-preview h1 {
+    @apply border-b border-white/10 pb-1.5 text-2xl font-bold;
+  }
+  .markdown-preview h2 {
+    @apply border-b border-white/10 pb-1 text-xl;
+  }
+  .markdown-preview h3 {
+    @apply text-lg;
+  }
+  .markdown-preview h4 {
+    @apply text-base;
+  }
+  .markdown-preview h5 {
+    @apply text-sm;
+  }
+  .markdown-preview h6 {
+    @apply text-xs tracking-wide text-neutral-400 uppercase;
+  }
+  .markdown-preview :is(p, ul, ol, blockquote, pre, table) {
+    @apply my-3;
+  }
+  .markdown-preview ul {
+    @apply list-disc pl-6;
+  }
+  .markdown-preview ol {
+    @apply list-decimal pl-6;
+  }
+  .markdown-preview li {
+    @apply my-1;
+  }
+  .markdown-preview li > :is(ul, ol) {
+    @apply my-1;
+  }
+  .markdown-preview li::marker {
+    @apply text-neutral-500;
+  }
+  .markdown-preview ul.contains-task-list {
+    @apply list-none pl-1;
+  }
+  .markdown-preview .task-list-item input {
+    @apply mr-2 align-middle;
+  }
+  .markdown-preview blockquote {
+    @apply border-l-4 border-blue-500/60 py-0.5 pl-4 text-neutral-400;
+  }
+  .markdown-preview a {
+    @apply text-blue-400 underline-offset-4 hover:text-blue-300 hover:underline;
+  }
+  .markdown-preview code {
+    @apply rounded bg-white/10 px-1.5 py-0.5 font-mono text-[0.85em] text-neutral-100;
+  }
+  .markdown-preview pre {
+    @apply overflow-x-auto rounded-md border border-white/10 bg-[#141414] p-3 text-xs leading-relaxed;
+  }
+  .markdown-preview pre code {
+    @apply rounded-none bg-transparent p-0 text-[1em];
+  }
+  .markdown-preview table {
+    @apply block w-max max-w-full overflow-x-auto border-collapse text-xs;
+  }
+  .markdown-preview :is(th, td) {
+    @apply border border-white/15 px-3 py-1.5 text-left;
+  }
+  .markdown-preview th {
+    @apply bg-[#2d2d2d] font-semibold text-neutral-100;
+  }
+  .markdown-preview hr {
+    @apply my-5 border-white/10;
+  }
+  .markdown-preview img {
+    @apply max-w-full rounded;
+  }
+
+  /* A thin scrollbar that stays visible on the dark #1e1e1e surface. */
+  .markdown-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #ffffff40 transparent;
+  }
+  .markdown-scroll:hover {
+    scrollbar-color: #ffffff66 transparent;
+  }
+}

@@ -20,6 +20,7 @@ import {
 import { useState } from "react";
 
 import { CodeEditor } from "@/components/items/CodeEditor";
+import { MarkdownEditor } from "@/components/items/MarkdownEditor";
 import { ItemDeleteDialog } from "@/components/items/ItemDeleteDialog";
 import { ItemEditForm, type SavedItem } from "@/components/items/ItemEditForm";
 import { Badge } from "@/components/ui/badge";
@@ -201,9 +202,7 @@ function ItemBody({ state, slug }: { state: ItemDetailState; slug: ItemTypeSlug 
       {content && isCodeType(slug) ? (
         <CodeEditor value={content} language={language} ariaLabel="Content" />
       ) : content ? (
-        <pre className="rounded-lg border border-border bg-muted/50 p-3 font-mono text-xs break-words whitespace-pre-wrap">
-          {content}
-        </pre>
+        <MarkdownEditor value={content} ariaLabel="Content" />
       ) : null}
 
       {url ? (

@@ -1,16 +1,38 @@
-# Current Feature
+# Current Feature: Markdown Editor
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- A `MarkdownEditor` component with Write/Preview tabs, rendering through `react-markdown` +
+  `remark-gfm` (GitHub Flavored Markdown)
+- Notes and prompts use `MarkdownEditor` instead of `Textarea`; snippets and commands keep
+  `CodeEditor` unchanged
+- Matches the CodeEditor's dark look: `bg-[#1e1e1e]` container, `bg-[#2d2d2d]` header, with the
+  same copy button in the header
+- Read-only (display) mode shows only the Preview tab; edit mode opens on Write with Preview
+  available
+- Preview styling via a custom `.markdown-preview` class: distinct h1–h6, dark monospace code
+  blocks, highlighted inline code, indented lists with bullets/numbers, left-bordered
+  blockquotes, blue links with hover, bordered tables with a header background
+- Height grows with the content up to a 400px max, then scrolls, like `CodeEditor`
+- Used in NewItemDialog (note/prompt content), ItemDrawer edit mode, and ItemDrawer view mode
+  (read-only)
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Spec: `@context/features/markdown-editor-spec.md`.
+- Integration points today: `src/components/items/NewItemDialog.tsx` and
+  `src/components/items/ItemEditForm.tsx` render `Textarea` for non-code content;
+  `src/components/items/ItemDetails.tsx` renders non-code content as a `<pre>` block. All three
+  branch on `isCodeType(slug)` from `@/lib/code-language`.
+- `CodeEditor` (`src/components/items/CodeEditor.tsx`) treats "no `onChange`" as read-only and
+  uses `copyToClipboard` from `@/lib/clipboard` — mirror both.
+- `react-markdown` and `remark-gfm` are not installed — new dependencies, installed through
+  Windows npm. `.markdown-preview` styles go in `src/app/globals.css` (Tailwind v4, no config file).
+- Don't enable raw HTML rendering (no `rehype-raw`): content is user-supplied.
 
 ---
 

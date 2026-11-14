@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { updateItem, type UpdateItemField, type UpdateItemInput } from "@/actions/items";
 import { CodeEditor } from "@/components/items/CodeEditor";
+import { MarkdownEditor } from "@/components/items/MarkdownEditor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -157,11 +158,16 @@ export function ItemEditForm({ card, detail, slug, onCancel, onSaved, children }
                 }}
               />
             ) : (
-              <Textarea
+              <MarkdownEditor
                 value={content}
-                spellCheck={false}
-                className="min-h-40 resize-none font-mono text-xs md:text-xs"
-                {...fieldProps("content", setContent)}
+                id={`${id}-content`}
+                ariaLabel="Content"
+                invalid={error?.field === "content"}
+                describedBy={`${id}-content-message`}
+                onChange={(value) => {
+                  setContent(value);
+                  if (error?.field === "content") setError(null);
+                }}
               />
             )}
           </Field>

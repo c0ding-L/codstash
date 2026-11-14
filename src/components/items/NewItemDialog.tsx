@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { type CreatableType, createItem, type CreateItemField, type CreateItemInput } from "@/actions/items";
 import { CodeEditor } from "@/components/items/CodeEditor";
+import { MarkdownEditor } from "@/components/items/MarkdownEditor";
 import { Field, toTags } from "@/components/items/ItemEditForm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -190,11 +191,16 @@ function NewItemForm({ saving, startSaving, onCreated }: NewItemFormProps) {
               }}
             />
           ) : (
-            <Textarea
+            <MarkdownEditor
               value={content}
-              spellCheck={false}
-              className="max-h-64 min-h-32 resize-none font-mono text-xs md:text-xs"
-              {...fieldProps("content", setContent)}
+              id={`${id}-content`}
+              ariaLabel="Content"
+              invalid={error?.field === "content"}
+              describedBy={`${id}-content-message`}
+              onChange={(value) => {
+                setContent(value);
+                if (error?.field === "content") setError(null);
+              }}
             />
           )}
         </Field>
