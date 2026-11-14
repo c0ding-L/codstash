@@ -1,29 +1,22 @@
-# Current Feature: Code Editor
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- A `CodeEditor` component built on Monaco Editor, using a dark theme
-- Snippets and commands use `CodeEditor` instead of `Textarea`; notes, prompts and other
-  non-code types keep `Textarea`
-- macOS-style window dots (red/yellow/green) across the top of the editor
-- Editor header shows the language and a quick copy button next to it
-- Works in both read-only (display) and edit modes
-- Height grows with the content up to a 400px max, then scrolls with a themed scrollbar
-- Added on request: the New Item dialog starts on the type of the listing page it is opened
-  from (`/items/prompts` → Prompt, etc.); elsewhere, or for Files/Images, it stays on Snippet
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Spec: `@context/features/code-editor-spec.md`.
-- `Textarea` is currently used for content in `src/components/items/NewItemDialog.tsx` and
-  `src/components/items/ItemEditForm.tsx`; read-only display is in the item drawer.
-- Monaco is not installed yet — adding it (likely `@monaco-editor/react`) is a new dependency,
-  installed through Windows npm. It is browser-only, so the editor must be a client component.
-- Language comes from the item's `language` field (fall back to plaintext when empty).
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — Code Editor: snippets and commands show and edit their content in a
+Monaco editor with macOS window dots, the language and a copy button. Spec:
+`@context/features/code-editor-spec.md`. Outcome in the History below.
 
 ---
 
@@ -1454,3 +1447,25 @@ Environment notes that outlive any one feature:
   overflows horizontally at 375 px (622 px wide), from the item cards, before this feature too.
   `DeleteAccountDialog` still uses the tinted `destructive` button. The type radios have no
   arrow-key navigation. The Free plan's 50-item limit is not enforced on create.
+- 2026-11-14 — Code Editor completed and merged into `main` (`a4d9af5` feat, `baa5271` test,
+  fast-forward); branch `feature/code-editor` deleted. It was never pushed. Shipped: `CodeEditor`
+  (`src/components/items/CodeEditor.tsx`) on `@monaco-editor/react`, with a `codstash-dark` theme
+  matching `--card`, red/yellow/green dots, the language and a copy button in the header, read-only
+  when no `onChange` is passed. Height follows Monaco's content height (min 120 px when editable),
+  capped at 400 px, with a thin themed scrollbar and `alwaysConsumeMouseWheel: false` so the page
+  scrolls below the cap. TypeScript/JavaScript semantic checks are off (a snippet's imports never
+  resolve); this goes through Monaco's top-level `typescript` namespace, present at runtime but
+  missing from its editor API types. Used for snippet and command content in the drawer,
+  `ItemEditForm` and `NewItemDialog`; notes and prompts keep the textarea. New utilities:
+  `isCodeType` and `toMonacoLanguage` (`src/lib/code-language.ts`, aliases such as `ts`, `bash`,
+  `py`), `copyToClipboard` moved to `src/lib/clipboard.ts`. Added on request: the New Item dialog
+  starts on the listing page's type through `itemTypeFromPathname` in `item-type-ui.ts` (Snippet
+  elsewhere and on Files/Images). 251 unit tests (22 new). Verified with Playwright (Chromium) on
+  `next dev` (develop branch): drawer, edit and create views, the 400 px cap, Escape with the
+  suggest or find widget open keeps the dialog/drawer open, create + edit round-trip saved (test
+  item deleted), default type on every page and after a client-side navigation. **Known:** Monaco
+  loads from `cdn.jsdelivr.net` (`monaco-editor@0.55.1`) with no integrity check, so a third-party
+  script runs in the page; self-hosting it under `public/monaco/vs` was proposed and not done. The
+  `Content` label no longer targets the editor and a content error is not announced on it. Tab
+  indents instead of leaving the editor (Ctrl+M toggles). In Firefox every signed-in page reloads in
+  a loop under `next dev`; reproduced on `main` without this feature, cause not found yet.
