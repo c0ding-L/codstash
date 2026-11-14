@@ -1,38 +1,22 @@
-# Current Feature: Markdown Editor
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- A `MarkdownEditor` component with Write/Preview tabs, rendering through `react-markdown` +
-  `remark-gfm` (GitHub Flavored Markdown)
-- Notes and prompts use `MarkdownEditor` instead of `Textarea`; snippets and commands keep
-  `CodeEditor` unchanged
-- Matches the CodeEditor's dark look: `bg-[#1e1e1e]` container, `bg-[#2d2d2d]` header, with the
-  same copy button in the header
-- Read-only (display) mode shows only the Preview tab; edit mode opens on Write with Preview
-  available
-- Preview styling via a custom `.markdown-preview` class: distinct h1–h6, dark monospace code
-  blocks, highlighted inline code, indented lists with bullets/numbers, left-bordered
-  blockquotes, blue links with hover, bordered tables with a header background
-- Height grows with the content up to a 400px max, then scrolls, like `CodeEditor`
-- Used in NewItemDialog (note/prompt content), ItemDrawer edit mode, and ItemDrawer view mode
-  (read-only)
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Spec: `@context/features/markdown-editor-spec.md`.
-- Integration points today: `src/components/items/NewItemDialog.tsx` and
-  `src/components/items/ItemEditForm.tsx` render `Textarea` for non-code content;
-  `src/components/items/ItemDetails.tsx` renders non-code content as a `<pre>` block. All three
-  branch on `isCodeType(slug)` from `@/lib/code-language`.
-- `CodeEditor` (`src/components/items/CodeEditor.tsx`) treats "no `onChange`" as read-only and
-  uses `copyToClipboard` from `@/lib/clipboard` — mirror both.
-- `react-markdown` and `remark-gfm` are not installed — new dependencies, installed through
-  Windows npm. `.markdown-preview` styles go in `src/app/globals.css` (Tailwind v4, no config file).
-- Don't enable raw HTML rendering (no `rehype-raw`): content is user-supplied.
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — Markdown Editor: notes and prompts show and edit their content in a
+Markdown editor with Write/Preview tabs and a copy button. Spec:
+`@context/features/markdown-editor-spec.md`. Outcome in the History below.
 
 ---
 
@@ -1514,3 +1498,18 @@ Environment notes that outlive any one feature:
   two sequential Neon round trips of about 170 ms each from the author's machine to `us-east-2`
   (the `auth()` JWT check of `passwordChangedAt`, then `getItemDetail`); hover prefetching was
   proposed as a follow-up.
+- 2026-11-14 — Markdown editor merged into `main` (`a53adda`, fast-forward); branch
+  `feature/markdown-editor` deleted, never pushed. New `src/components/items/MarkdownEditor.tsx`
+  (`react-markdown` ^10.1.0 + `remark-gfm` ^4.0.1): Write/Preview tabs and a copy button, read-only
+  when `onChange` is left out (Preview only), links open in a new tab, raw HTML is shown as text
+  (no `rehype-raw`). Used for note and prompt content in `NewItemDialog`, `ItemEditForm` (wired to
+  the field's label and error message) and the drawer's view mode (`ItemDetails`, replacing the
+  `<pre>`); snippets and commands keep `CodeEditor`. Styles in a `.markdown-preview` class in
+  `globals.css`; both panes grow to 400px, then scroll with a thin `.markdown-scroll` scrollbar.
+  Uses the spec's `#1e1e1e`/`#2d2d2d`, slightly lighter than `CodeEditor`'s theme card colours.
+  Two fixes after the author's checks: the scrollbar thumb was 10% white and invisible, now 25%;
+  and in a short window the drawer's flex column squashed the `overflow-hidden` box and clipped the
+  note with no scrollbar (measured 311px of 435px at a 650px window), fixed with `shrink-0`. The
+  `shrink-0` fix was not re-checked in the browser by me (sign-in rate limit hit); the author
+  completed after it. 251 unit tests, build and lint green. **Known:** plain-text prompts now follow
+  Markdown, so single line breaks inside a paragraph join up.
