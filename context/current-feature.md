@@ -1,26 +1,21 @@
-# Current Feature: Fix Firefox Reload Loop
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Signed-in pages no longer reload in a loop in Firefox under `next dev`
-- `next` and `eslint-config-next` upgraded from 16.2.12 to 16.4.6
-- Tests, build and lint still pass; pages still work in Chromium
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Cause: in 16.2.12, `node_modules/next/dist/client/dev/debug-channel.js` treats a document with
-  `performance.getEntriesByType("navigation")[0].transferSize === 0` as served from cache, tries
-  to restore React's debug channel from `sessionStorage`, and calls `location.reload()` when it
-  cannot. Firefox reports `transferSize` 0 while a streamed document is still arriving, so every
-  streamed (signed-in) page reloads forever. `/sign-in` is not streamed and is unaffected.
-  Chromium reports the real size. Dev only.
-- 16.4.6 removed that `transferSize` / `sessionStorage` / `location.reload()` logic.
-- Install through Windows npm. Read the 16.3 / 16.4 upgrade notes in `node_modules/next/dist/docs/`
-  for breaking changes.
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous fix (completed) — Firefox Reload Loop: signed-in pages reloaded forever in Firefox under
+`next dev`; fixed by upgrading Next.js to 16.4.6. Outcome in the History below.
 
 ---
 
@@ -1479,3 +1474,21 @@ Environment notes that outlive any one feature:
   `Content` label no longer targets the editor and a content error is not announced on it. Tab
   indents instead of leaving the editor (Ctrl+M toggles). In Firefox every signed-in page reloads in
   a loop under `next dev`; reproduced on `main` without this feature, cause not found yet.
+- 2026-11-14 — Firefox reload loop fixed and merged into `main` (`18c9e08`, fast-forward); branch
+  `fix/firefox-reload-loop` deleted. It was never pushed. Cause, found with a Navigation API
+  `navigate` listener whose stack pointed at `createDebugChannel`: in Next.js 16.2.12,
+  `next/dist/client/dev/debug-channel.js` treats a document whose navigation entry has
+  `transferSize === 0` as served from cache, fails to restore React's debug channel from
+  `sessionStorage` and calls `location.reload()`. Firefox reports 0 while a streamed document is
+  still arriving (measured: `/profile` 0 in Firefox, 26465 in Chromium; `/sign-in`, not streamed,
+  7286 in both), so every signed-in page reloaded about every 0.7 s. Dev only. Reproduced on `main`
+  before the code-editor feature. Fix: `next` and `eslint-config-next` 16.2.12 → 16.4.6 (exact),
+  where that logic is gone; the 16.3/16.4 removed flags (`viewTransition`, `appNewScrollHandler`)
+  are not used here. 251 unit tests, build and lint green. Verified with Playwright in Firefox and
+  Chromium on `next dev`: one document load in 5 s on `/dashboard`, `/items/prompts`,
+  `/items/snippets` and `/profile` (30 to 47 before in Firefox), snippet drawer editor still renders.
+  **Known:** `npm audit` reports vulnerabilities, not checked against the previous version and not
+  fixed. Also measured during this fix: the item drawer takes about 440 ms to fill, almost all of it
+  two sequential Neon round trips of about 170 ms each from the author's machine to `us-east-2`
+  (the `auth()` JWT check of `passwordChangedAt`, then `getItemDetail`); hover prefetching was
+  proposed as a follow-up.
