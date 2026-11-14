@@ -5,11 +5,13 @@ import { useId, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { updateItem, type UpdateItemField, type UpdateItemInput } from "@/actions/items";
+import { CodeEditor } from "@/components/items/CodeEditor";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { isCodeType } from "@/lib/code-language";
 import type { DashboardItem, ItemDetailJson } from "@/lib/db/items";
 import type { ItemTypeSlug } from "@/types/item-type";
 
@@ -144,12 +146,24 @@ export function ItemEditForm({ card, detail, slug, onCancel, onSaved, children }
 
         {hasContent ? (
           <Field id={`${id}-content`} label="Content" error={messageFor("content")}>
-            <Textarea
-              value={content}
-              spellCheck={false}
-              className="min-h-40 resize-none font-mono text-xs md:text-xs"
-              {...fieldProps("content", setContent)}
-            />
+            {isCodeType(slug) ? (
+              <CodeEditor
+                value={content}
+                language={language}
+                ariaLabel="Content"
+                onChange={(value) => {
+                  setContent(value);
+                  if (error?.field === "content") setError(null);
+                }}
+              />
+            ) : (
+              <Textarea
+                value={content}
+                spellCheck={false}
+                className="min-h-40 resize-none font-mono text-xs md:text-xs"
+                {...fieldProps("content", setContent)}
+              />
+            )}
           </Field>
         ) : null}
 

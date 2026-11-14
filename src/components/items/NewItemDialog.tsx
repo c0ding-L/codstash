@@ -1,11 +1,12 @@
 "use client";
 
 import { Plus } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useId, useState, useTransition, type TransitionStartFunction } from "react";
 import { toast } from "sonner";
 
 import { type CreatableType, createItem, type CreateItemField, type CreateItemInput } from "@/actions/items";
+import { CodeEditor } from "@/components/items/CodeEditor";
 import { Field, toTags } from "@/components/items/ItemEditForm";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { colorClasses, surfaceClasses, typeColors, typeIcons } from "@/lib/item-type-ui";
+import { isCodeType } from "@/lib/code-language";
+import { colorClasses, itemTypeFromPathname, surfaceClasses, typeColors, typeIcons } from "@/lib/item-type-ui";
 import { cn } from "@/lib/utils";
 
 const TYPES: { slug: CreatableType; label: string }[] = [
@@ -70,7 +72,11 @@ function NewItemForm({ saving, startSaving, onCreated }: NewItemFormProps) {
   const id = useId();
   const [error, setError] = useState<{ field: CreateItemField; message: string } | null>(null);
 
-  const [type, setType] = useState<CreatableType>("snippet");
+  // Starts on the type of the listing page it was opened from, when that type can be created here.
+  const pageType = itemTypeFromPathname(usePathname());
+  const [type, setType] = useState<CreatableType>(
+    () => TYPES.find(({ slug }) => slug === pageType)?.slug ?? "snippet",
+  );
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");
@@ -173,12 +179,24 @@ function NewItemForm({ saving, startSaving, onCreated }: NewItemFormProps) {
 
       {hasContent ? (
         <Field id={`${id}-content`} label="Content" error={messageFor("content")}>
-          <Textarea
-            value={content}
-            spellCheck={false}
-            className="max-h-64 min-h-32 resize-none font-mono text-xs md:text-xs"
-            {...fieldProps("content", setContent)}
-          />
+          {isCodeType(type) ? (
+            <CodeEditor
+              value={content}
+              language={language}
+              ariaLabel="Content"
+              onChange={(value) => {
+                setContent(value);
+                if (error?.field === "content") setError(null);
+              }}
+            />
+          ) : (
+            <Textarea
+              value={content}
+              spellCheck={false}
+              className="max-h-64 min-h-32 resize-none font-mono text-xs md:text-xs"
+              {...fieldProps("content", setContent)}
+            />
+          )}
         </Field>
       ) : null}
 

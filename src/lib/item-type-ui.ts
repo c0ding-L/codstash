@@ -143,6 +143,12 @@ export function itemTypeFromSegment(segment: string): ItemTypeSlug | null {
   return slugs.find((slug) => typePluralNames[slug].toLowerCase() === segment) ?? null;
 }
 
+/** The type a page lists, from its pathname: `/items/prompts` gives "prompt". Null on any other page. */
+export function itemTypeFromPathname(pathname: string): ItemTypeSlug | null {
+  const segment = /^\/items\/([^/]+)/.exec(pathname)?.[1];
+  return segment ? itemTypeFromSegment(segment) : null;
+}
+
 /** Derive avatar initials from a display name when the user has no image. */
 export function initialsFromName(name: string | null) {
   if (!name) return "?";

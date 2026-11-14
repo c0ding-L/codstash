@@ -1,16 +1,29 @@
-# Current Feature
+# Current Feature: Code Editor
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- A `CodeEditor` component built on Monaco Editor, using a dark theme
+- Snippets and commands use `CodeEditor` instead of `Textarea`; notes, prompts and other
+  non-code types keep `Textarea`
+- macOS-style window dots (red/yellow/green) across the top of the editor
+- Editor header shows the language and a quick copy button next to it
+- Works in both read-only (display) and edit modes
+- Height grows with the content up to a 400px max, then scrolls with a themed scrollbar
+- Added on request: the New Item dialog starts on the type of the listing page it is opened
+  from (`/items/prompts` → Prompt, etc.); elsewhere, or for Files/Images, it stays on Snippet
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Spec: `@context/features/code-editor-spec.md`.
+- `Textarea` is currently used for content in `src/components/items/NewItemDialog.tsx` and
+  `src/components/items/ItemEditForm.tsx`; read-only display is in the item drawer.
+- Monaco is not installed yet — adding it (likely `@monaco-editor/react`) is a new dependency,
+  installed through Windows npm. It is browser-only, so the editor must be a client component.
+- Language comes from the item's `language` field (fall back to plaintext when empty).
 
 ---
 

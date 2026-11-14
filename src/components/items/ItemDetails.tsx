@@ -18,8 +18,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
 
+import { CodeEditor } from "@/components/items/CodeEditor";
 import { ItemDeleteDialog } from "@/components/items/ItemDeleteDialog";
 import { ItemEditForm, type SavedItem } from "@/components/items/ItemEditForm";
 import { Badge } from "@/components/ui/badge";
@@ -28,10 +28,13 @@ import { Separator } from "@/components/ui/separator";
 import { SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { copyToClipboard } from "@/lib/clipboard";
+import { isCodeType } from "@/lib/code-language";
 import type { DashboardItem, ItemDetailJson } from "@/lib/db/items";
 import { formatFileSize } from "@/lib/format";
 import { colorClasses, surfaceClasses, toColorToken, toItemTypeSlug, typeIcons } from "@/lib/item-type-ui";
 import { cn, isWebUrl } from "@/lib/utils";
+import type { ItemTypeSlug } from "@/types/item-type";
 
 export type ItemDetailState =
   | { status: "loading" }
@@ -40,15 +43,6 @@ export type ItemDetailState =
 
 function formatDate(date: Date | string) {
   return new Date(date).toLocaleDateString(undefined, { dateStyle: "medium" });
-}
-
-async function copyToClipboard(text: string) {
-  try {
-    await navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard.");
-  } catch {
-    toast.error("Could not copy to the clipboard.");
-  }
 }
 
 /** The drawer's title, next to the type's icon in the type's color, as on the cards. */
@@ -183,7 +177,7 @@ function DetailRow({ icon: Icon, label, children }: { icon: LucideIcon; label: s
 }
 
 /** The body of the item: the part of the drawer that waits for the fetch. */
-function ItemBody({ state }: { state: ItemDetailState }) {
+function ItemBody({ state, slug }: { state: ItemDetailState; slug: ItemTypeSlug | null }) {
   if (state.status === "loading") {
     return (
       <div role="status" aria-label="Loading item">
@@ -200,11 +194,13 @@ function ItemBody({ state }: { state: ItemDetailState }) {
     );
   }
 
-  const { content, url } = state.detail;
+  const { content, language, url } = state.detail;
 
   return (
     <>
-      {content ? (
+      {content && isCodeType(slug) ? (
+        <CodeEditor value={content} language={language} ariaLabel="Content" />
+      ) : content ? (
         <pre className="rounded-lg border border-border bg-muted/50 p-3 font-mono text-xs break-words whitespace-pre-wrap">
           {content}
         </pre>
@@ -309,7 +305,7 @@ export function ItemDetails({ card, state, onSaved, onDeleted }: ItemDetailsProp
       <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
         {card.description ? <p className="text-muted-foreground">{card.description}</p> : null}
 
-        <ItemBody state={state} />
+        <ItemBody state={state} slug={slug} />
 
         <Separator />
 

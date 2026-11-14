@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   initialsFromName,
+  itemTypeFromPathname,
   itemTypeFromSegment,
   itemTypeHref,
   sidebarTypes,
@@ -38,6 +39,23 @@ describe("itemTypeFromSegment", () => {
     "returns null for %j",
     (segment) => {
       expect(itemTypeFromSegment(segment)).toBeNull();
+    },
+  );
+});
+
+describe("itemTypeFromPathname", () => {
+  it.each(SLUGS)("reads %s from its listing page", (slug) => {
+    expect(itemTypeFromPathname(itemTypeHref(slug))).toBe(slug);
+  });
+
+  it("ignores anything after the type segment", () => {
+    expect(itemTypeFromPathname("/items/commands/extra")).toBe("command");
+  });
+
+  it.each(["/dashboard", "/profile", "/", "/items", "/items/", "/items/whatever", "/x/items/prompts"])(
+    "returns null for %j",
+    (pathname) => {
+      expect(itemTypeFromPathname(pathname)).toBeNull();
     },
   );
 });
