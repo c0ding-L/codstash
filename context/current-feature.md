@@ -1,40 +1,22 @@
-# Current Feature: Image Card Details
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- The image gallery keeps its layout (grid, 16:9 thumbnail, hover zoom); only the text under
-  each thumbnail changes
-- First line: the title (with the pin/favorite marks, as today) on the left; the image's
-  dimensions and the relative update time on the right, e.g. `1216×832 / 2w ago`
-- Second line: the item's description, on one line, truncated; left out when there is none
-- Nothing else changes: no search, filters or sort (those were in the Lovable mock, not asked for)
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-Reference: `lovable-result/images-list.png` (Lovable mock). Only its per-image details are
-taken, not its masonry layout.
+<!-- Additional context, constraints, or details from spec -->
 
-- **Dimensions are read in the browser.** Nothing stores them: the schema has no width/height
-  and the upload does not measure the image. `ImageThumbnail` is already a client component,
-  so it reads `naturalWidth` × `naturalHeight` on load and shows them. No schema change, no
-  upload change, and it works for images uploaded before this feature.
-  - Trade-off: the dimensions appear only once the image has loaded (lazy-loaded cards below
-    the fold show them when scrolled to), and not at all when the file fails to load.
-  - The alternative, measuring at upload and storing width/height, needs a migration and a
-    backfill for existing images. Not proposed.
-- **Time and description are already in `DashboardItem`** (`updatedAt`, `description`), so no
-  query change. The time uses `formatRelativeTime` with the page's `now`, as `ItemCard` does, so
-  `ImageCard` takes `now` as a prop.
-- **Layout of the details.** Dimensions and time in a small, muted, tabular-nums style,
-  right-aligned; the title truncates first so the right side never wraps.
-- Since the dimensions live in `ImageThumbnail` and the title row in `ImageCard`, the thumbnail
-  and the details row move into one client component, or the thumbnail reports its size up.
-  Decide while building; keep the server/client split minimal.
-- **Tests.** Components only, so no unit tests; check it in the browser with the demo image.
+---
+
+Previous feature (completed) — Image Card Details: each image card shows its dimensions, the
+relative update time and the description under the thumbnail. Reference:
+`lovable-result/images-list.png`. Outcome in the History below.
 
 ---
 
@@ -1595,3 +1577,20 @@ Environment notes that outlive any one feature:
   snippets unchanged. **Known:** each card loads the full image (no thumbnail generation); an image
   that fails before hydration may miss `onError` and show the browser's broken icon; the download
   URL is built in both `ItemDetails.tsx` and `ImageCard.tsx`.
+- 2026-11-15 — Item card prototype dropped. A throwaway `?variant=` prototype of three list
+  designs on `/items/[type]` (today / native forms per type / dense list) was not liked; branch
+  `prototype/item-cards` deleted without commits. The author mocked the lists in Lovable instead
+  (`lovable-result/`); per-type list specs written from those mocks:
+  `command-list-spec.md`, `file-list-spec.md`, `link-list-spec.md`, `prompt-list-spec.md`,
+  `snippet-list-spec.md`, plus `item-list-filters-spec.md` (search, filters, sort).
+- 2026-11-15 — Image Card Details merged into `main` (`f36e6b0`, fast-forward); branch
+  `feature/image-card-details` deleted, never pushed. `ImageThumbnail` renamed `ImageCardBody`
+  and now renders the details row too: title and pin/favorite marks, then `W×H / relative time`,
+  then the description on one truncated line. Dimensions are read from the loaded image
+  (`naturalWidth`/`naturalHeight`): no schema or upload change. A mount check reads an image that
+  loaded or failed before hydration (fixes the missed-`onError` point from the gallery review).
+  322 tests, build and lint green. Verified in Chromium on the dev server with 5 images: correct
+  sizes (up to 5184×3456), sizes still shown after a cached reload, placeholder and no size on a
+  404, drawer opens, one column on a phone. **Known:** an SVG with only a `viewBox` reports the
+  browser default 300×150 (checked in Chromium and Firefox); hiding it needs `fileName` in the
+  card query. The download URL is still built in both `ItemDetails.tsx` and `ImageCard.tsx`.
