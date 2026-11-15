@@ -1,46 +1,22 @@
-# Current Feature: Command List
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- `/items/commands` shows one terminal-style frame: a header with three window dots and
-  `~/codstash/commands`, then one row per command
-- Each row: the title as a shell comment (`# Prune Docker disk usage`), and under it `$` and the
-  command in Geist Mono
-- Light shell colouring: the program name, flags, pipes and `&&`
-- Right side of each row, muted: the collection (when there is one), the relative time and the
-  favorite/pin marks
-- A copy button per row, shown on hover and on keyboard focus, copying the full command
-- Clicking the row opens the item drawer
-- A multi-line command shows its first line, then a muted `…`
-- Every other type is unchanged
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-Spec: `@context/features/command-list-spec.md`. Reference: `lovable-result/commands-list.png`.
+<!-- Additional context, constraints, or details from spec -->
 
-- **Data: a separate map, not `DashboardItem`.** `DashboardItem` is shared with the dashboard
-  and passed whole to `ItemDrawerTrigger` (a client component), so it stays as it is. A new
-  `getCommandTexts(userId, ids)` in `src/lib/db/items.ts` returns `id → command` for the listed
-  items, and the page passes each row its text. The drawer and the dashboard see no change.
-- **Copy: carry the full command, not fetch it.** Commands are one-liners by nature and the
-  list is capped at `MAX_ITEM_LIMIT` (100), so sending the text is cheap. Fetching on click
-  would also lose the click's user activation in Safari, which can make the clipboard write
-  fail. The copy reuses `copyToClipboard` (`src/lib/clipboard.ts`, toast included).
-  - Guard: a command longer than a cap (e.g. 2,000 characters) is sent cut, and its copy
-    button fetches the full text from `/api/items/[id]` instead. Rare; keeps the payload bounded.
-- **Colouring** is a small tokenizer in `src/lib/` (program = first word and the first word
-  after `|`, `&&`, `||`, `;`; flags = words starting with `-`; operators). Pure function,
-  unit-tested. No new dependency.
-- **Layout.** Rows are a list inside one bordered frame; the copy button sits above the
-  drawer's overlay (`ItemDrawerTrigger` covers the row at `z-10`). On a phone, the collection
-  is hidden and the command wraps instead of being cut.
-- The mock's "c copies the focused line" keyboard shortcut is left out (spec).
-- **Tests.** Unit tests for the tokenizer and for `getCommandTexts`; check the page in the
-  browser with the demo commands.
+---
+
+Previous feature (completed) — Command List: `/items/commands` shows the commands in one
+terminal window, each with its title as a comment, a coloured command and a copy button. Spec:
+`@context/features/command-list-spec.md`. Outcome in the History below.
 
 ---
 
@@ -1624,3 +1600,20 @@ Environment notes that outlive any one feature:
   404, drawer opens, one column on a phone. **Known:** an SVG with only a `viewBox` reports the
   browser default 300×150 (checked in Chromium and Firefox); hiding it needs `fileName` in the
   card query. The download URL is still built in both `ItemDetails.tsx` and `ImageCard.tsx`.
+- 2026-11-15 — Command List merged into `main` (`6ecb93b`, fast-forward); branch
+  `feature/command-list` deleted, never pushed. New `src/lib/command-text.ts`
+  (`tokenizeCommand`, `commandFirstLine`, `clipCommand`), `getCommandTexts` in
+  `src/lib/db/items.ts` (text kept out of `DashboardItem`), `CommandList` (server) and
+  `CommandCopyButton` (client). Commands over 2,000 characters are sent cut and fetched in full
+  on copy. Testing found that `2>&1` coloured `1` as a program; redirects are now one operator.
+  The copy button hides until hover only with a mouse (`pointer-fine:`), so touch tablets see it.
+  Also `min-w-0` on the app layout's `<main>` (`SidebarInset`): it grew to its widest content,
+  so a long command widened the page and defeated `truncate`. 347 tests (25 new), build and lint
+  green. Verified in Chromium on the dev server with the demo commands plus two temporary ones
+  (multi-line, 2,111 characters; removed afterwards, 0 left): colouring, exact copies including
+  the long one, drawer, 2-line clamp and word-aware wrapping on a phone, no horizontal scroll on
+  commands, images, snippets or the dashboard; mouse vs touch-tablet visibility of the copy
+  button. **Known:** the phone was not re-checked after the `pointer-fine:` change (sign-in
+  rate limit hit by the test scripts; same rule as the tablet); copying a command over the cap
+  may fail in Safari (clipboard write after a fetch); `getCommandTexts` reads full `content`
+  and cuts in JS.
