@@ -10,6 +10,7 @@ import {
   getItemFileKeys,
   getItemsByType,
   getPinnedItems,
+  getPromptPreviews,
   getRecentItems,
   updateItem,
 } from "@/lib/db/items";
@@ -28,6 +29,7 @@ vi.mock("@/lib/prisma", () => ({
     },
     itemType: { findFirst: vi.fn() },
     tag: { findMany: vi.fn() },
+    itemTag: { findMany: vi.fn() },
   },
 }));
 
@@ -35,6 +37,7 @@ const findMany = prisma.item.findMany as unknown as Mock;
 const findFirst = prisma.item.findFirst as unknown as Mock;
 const count = prisma.item.count as unknown as Mock;
 const findTags = prisma.tag.findMany as unknown as Mock;
+const findItemTags = prisma.itemTag.findMany as unknown as Mock;
 const update = prisma.item.update as unknown as Mock;
 const remove = prisma.item.delete as unknown as Mock;
 const create = prisma.item.create as unknown as Mock;
@@ -47,6 +50,7 @@ beforeEach(() => {
   count.mockResolvedValue(0);
   findFirst.mockResolvedValue(null);
   findTags.mockResolvedValue([]);
+  findItemTags.mockResolvedValue([]);
 });
 
 describe("account isolation", () => {
@@ -439,5 +443,42 @@ describe("getCommandTexts", () => {
 
     expect(a!.isCut).toBe(true);
     expect(a!.text).toHaveLength(MAX_COMMAND_CHARS);
+  });
+});
+
+describe("getPromptPreviews", () => {
+  it("reads only that user's items and tags, among the ids given", async () => {
+    await getPromptPreviews(USER, ["a", "b"]);
+
+    expect(findMany.mock.calls[0]![0].where).toEqual({ userId: USER, id: { in: ["a", "b"] } });
+    expect(findItemTags.mock.calls[0]![0].where).toEqual({ itemId: { in: ["a", "b"] }, item: { userId: USER } });
+  });
+
+  it("loads the tags of the whole list in one query", async () => {
+    await getPromptPreviews(USER, ["a", "b", "c"]);
+
+    expect(findItemTags).toHaveBeenCalledOnce();
+  });
+
+  it("does not query when there are no ids", async () => {
+    expect(await getPromptPreviews(USER, [])).toEqual({});
+    expect(findMany).not.toHaveBeenCalled();
+    expect(findItemTags).not.toHaveBeenCalled();
+  });
+
+  it("maps each id to its excerpt, counts and sorted tags", async () => {
+    findMany.mockResolvedValue([
+      { id: "a", content: "# Review\n\nRank **every** finding." },
+      { id: "b", content: null },
+    ]);
+    findItemTags.mockResolvedValue([
+      { itemId: "a", tag: { name: "review" } },
+      { itemId: "a", tag: { name: "ai" } },
+    ]);
+
+    expect(await getPromptPreviews(USER, ["a", "b"])).toEqual({
+      a: { excerpt: "Review Rank every finding.", words: 4, tokens: 9, tags: ["ai", "review"] },
+      b: { excerpt: "", words: 0, tokens: 0, tags: [] },
+    });
   });
 });

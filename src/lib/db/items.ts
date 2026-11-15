@@ -1,6 +1,7 @@
 import { clipCommand } from "@/lib/command-text";
 import { clampLimit, MAX_ITEM_LIMIT } from "@/lib/db/limits";
 import { prisma } from "@/lib/prisma";
+import { countWords, estimateTokens, markdownToPlainText, promptExcerpt } from "@/lib/prompt-text";
 import type { ItemTypeSlug } from "@/types/item-type";
 
 /** Everything a row on the dashboard renders, flattened out of the relations. */
@@ -127,6 +128,60 @@ export async function getCommandTexts(
   });
 
   return Object.fromEntries(rows.map(({ id, content }) => [id, clipCommand(content ?? "")]));
+}
+
+/** What the prompt list shows of a prompt beyond its card. */
+export interface PromptPreview {
+  excerpt: string;
+  /** Counted on the prompt's plain text, so Markdown marks are not words. */
+  words: number;
+  /** An estimate from the raw content: what would be sent to a model. */
+  tokens: number;
+  /** Tag names, sorted. */
+  tags: string[];
+}
+
+/**
+ * The excerpt, counts and tags of each listed prompt. The full content is read
+ * here and never sent to the list (it has no length cap); the tags of the whole
+ * list come from one query.
+ */
+export async function getPromptPreviews(
+  userId: string,
+  ids: string[],
+): Promise<Record<string, PromptPreview>> {
+  if (ids.length === 0) return {};
+
+  const [rows, links] = await Promise.all([
+    prisma.item.findMany({
+      where: { userId, id: { in: ids } },
+      select: { id: true, content: true },
+    }),
+    prisma.itemTag.findMany({
+      where: { itemId: { in: ids }, item: { userId } },
+      select: { itemId: true, tag: { select: { name: true } } },
+    }),
+  ]);
+
+  const tagsByItem = new Map<string, string[]>();
+  for (const { itemId, tag } of links) {
+    tagsByItem.set(itemId, [...(tagsByItem.get(itemId) ?? []), tag.name]);
+  }
+
+  return Object.fromEntries(
+    rows.map(({ id, content }) => {
+      const raw = content ?? "";
+      return [
+        id,
+        {
+          excerpt: promptExcerpt(raw),
+          words: countWords(markdownToPlainText(raw)),
+          tokens: estimateTokens(raw),
+          tags: (tagsByItem.get(id) ?? []).sort((a, b) => a.localeCompare(b)),
+        },
+      ];
+    }),
+  );
 }
 
 /**

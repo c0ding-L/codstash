@@ -9,7 +9,8 @@ import { ImageCard } from "@/components/items/ImageCard";
 import { ItemCard } from "@/components/items/ItemCard";
 import { ItemDrawerProvider } from "@/components/items/ItemDrawerProvider";
 import { LinkList } from "@/components/items/LinkList";
-import { getCommandTexts, getItemsByType } from "@/lib/db/items";
+import { PromptList } from "@/components/items/PromptList";
+import { getCommandTexts, getItemsByType, getPromptPreviews } from "@/lib/db/items";
 import { itemTypeFromSegment, itemTypeHref, typePluralNames } from "@/lib/item-type-ui";
 
 interface ItemsPageProps {
@@ -34,8 +35,9 @@ export default async function ItemsPage({ params }: ItemsPageProps) {
   if (!session?.user?.id) redirect(`/sign-in?callbackUrl=${itemTypeHref(slug)}`);
 
   const { items, totalCount } = await getItemsByType(session.user.id, slug);
-  const commandTexts =
-    slug === "command" ? await getCommandTexts(session.user.id, items.map((item) => item.id)) : {};
+  const ids = items.map((item) => item.id);
+  const commandTexts = slug === "command" ? await getCommandTexts(session.user.id, ids) : {};
+  const promptPreviews = slug === "prompt" ? await getPromptPreviews(session.user.id, ids) : {};
   const label = typePluralNames[slug];
   const now = new Date().toISOString();
 
@@ -56,6 +58,8 @@ export default async function ItemsPage({ params }: ItemsPageProps) {
             <CommandList items={items} texts={commandTexts} now={now} />
           ) : slug === "file" ? (
             <FileList items={items} now={now} />
+          ) : slug === "prompt" ? (
+            <PromptList items={items} previews={promptPreviews} now={now} />
           ) : slug === "link" ? (
             <LinkList items={items} />
           ) : slug === "image" ? (

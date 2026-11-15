@@ -1,16 +1,50 @@
-# Current Feature
+# Current Feature: Prompt List
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- `/items/prompts` is a single full-width column, one prompt per entry, separated by space
+  rather than card borders
+- Each entry:
+  - The title, with the pin/favorite marks
+  - The prompt's text as a quote: a thin amber rule on the left, up to 3 lines, then cut
+  - A muted metadata line: the tags (`#review`), the word count, an approximate token count
+    (`~49 tokens`) and the relative time
+  - A "Copy prompt" button, shown on hover and on keyboard focus (always shown on touch
+    screens), copying the full prompt
+- Clicking the entry opens the item drawer
+- Every other type is unchanged
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+Spec: `@context/features/prompt-list-spec.md`. Reference: `lovable-result/prompts-list.png`.
+
+- **Data: a separate map, as for commands.** `content` has **no length cap** in validation, so
+  the full prompt never goes to the list. A new `getPromptPreviews(userId, ids)` in
+  `src/lib/db/items.ts` returns, per item: the excerpt, the word count and the token estimate.
+  All three are computed on the server from the full content.
+- **Tags in one query** for the whole list (`ItemTag` filtered on the listed ids, joined to the
+  tag name), never one per item. Returned sorted, in the same map.
+- **Excerpt.** `promptExcerpt(content)` in `src/lib/`: Markdown reduced to plain text (headings,
+  emphasis, code fences, links → their text, list markers), whitespace collapsed, cut at about
+  300 characters on a word boundary. The 3-line clamp is CSS on top. Unit-tested.
+- **Counts.** `countWords` (whitespace-separated, on the raw content) and `estimateTokens`
+  (`Math.ceil(characters / 4)`, labelled with `~`). Unit-tested.
+- **Copy fetches the full text, without breaking in Safari.** Commands carried their text;
+  prompts can't (no cap). The copy button fetches `/api/items/[id]`, and to keep the click's
+  permission in Safari it writes a `ClipboardItem` whose content is the pending fetch
+  (supported by Safari, Chrome and Firefox), falling back to fetch-then-`writeText` where
+  `ClipboardItem` is missing. A new `copyFromPromise` beside `copyToClipboard` in
+  `src/lib/clipboard.ts`, same toasts, unit-tested with the clipboard stubbed.
+- **Layout.** `<ul>` of entries with vertical spacing; the copy button above the drawer overlay
+  (`relative z-20`), hidden until hover only with a mouse (`pointer-fine:`), as on commands. The
+  mock's row numbers (`01`, `02`) are left out: prompts are not a sequence.
+- **Tests.** `promptExcerpt`, `countWords`, `estimateTokens`, `copyFromPromise`,
+  `getPromptPreviews` (account isolation, one tag query, empty ids). Components: browser check
+  with the 3 demo prompts.
 
 ---
 
