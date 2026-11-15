@@ -224,6 +224,11 @@ export interface ItemCreate {
   content?: string | null;
   url?: string | null;
   language?: string | null;
+  /** File and image items: the R2 key, the original name and the stored size. */
+  fileUrl?: string;
+  fileName?: string;
+  fileSize?: number;
+  contentType?: "text" | "file";
   tags: string[];
 }
 
@@ -268,9 +273,29 @@ export async function createItem(
 }
 
 /**
- * Deletes the item. Filtered on the owner, so another user's item throws
+ * Deletes the item and returns its R2 key, if it had a file, so the caller can
+ * delete that too. Filtered on the owner, so another user's item throws
  * Prisma's P2025 just as a missing one does. Its tag links cascade; the tags stay.
  */
-export async function deleteItem(userId: string, id: string): Promise<void> {
-  await prisma.item.delete({ where: { id, userId }, select: { id: true } });
+export async function deleteItem(userId: string, id: string): Promise<{ fileUrl: string | null }> {
+  return prisma.item.delete({ where: { id, userId }, select: { fileUrl: true } });
+}
+
+/** The stored file of one of the user's items, or null when it has none or is not theirs. */
+export async function getItemFile(userId: string, id: string): Promise<{ fileUrl: string; fileName: string } | null> {
+  const item = await prisma.item.findFirst({
+    where: { id, userId, fileUrl: { not: null } },
+    select: { fileUrl: true, fileName: true },
+  });
+  if (!item?.fileUrl) return null;
+  return { fileUrl: item.fileUrl, fileName: item.fileName ?? "file" };
+}
+
+/** Every R2 key the user's items point at, for deleting the account. */
+export async function getItemFileKeys(userId: string): Promise<string[]> {
+  const items = await prisma.item.findMany({
+    where: { userId, fileUrl: { not: null } },
+    select: { fileUrl: true },
+  });
+  return items.flatMap(({ fileUrl }) => (fileUrl ? [fileUrl] : []));
 }

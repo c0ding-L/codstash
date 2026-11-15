@@ -6,7 +6,9 @@ import { z } from "zod";
 
 import { auth, signIn, signOut } from "@/auth";
 import { DEMO_USER_EMAIL } from "@/lib/db/collections";
+import { getItemFileKeys } from "@/lib/db/items";
 import { prisma } from "@/lib/prisma";
+import { deleteObjectsQuietly } from "@/lib/r2";
 
 const BCRYPT_ROUNDS = 12;
 const MIN_PASSWORD_LENGTH = 8;
@@ -120,6 +122,9 @@ export async function deleteAccount(_previous: ActionResult, formData: FormData)
       }
     }
 
+    // Read before the items go: the cascade would lose the R2 keys.
+    const fileKeys = await getItemFileKeys(user.id);
+
     await prisma.$transaction([
       // Items first: `Item.typeId` is `Restrict`, and the user's custom types
       // are deleted by the same cascade as their items.
@@ -131,6 +136,8 @@ export async function deleteAccount(_previous: ActionResult, formData: FormData)
       }),
       prisma.user.delete({ where: { id: user.id } }),
     ]);
+
+    await deleteObjectsQuietly(fileKeys);
   } catch (error) {
     console.error("[profile] deleteAccount failed:", error);
     return { success: false, error: "Could not delete the account. Try again." };

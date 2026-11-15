@@ -4,7 +4,9 @@ import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import { changePassword, deleteAccount, type ActionResult } from "@/actions/profile";
 import { auth, signIn, signOut } from "@/auth";
+import { getItemFileKeys } from "@/lib/db/items";
 import { prisma } from "@/lib/prisma";
+import { deleteObjectsQuietly } from "@/lib/r2";
 
 vi.mock("@/auth", () => ({ auth: vi.fn(), signIn: vi.fn(), signOut: vi.fn() }));
 vi.mock("next/navigation", () => ({
@@ -13,6 +15,8 @@ vi.mock("next/navigation", () => ({
     throw new Error(`REDIRECT ${url}`);
   }),
 }));
+vi.mock("@/lib/db/items", () => ({ getItemFileKeys: vi.fn() }));
+vi.mock("@/lib/r2", () => ({ deleteObjectsQuietly: vi.fn() }));
 vi.mock("bcryptjs", () => ({ default: { compare: vi.fn(), hash: vi.fn() } }));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
@@ -47,6 +51,8 @@ beforeEach(() => {
   compare.mockResolvedValue(true);
   hash.mockResolvedValue("new-hash");
   vi.spyOn(console, "error").mockImplementation(() => {});
+  asMock(getItemFileKeys).mockResolvedValue(["user_1/a/notes.pdf"]);
+  asMock(deleteObjectsQuietly).mockResolvedValue(undefined);
 
   // Each write returns a marker, so a test can check what went into `$transaction`
   // and in which order. A write made outside it would be missing from the array.
@@ -218,6 +224,16 @@ describe("deleteAccount", () => {
     expect(result).toEqual({ success: true, error: null });
   });
 
+  it("deletes the user's uploaded files from R2 once the data is gone", async () => {
+    await deleteAccount(INITIAL, form(confirm));
+
+    expect(getItemFileKeys).toHaveBeenCalledWith(USER.id);
+    expect(deleteObjectsQuietly).toHaveBeenCalledWith(["user_1/a/notes.pdf"]);
+    expect(asMock(deleteObjectsQuietly).mock.invocationCallOrder[0]).toBeGreaterThan(
+      transaction.mock.invocationCallOrder[0]!,
+    );
+  });
+
   it("stays signed in when the database fails", async () => {
     vi.mocked(prisma.$transaction).mockRejectedValue(new Error("connection lost"));
 
@@ -225,5 +241,7 @@ describe("deleteAccount", () => {
 
     expect(result).toEqual({ success: false, error: "Could not delete the account. Try again." });
     expect(signOut).not.toHaveBeenCalled();
+    // The items are still there, so their files must stay too.
+    expect(deleteObjectsQuietly).not.toHaveBeenCalled();
   });
 });

@@ -6,7 +6,10 @@ import {
   CalendarPlus,
   Clock,
   Copy,
+  Download,
+  FileText,
   Folder,
+  ImageIcon,
   HardDrive,
   type LucideIcon,
   Paperclip,
@@ -24,7 +27,7 @@ import { MarkdownEditor } from "@/components/items/MarkdownEditor";
 import { ItemDeleteDialog } from "@/components/items/ItemDeleteDialog";
 import { ItemEditForm, type SavedItem } from "@/components/items/ItemEditForm";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -32,6 +35,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { copyToClipboard } from "@/lib/clipboard";
 import { isCodeType } from "@/lib/code-language";
 import type { DashboardItem, ItemDetailJson } from "@/lib/db/items";
+import { extensionOf } from "@/lib/files";
 import { formatFileSize } from "@/lib/format";
 import { colorClasses, surfaceClasses, toColorToken, toItemTypeSlug, typeIcons } from "@/lib/item-type-ui";
 import { cn, isWebUrl } from "@/lib/utils";
@@ -178,7 +182,45 @@ function DetailRow({ icon: Icon, label, children }: { icon: LucideIcon; label: s
 }
 
 /** The body of the item: the part of the drawer that waits for the fetch. */
-function ItemBody({ state, slug }: { state: ItemDetailState; slug: ItemTypeSlug | null }) {
+/** The uploaded file: its icon, name and extension, with the download button, in a light frame. */
+function FileCard({ href, fileName, fileSize, isImage }: { href: string; fileName: string; fileSize: number | null; isImage: boolean }) {
+  const Icon = isImage ? ImageIcon : FileText;
+  const extension = extensionOf(fileName);
+
+  return (
+    <div className="flex shrink-0 items-center gap-3 rounded-lg border border-border bg-muted/30 p-3">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-background/60 text-muted-foreground">
+        <Icon className="size-5" aria-hidden />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium" title={fileName}>
+          {fileName}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {[extension ? extension.toUpperCase() : null, fileSize ? formatFileSize(fileSize) : null]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
+      </div>
+      <a href={href} download={fileName} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "shrink-0")}>
+        <Download aria-hidden />
+        Download
+      </a>
+    </div>
+  );
+}
+
+function ItemBody({
+  itemId,
+  fileSize,
+  state,
+  slug,
+}: {
+  itemId: string;
+  fileSize: number | null;
+  state: ItemDetailState;
+  slug: ItemTypeSlug | null;
+}) {
   if (state.status === "loading") {
     return (
       <div role="status" aria-label="Loading item">
@@ -195,10 +237,26 @@ function ItemBody({ state, slug }: { state: ItemDetailState; slug: ItemTypeSlug 
     );
   }
 
-  const { content, language, url } = state.detail;
+  const { content, language, url, fileName } = state.detail;
+  // Served by the app from the private bucket, for the owner only.
+  const fileHref = `/api/items/${encodeURIComponent(itemId)}/download`;
 
   return (
     <>
+      {fileName && slug === "image" ? (
+        // From the download route, which next/image's optimiser could not reach with the session.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={fileHref}
+          alt={fileName}
+          className="max-h-80 w-full shrink-0 rounded-lg border border-border bg-muted/30 object-contain"
+        />
+      ) : null}
+
+      {fileName ? (
+        <FileCard href={fileHref} fileName={fileName} fileSize={fileSize} isImage={slug === "image"} />
+      ) : null}
+
       {content && isCodeType(slug) ? (
         <CodeEditor value={content} language={language} ariaLabel="Content" />
       ) : content ? (
@@ -304,7 +362,7 @@ export function ItemDetails({ card, state, onSaved, onDeleted }: ItemDetailsProp
       <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
         {card.description ? <p className="text-muted-foreground">{card.description}</p> : null}
 
-        <ItemBody state={state} slug={slug} />
+        <ItemBody itemId={card.id} fileSize={card.fileSize} state={state} slug={slug} />
 
         <Separator />
 

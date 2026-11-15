@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { type CreatableType, createItem, type CreateItemField, type CreateItemInput } from "@/actions/items";
 import { CodeEditor } from "@/components/items/CodeEditor";
+import { FileUpload } from "@/components/items/FileUpload";
 import { MarkdownEditor } from "@/components/items/MarkdownEditor";
 import { Field, toTags } from "@/components/items/ItemEditForm";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +25,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { isCodeType } from "@/lib/code-language";
+import { isUploadKind } from "@/lib/files";
 import { colorClasses, itemTypeFromPathname, surfaceClasses, typeColors, typeIcons } from "@/lib/item-type-ui";
+import { uploadFile } from "@/lib/upload-client";
 import { cn } from "@/lib/utils";
 
 const TYPES: { slug: CreatableType; label: string }[] = [
@@ -32,6 +35,8 @@ const TYPES: { slug: CreatableType; label: string }[] = [
   { slug: "prompt", label: "Prompt" },
   { slug: "command", label: "Command" },
   { slug: "note", label: "Note" },
+  { slug: "file", label: "File" },
+  { slug: "image", label: "Image" },
   { slug: "link", label: "Link" },
 ];
 
@@ -84,12 +89,15 @@ function NewItemForm({ saving, startSaving, onCreated }: NewItemFormProps) {
   const [content, setContent] = useState("");
   const [language, setLanguage] = useState("");
   const [url, setUrl] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [progress, setProgress] = useState<number | null>(null);
 
   const hasContent = CONTENT_TYPES.has(type);
   const hasLanguage = LANGUAGE_TYPES.has(type);
   const hasUrl = type === "link";
+  const uploadKind = isUploadKind(type) ? type : null;
   const parsedTags = toTags(tags);
-  const canSubmit = title.trim() !== "" && (!hasUrl || url.trim() !== "");
+  const canSubmit = title.trim() !== "" && (!hasUrl || url.trim() !== "") && (!uploadKind || file !== null);
 
   /** Props tying an input to its label and message, and marking it while it is at fault. */
   function fieldProps(field: CreateItemField, setValue: (value: string) => void) {
@@ -122,8 +130,22 @@ function NewItemForm({ saving, startSaving, onCreated }: NewItemFormProps) {
     };
 
     startSaving(async () => {
+      if (uploadKind && file) {
+        setProgress(0);
+        try {
+          input.fileKey = await uploadFile(uploadKind, file, setProgress);
+        } catch (uploadError) {
+          setProgress(null);
+          const message = uploadError instanceof Error ? uploadError.message : "Could not upload the file.";
+          toast.error(message);
+          setError({ field: "fileKey", message });
+          return;
+        }
+      }
+
       const result = await createItem(input);
       if (!result.success) {
+        setProgress(null);
         toast.error(result.error);
         // The field at fault is also marked where it is.
         if (result.field) setError({ field: result.field, message: result.error });
@@ -152,7 +174,10 @@ function NewItemForm({ saving, startSaving, onCreated }: NewItemFormProps) {
               variant="ghost"
               size="sm"
               className={cn(selected && ["ring-1 ring-foreground/20", surfaceClasses[color]])}
+              disabled={saving}
               onClick={() => {
+                // A file chosen as one kind is not valid as the other.
+                if (slug !== type) setFile(null);
                 setType(slug);
                 setError(null);
               }}
@@ -171,6 +196,25 @@ function NewItemForm({ saving, startSaving, onCreated }: NewItemFormProps) {
       <Field id={`${id}-description`} label="Description" error={messageFor("description")}>
         <Textarea value={description} className="resize-none" {...fieldProps("description", setDescription)} />
       </Field>
+
+      {uploadKind ? (
+        <Field id={`${id}-fileKey`} label={uploadKind === "image" ? "Image" : "File"} error={messageFor("fileKey")}>
+          <FileUpload
+            kind={uploadKind}
+            file={file}
+            id={`${id}-fileKey`}
+            invalid={error?.field === "fileKey"}
+            describedBy={`${id}-fileKey-message`}
+            progress={progress}
+            disabled={saving}
+            onFileChange={(next) => {
+              setFile(next);
+              if (error?.field === "fileKey") setError(null);
+            }}
+            onReject={(message) => setError({ field: "fileKey", message })}
+          />
+        </Field>
+      ) : null}
 
       {hasUrl ? (
         <Field id={`${id}-url`} label="URL" error={messageFor("url")}>
@@ -238,7 +282,7 @@ function NewItemForm({ saving, startSaving, onCreated }: NewItemFormProps) {
           Cancel
         </DialogClose>
         <Button type="submit" disabled={saving || !canSubmit}>
-          {saving ? "Creating…" : "Create item"}
+          {progress !== null && progress < 1 ? "Uploading…" : saving ? "Creating…" : "Create item"}
         </Button>
       </DialogFooter>
     </form>

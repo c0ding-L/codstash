@@ -3,6 +3,8 @@
 import { z } from "zod";
 
 import { auth } from "@/auth";
+import { fromObjectMetadata, isOwnKey } from "@/lib/files";
+import { deleteObjectsQuietly, headObject } from "@/lib/r2";
 import {
   createItem as createItemQuery,
   deleteItem as deleteItemQuery,
@@ -87,7 +89,7 @@ export async function updateItem(itemId: string, input: UpdateItemInput): Promis
 }
 
 /** The types an item can be created as from the dialog. */
-export type CreatableType = "snippet" | "prompt" | "command" | "note" | "link";
+export type CreatableType = "snippet" | "prompt" | "command" | "note" | "link" | "file" | "image";
 
 /** What the dialog sends: the type, plus only the fields that type uses. */
 export interface CreateItemInput {
@@ -97,6 +99,8 @@ export interface CreateItemInput {
   content?: string | null;
   url?: string | null;
   language?: string | null;
+  /** File and image items: the key `/api/upload` returned for the uploaded file. */
+  fileKey?: string;
   tags: string[];
 }
 
@@ -109,6 +113,7 @@ const CREATE_ITEM_FIELDS: ReadonlySet<string> = new Set<CreateItemField>([
   "content",
   "url",
   "language",
+  "fileKey",
   "tags",
 ]);
 
@@ -123,10 +128,13 @@ const baseFields = {
   tags: updateItemSchema.shape.tags,
 };
 const contentField = updateItemSchema.shape.content;
+const fileKeyField = z.string({ error: "Choose a file to upload." }).min(1, "Choose a file to upload.");
+
+const UPLOAD_NOT_FOUND = "The uploaded file was not found. Upload it again.";
 
 /**
  * One shape per type, so a field the type does not use is stripped rather than
- * stored, and a type outside the list (file, image, a custom one) is refused.
+ * stored, and a type outside the list (a custom one) is refused.
  */
 const createItemSchema = z.discriminatedUnion(
   "type",
@@ -141,6 +149,8 @@ const createItemSchema = z.discriminatedUnion(
       // Blank becomes null, which fails as "required" rather than as a bad URL.
       url: z.preprocess(blankToNull, z.url({ error: (issue) => (issue.input == null ? "URL is required." : "Enter a valid URL.") })),
     }),
+    z.object({ type: z.literal("file"), ...baseFields, fileKey: fileKeyField }),
+    z.object({ type: z.literal("image"), ...baseFields, fileKey: fileKeyField }),
   ],
   { error: "Choose a type." },
 );
@@ -162,8 +172,37 @@ export async function createItem(input: CreateItemInput): Promise<CreateItemResu
     const session = await auth();
     if (!session?.user?.id) return { success: false, data: null, error: "You are not signed in." };
 
-    const card = await createItemQuery(session.user.id, parsed.data);
-    return { success: true, data: card, error: null };
+    const userId = session.user.id;
+
+    if (parsed.data.type !== "file" && parsed.data.type !== "image") {
+      const card = await createItemQuery(userId, parsed.data);
+      return { success: true, data: card, error: null };
+    }
+
+    // The key comes back from the browser, so it is checked rather than trusted: it
+    // must be this user's, exist in R2 and have been uploaded as this kind. The name
+    // and size are read from R2, not from the browser.
+    const { fileKey, ...fields } = parsed.data;
+    const head = isOwnKey(userId, fileKey) ? await headObject(fileKey) : null;
+    const stored = fromObjectMetadata(head?.metadata);
+    if (!head || stored?.kind !== fields.type) {
+      return { success: false, data: null, error: UPLOAD_NOT_FOUND, field: "fileKey" };
+    }
+
+    try {
+      const card = await createItemQuery(userId, {
+        ...fields,
+        contentType: "file",
+        fileUrl: fileKey,
+        fileName: stored.fileName,
+        fileSize: head.size,
+      });
+      return { success: true, data: card, error: null };
+    } catch (error) {
+      // Nothing points at the upload any more.
+      await deleteObjectsQuietly([fileKey]);
+      throw error;
+    }
   } catch (error) {
     console.error("[items] createItem failed:", error);
     return { success: false, data: null, error: "Could not create the item. Try again." };
@@ -178,7 +217,9 @@ export async function deleteItem(itemId: string): Promise<DeleteItemResult> {
     if (!session?.user?.id) return { success: false, data: null, error: "You are not signed in." };
 
     // The query filters on the owner, so another user's item is not found either.
-    await deleteItemQuery(session.user.id, itemId);
+    const { fileUrl } = await deleteItemQuery(session.user.id, itemId);
+    // After the row is gone: a failure here leaves an orphaned object, not a broken item.
+    if (fileUrl) await deleteObjectsQuietly([fileUrl]);
     return { success: true, data: null, error: null };
   } catch (error) {
     if (isNotFound(error)) return { success: false, data: null, error: "This item no longer exists." };

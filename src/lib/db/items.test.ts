@@ -4,6 +4,8 @@ import {
   createItem,
   deleteItem,
   getItemDetail,
+  getItemFile,
+  getItemFileKeys,
   getItemsByType,
   getPinnedItems,
   getRecentItems,
@@ -242,7 +244,7 @@ describe("updateItem", () => {
 
 describe("deleteItem", () => {
   beforeEach(() => {
-    remove.mockResolvedValue({ id: "item_1" });
+    remove.mockResolvedValue({ fileUrl: null });
   });
 
   it("deletes only that owner's item", async () => {
@@ -251,10 +253,47 @@ describe("deleteItem", () => {
     expect(remove.mock.calls[0]![0].where).toEqual({ id: "item_1", userId: USER });
   });
 
+  it("returns the deleted item's file key, so its R2 object can go too", async () => {
+    remove.mockResolvedValue({ fileUrl: "user_a/key/a.pdf" });
+
+    await expect(deleteItem(USER, "item_1")).resolves.toEqual({ fileUrl: "user_a/key/a.pdf" });
+    expect(remove.mock.calls[0]![0].select).toEqual({ fileUrl: true });
+  });
+
   it("passes Prisma's error through when no item of that owner matches", async () => {
     remove.mockRejectedValue(Object.assign(new Error("not found"), { code: "P2025" }));
 
     await expect(deleteItem(USER, "someone_elses")).rejects.toMatchObject({ code: "P2025" });
+  });
+});
+
+describe("getItemFile", () => {
+  it("looks only among that owner's items that have a file", async () => {
+    findFirst.mockResolvedValue({ fileUrl: "user_a/key/a.pdf", fileName: "a.pdf" });
+
+    await expect(getItemFile(USER, "item_1")).resolves.toEqual({ fileUrl: "user_a/key/a.pdf", fileName: "a.pdf" });
+    expect(findFirst.mock.calls[0]![0].where).toEqual({ id: "item_1", userId: USER, fileUrl: { not: null } });
+  });
+
+  it("is null when nothing matches", async () => {
+    findFirst.mockResolvedValue(null);
+
+    await expect(getItemFile(USER, "item_1")).resolves.toBeNull();
+  });
+
+  it("falls back to a generic name when none was stored", async () => {
+    findFirst.mockResolvedValue({ fileUrl: "user_a/key/a.pdf", fileName: null });
+
+    await expect(getItemFile(USER, "item_1")).resolves.toEqual({ fileUrl: "user_a/key/a.pdf", fileName: "file" });
+  });
+});
+
+describe("getItemFileKeys", () => {
+  it("lists the keys of that owner's items that have a file", async () => {
+    findMany.mockResolvedValue([{ fileUrl: "user_a/1/a.pdf" }, { fileUrl: "user_a/2/b.png" }]);
+
+    await expect(getItemFileKeys(USER)).resolves.toEqual(["user_a/1/a.pdf", "user_a/2/b.png"]);
+    expect(findMany.mock.calls[0]![0].where).toEqual({ userId: USER, fileUrl: { not: null } });
   });
 });
 
@@ -300,6 +339,26 @@ describe("createItem", () => {
       type: { connect: { id: "type_note" } },
     });
     expect(data).not.toHaveProperty("userId");
+  });
+
+  it("stores a file item's key, name, size and content type", async () => {
+    await createItem(USER, {
+      type: "file",
+      title: "Report",
+      contentType: "file",
+      fileUrl: "user_a/key/report.pdf",
+      fileName: "Report.pdf",
+      fileSize: 2048,
+      tags: [],
+    });
+
+    expect(findType.mock.calls[0]![0].where).toMatchObject({ slug: "file" });
+    expect(create.mock.calls[0]![0].data).toMatchObject({
+      contentType: "file",
+      fileUrl: "user_a/key/report.pdf",
+      fileName: "Report.pdf",
+      fileSize: 2048,
+    });
   });
 
   it("links each tag once, to that user's tag of that name", async () => {

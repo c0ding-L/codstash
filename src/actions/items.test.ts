@@ -7,14 +7,18 @@ import {
   deleteItem as deleteItemQuery,
   updateItem as updateItemQuery,
 } from "@/lib/db/items";
+import { deleteObjectsQuietly, headObject } from "@/lib/r2";
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/db/items", () => ({ createItem: vi.fn(), updateItem: vi.fn(), deleteItem: vi.fn() }));
+vi.mock("@/lib/r2", () => ({ headObject: vi.fn(), deleteObjectsQuietly: vi.fn() }));
 
 const session = auth as unknown as Mock;
 const query = updateItemQuery as unknown as Mock;
 const deleteQuery = deleteItemQuery as unknown as Mock;
 const createQuery = createItemQuery as unknown as Mock;
+const head = headObject as unknown as Mock;
+const deleteObjects = deleteObjectsQuietly as unknown as Mock;
 
 const USER_ID = "user_1";
 
@@ -34,7 +38,9 @@ const detail = { content: "body", url: null, fileName: null, language: null, cre
 beforeEach(() => {
   session.mockResolvedValue({ user: { id: USER_ID } });
   query.mockResolvedValue({ card, detail });
-  deleteQuery.mockResolvedValue(undefined);
+  deleteQuery.mockResolvedValue({ fileUrl: null });
+  head.mockResolvedValue(null);
+  deleteObjects.mockResolvedValue(undefined);
   createQuery.mockResolvedValue(card);
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -142,8 +148,8 @@ describe("createItem", () => {
     ["a link with a blank URL", { type: "link", title: "Docs", url: "  ", tags: [] }, "URL is required.", "url"],
     ["a link with an invalid URL", { type: "link", title: "Docs", url: "nope", tags: [] }, "Enter a valid URL.", "url"],
     ["an empty tag", { type: "note", title: "Title", tags: ["a", " "] }, "Tags cannot be empty.", "tags"],
-    ["the file type", { type: "file", title: "Title", tags: [] }, "Choose a type.", "type"],
-    ["the image type", { type: "image", title: "Title", tags: [] }, "Choose a type.", "type"],
+    ["a file without an upload", { type: "file", title: "Title", tags: [] }, "Choose a file to upload.", "fileKey"],
+    ["an image with a blank key", { type: "image", title: "Title", fileKey: "", tags: [] }, "Choose a file to upload.", "fileKey"],
     ["an unknown type", { type: "custom", title: "Title", tags: [] }, "Choose a type.", "type"],
   ])("rejects %s before reaching the database, naming the field", async (_name, input, error, field) => {
     const result = await createItem(input as Parameters<typeof createItem>[0]);
@@ -238,6 +244,84 @@ describe("createItem", () => {
   });
 });
 
+describe("createItem with an upload", () => {
+  const KEY = `${USER_ID}/0f8fad5b-d9cb-469f-a165-70867728950e/report.pdf`;
+  const NOT_FOUND = "The uploaded file was not found. Upload it again.";
+
+  beforeEach(() => {
+    head.mockResolvedValue({ size: 2048, metadata: { kind: "file", name: encodeURIComponent("Rapport été.pdf") } });
+  });
+
+  it("stores the key with the name and size R2 reports, not the browser's", async () => {
+    const result = await createItem({
+      type: "file",
+      title: " Report ",
+      fileKey: KEY,
+      tags: [],
+      // Not part of the input, as a tampered request might send them.
+      ...({ fileSize: 1, fileName: "fake.pdf" } as object),
+    });
+
+    expect(head).toHaveBeenCalledWith(KEY);
+    expect(createQuery).toHaveBeenCalledWith(USER_ID, {
+      type: "file",
+      title: "Report",
+      tags: [],
+      contentType: "file",
+      fileUrl: KEY,
+      fileName: "Rapport été.pdf",
+      fileSize: 2048,
+    });
+    expect(result).toEqual({ success: true, data: card, error: null });
+  });
+
+  it.each([
+    ["another user's key", `user_2/0f8fad5b-d9cb-469f-a165-70867728950e/report.pdf`],
+    ["a key that climbs out of the user's folder", `${USER_ID}/../user_2/report.pdf`],
+    ["a key the server did not build", `${USER_ID}/report.pdf`],
+  ])("refuses %s without asking R2", async (_name, fileKey) => {
+    const result = await createItem({ type: "file", title: "Report", fileKey, tags: [] });
+
+    expect(result).toEqual({ success: false, data: null, error: NOT_FOUND, field: "fileKey" });
+    expect(head).not.toHaveBeenCalled();
+    expect(createQuery).not.toHaveBeenCalled();
+  });
+
+  it("refuses a key with nothing behind it in R2", async () => {
+    head.mockResolvedValue(null);
+
+    const result = await createItem({ type: "file", title: "Report", fileKey: KEY, tags: [] });
+
+    expect(result).toEqual({ success: false, data: null, error: NOT_FOUND, field: "fileKey" });
+    expect(createQuery).not.toHaveBeenCalled();
+  });
+
+  it("refuses a file uploaded as the other kind", async () => {
+    const result = await createItem({ type: "image", title: "Report", fileKey: KEY, tags: [] });
+
+    expect(result).toEqual({ success: false, data: null, error: NOT_FOUND, field: "fileKey" });
+    expect(createQuery).not.toHaveBeenCalled();
+  });
+
+  it("deletes the upload when the item cannot be saved", async () => {
+    createQuery.mockRejectedValue(new Error("connection lost"));
+
+    const result = await createItem({ type: "file", title: "Report", fileKey: KEY, tags: [] });
+
+    expect(result).toEqual({ success: false, data: null, error: "Could not create the item. Try again." });
+    expect(deleteObjects).toHaveBeenCalledWith([KEY]);
+  });
+
+  it("refuses when not signed in, before looking at the key", async () => {
+    session.mockResolvedValue(null);
+
+    const result = await createItem({ type: "file", title: "Report", fileKey: KEY, tags: [] });
+
+    expect(result).toEqual({ success: false, data: null, error: "You are not signed in." });
+    expect(head).not.toHaveBeenCalled();
+  });
+});
+
 describe("deleteItem", () => {
   it("refuses when not signed in", async () => {
     session.mockResolvedValue(null);
@@ -253,6 +337,16 @@ describe("deleteItem", () => {
 
     expect(result).toEqual({ success: true, data: null, error: null });
     expect(deleteQuery).toHaveBeenCalledWith(USER_ID, "item_1");
+    expect(deleteObjects).not.toHaveBeenCalled();
+  });
+
+  it("deletes the item's file from R2 too", async () => {
+    deleteQuery.mockResolvedValue({ fileUrl: "user_1/key/report.pdf" });
+
+    const result = await deleteItem("item_1");
+
+    expect(result).toEqual({ success: true, data: null, error: null });
+    expect(deleteObjects).toHaveBeenCalledWith(["user_1/key/report.pdf"]);
   });
 
   it("reports an item that is missing or another user's as gone", async () => {
