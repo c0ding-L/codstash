@@ -1,64 +1,23 @@
-# Current Feature: File and Image Upload
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- An upload API route stores files and images in Cloudflare R2
-- A `FileUpload` component with drag-and-drop and an upload progress indicator; it shows an image
-  preview for images and file info (name, size) for files
-- The New Item dialog offers File and Image and uses `FileUpload` for them
-- Deleting a file or image item also deletes its object from R2
-- A download proxy API route serves the file through the app (no CORS issues)
-- The item drawer has a download button for file items
-- Upload limits enforced on the server, not just in the browser:
-  - Images, 5 MB max: `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.svg` (`image/png`,
-    `image/jpeg`, `image/gif`, `image/webp`, `image/svg+xml`)
-  - Files, 10 MB max: `.pdf`, `.txt`, `.md`, `.json`, `.yaml`, `.yml`, `.xml`, `.csv`, `.toml`,
-    `.ini` (`application/pdf`, `text/plain`, `text/markdown`, `application/json`,
-    `application/x-yaml`, `text/yaml`, `application/xml`, `text/xml`, `text/csv`,
-    `application/toml`; `.ini` as `text/plain`)
-- Prisma calls stay in `src/lib/db/items.ts`
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Spec: `@context/features/file-image-spec.md`.
-- The schema already has `Item.fileUrl`, `fileName` and `fileSize` (no MIME type column);
-  `contentType` is `"text" | "file"`. No migration expected unless we store the MIME type.
-- Nothing for R2 exists yet: no SDK in `package.json` (likely `@aws-sdk/client-s3`, since R2 speaks
-  S3) and no R2 variables in `.env`. The author must create the bucket and add credentials
-  (account id, access key, secret, bucket name) before anything can be tested end to end.
-- `NewItemDialog` currently offers Snippet, Prompt, Command, Note and Link only.
-- `deleteItem` in `src/lib/db/items.ts` returns nothing today; it will need to hand back the
-  file key so the action can delete the R2 object.
-- The drawer (`ItemDetails.tsx`) already shows `fileName` and `fileSize`.
-- Existing API route pattern: `src/app/api/items/[id]/route.ts`. Both new routes must check the
-  session and ownership, and the download route must only serve the owner's files.
-- SVG can carry scripts: serve downloads with `Content-Disposition: attachment` (or a safe
-  content type) rather than inline from the app's origin.
-- Open question: the pricing table in `project-overview.md` makes file uploads Pro-only and image
-  uploads free. The spec doesn't mention gating; decide before starting.
+<!-- Additional context, constraints, or details from spec -->
 
-### Decisions made while building
+---
 
-- **No Pro gating**: the spec doesn't ask for it; left for the Pro phase.
-- **The bucket stays private.** `fileUrl` stores the R2 key (`<userId>/<uuid>/<safe name>`), not a
-  URL; `R2_PUBLIC_URL` is unused. Files only leave through `/api/items/[id]/download`, which checks
-  the owner and always sends `attachment`, `nosniff` and a `sandbox` CSP (the drawer's `<img>` still
-  shows images, SVG included, without running their scripts).
-- **Upload on submit**, not on file choice: `/api/upload` (XHR, for progress) returns a key, then
-  `createItem` checks the key is the user's (`isOwnKey`), asks R2 for its size, name and kind
-  (`HeadObject` + object metadata) and never trusts the browser's values.
-- **Extension is the authority.** The browser's MIME type is only refused when it names a specific
-  type outside the list (Windows often sends "" for `.md`, `.toml`, `.ini`).
-- **Account deletion** also deletes the user's R2 files (keys read before the cascade).
-- **Dev and prod share one R2 bucket** (`R2_BUCKET_NAME` is the same in `.env` and
-  `.env.production`). Recommended: a separate dev bucket.
-- **Known orphan cases**: an upload whose follow-up `createItem` never arrives (closed tab, network,
-  expired session) leaves an object in R2. A database failure inside `createItem` does clean up.
-- Editing a file/image item cannot replace its file (not in the spec).
+Previous feature (completed) — File and Image Upload: file and image items are uploaded to a
+private Cloudflare R2 bucket from the New Item dialog, previewed and downloaded from the drawer,
+and deleted from R2 with their item. Spec: `@context/features/file-image-spec.md`. Outcome in the
+History below.
 
 ---
 
@@ -1561,3 +1520,27 @@ Environment notes that outlive any one feature:
   `shrink-0` fix was not re-checked in the browser by me (sign-in rate limit hit); the author
   completed after it. 251 unit tests, build and lint green. **Known:** plain-text prompts now follow
   Markdown, so single line breaks inside a paragraph join up.
+- 2026-11-15 — File and image upload merged into `main` (`246c8a5`, fast-forward); branch
+  `feature/file-image-upload` deleted, never pushed. New `@aws-sdk/client-s3`. `src/lib/files.ts`
+  holds the upload rules shared by browser and server (extension allowlist as the authority, a
+  browser MIME type only refused when it names a specific other type; 5 MB images, 10 MB files),
+  key building (`<userId>/<uuid>/<safe name>`), `isOwnKey`, the attachment header and the object
+  metadata (kind + URI-encoded name). `src/lib/r2.ts` wraps the S3 client (built on first use,
+  checksums `WHEN_REQUIRED`). `/api/upload` (outside the proxy, session checked, 413 above 10 MB
+  declared) stores the file; the dialog uploads on submit through XHR for progress
+  (`src/lib/upload-client.ts`), then `createItem` accepts only the user's own key and reads name,
+  size and kind from R2 with `HeadObject`, deleting the object if the database write fails.
+  `/api/items/[id]/download` streams the owner's file with `attachment`, `nosniff` and a `sandbox`
+  CSP; the drawer shows images through it in an `<img>` and a framed file card (icon, name,
+  extension and size, Download), added on request. Deleting an item or the account deletes its R2
+  objects after the rows (failures logged, not thrown). `fileUrl` stores the key; the bucket stays
+  private and `R2_PUBLIC_URL` is unused. Fixed during review: a long file name could build a key
+  that `isOwnKey` refused (cut now happens before stripping a leading dot); the field label lost its
+  target once a file was chosen. 317 unit tests (27 new for R2 and the upload client, plus files,
+  actions and db), build and lint green. Verified live, with the author's approval, on the R2
+  bucket: uploads, progress (3→100 % throttled), drawer preview (PNG and SVG, the SVG's script did
+  not run), exact-byte downloads, 401 without a session, 413 and 400 refusals, deletes leaving the
+  bucket at 0 objects; in Chromium and Firefox. **Known:** no Pro gating (the spec doesn't ask for
+  it); dev and prod share one R2 bucket (a separate dev bucket recommended); an upload whose
+  `createItem` never arrives (tab closed, network, expired session) is orphaned in R2; a file
+  cannot be replaced when editing; the drawer's File and Size rows now repeat the file card.
