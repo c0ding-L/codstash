@@ -1,16 +1,54 @@
-# Current Feature
+# Current Feature: Snippet List
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- `/items/snippets` shows one row per snippet, in two columns:
+  - Left (about a quarter of the width): the title in Geist Mono, the pin/favorite marks, the
+    description, the tags (`#react #hooks`), then a muted line with the language (in the
+    snippet colour), the line count, the collection and the relative time
+  - Right: the first 7 lines of the code, with line numbers and syntax highlighting, the last
+    line fading out
+- A "Copy" button in the code's top-right corner, shown on hover and on keyboard focus (always
+  on touch screens), copying the full snippet
+- Clicking the row opens the item drawer
+- On a phone, the details stack above the code
+- Every other type is unchanged
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+Spec: `@context/features/snippet-list-spec.md`. Reference: `lovable-result/snippets-list.png`.
+
+- **New dependency: `shiki` (4.6.0)**, to confirm before starting. It runs **only on the
+  server** (the list is a server component), so nothing is added to the browser bundle; the
+  page receives plain coloured HTML. v4 requires Node ≥ 20 (the project runs 22) and only
+  removed deprecated APIs.
+  - Theme `dark-plus` (VS Code's Dark+), the closest to the editor's Monaco `vs-dark` base, with
+    the background set to the editor's `#171717` so list and drawer match.
+  - One long-lived highlighter for the server process, languages loaded on first use.
+- **Language names.** A `toShikiLanguage(language)` next to `toMonacoLanguage` in
+  `src/lib/code-language.ts`: the same aliases, the few ids that differ between the two mapped
+  (`pgsql` → `sql`, `plaintext` → `text`…), and anything Shiki does not know falls back to plain
+  text instead of throwing. Unit-tested.
+- **Data: a separate map, as for prompts.** Content has no length cap, so a new
+  `getSnippetPreviews(userId, ids)` returns per item: the first 7 lines (each line capped, so one
+  minified line cannot bloat the page), the full line count, the language and the tags (one
+  query for the whole list, as for prompts). The highlighting happens in the page from that
+  preview, never from the full content.
+- **Copy reuses the prompt list's approach**: fetch on click through `copyFromPromise`, so Safari
+  keeps the click's permission. `PromptCopyButton` becomes a shared `ItemCopyButton` with a label
+  ("Copy prompt" / "Copy"), rather than a second copy of it.
+- **Line numbers** come from a CSS counter on Shiki's `.line` spans, not from the HTML, so
+  selecting the code doesn't select the numbers.
+- **Safety.** The highlighted HTML is inserted as HTML. Shiki escapes the code itself; the only
+  input is the snippet's own text, rendered for its owner. A test checks that `<script>` in a
+  snippet comes out escaped.
+- **Tests.** `toShikiLanguage`, the preview cut (`snippetPreview`), `getSnippetPreviews` (account
+  isolation, one tag query, empty ids), the escaping. Components: browser check with the 3 demo
+  snippets.
 
 ---
 

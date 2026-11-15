@@ -131,6 +131,20 @@
     }
 }
 
+/* Shiki's highlighted HTML in the snippet list. Line numbers come from a counter, so
+   selecting the code never selects them. */
+@layer components {
+  .snippet-code pre {
+    @apply m-0 overflow-hidden font-mono text-[13px] leading-[1.65];
+    counter-reset: line;
+  }
+  .snippet-code .line::before {
+    @apply mr-5 inline-block w-[2ch] text-right text-neutral-600 select-none;
+    counter-increment: line;
+    content: counter(line);
+  }
+}
+
 /* Rendered Markdown in MarkdownEditor. Always on its dark #1e1e1e surface, so the colours are fixed. */
 @layer components {
   .markdown-preview {

@@ -31,6 +31,12 @@ describe("toMonacoLanguage", () => {
     expect(toMonacoLanguage(" JS")).toBe("javascript");
   });
 
+  it("treats names of built-in object properties as plain names, never as aliases", () => {
+    // `language` is free text: a lookup on a plain object would find these on its prototype.
+    expect(toMonacoLanguage("constructor")).toBe("constructor");
+    expect(toMonacoLanguage("__proto__")).toBe("__proto__");
+  });
+
   it("passes unknown names through lowercased", () => {
     expect(toMonacoLanguage("Elixir")).toBe("elixir");
   });

@@ -1,7 +1,7 @@
 import { Pin, Star } from "lucide-react";
 
+import { ItemCopyButton } from "@/components/items/ItemCopyButton";
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
-import { PromptCopyButton } from "@/components/items/PromptCopyButton";
 import type { DashboardItem, PromptPreview } from "@/lib/db/items";
 import { formatRelativeTime } from "@/lib/format";
 
@@ -43,7 +43,7 @@ function PromptEntry({ item, preview, now }: { item: DashboardItem; preview: Pro
       </div>
 
       {quote ? (
-        <blockquote className="mt-2 line-clamp-3 border-l-2 border-amber-400/60 pl-4 text-sm leading-relaxed text-muted-foreground">
+        <blockquote className="mt-2 line-clamp-3 border-l-2 border-amber-400/60 pl-4 text-sm leading-relaxed text-muted-foreground transition-colors group-hover:text-foreground">
           {quote}
         </blockquote>
       ) : null}
@@ -72,9 +72,10 @@ function PromptEntry({ item, preview, now }: { item: DashboardItem; preview: Pro
             {formatRelativeTime(item.updatedAt.toISOString(), now)}
           </span>
         </p>
-        <PromptCopyButton
+        <ItemCopyButton
           itemId={item.id}
           title={item.title}
+          label="Copy prompt"
           // Hidden until hover only with a mouse: a touch screen, even a wide one, never hovers.
           className="shrink-0 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:focus-visible:opacity-100"
         />

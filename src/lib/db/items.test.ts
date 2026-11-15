@@ -11,6 +11,7 @@ import {
   getItemsByType,
   getPinnedItems,
   getPromptPreviews,
+  getSnippetPreviews,
   getRecentItems,
   updateItem,
 } from "@/lib/db/items";
@@ -479,6 +480,43 @@ describe("getPromptPreviews", () => {
     expect(await getPromptPreviews(USER, ["a", "b"])).toEqual({
       a: { excerpt: "Review Rank every finding.", words: 4, tokens: 9, tags: ["ai", "review"] },
       b: { excerpt: "", words: 0, tokens: 0, tags: [] },
+    });
+  });
+});
+
+describe("getSnippetPreviews", () => {
+  it("reads only that user's items and tags, among the ids given", async () => {
+    await getSnippetPreviews(USER, ["a", "b"]);
+
+    expect(findMany.mock.calls[0]![0].where).toEqual({ userId: USER, id: { in: ["a", "b"] } });
+    expect(findItemTags.mock.calls[0]![0].where).toEqual({ itemId: { in: ["a", "b"] }, item: { userId: USER } });
+  });
+
+  it("loads the tags of the whole list in one query", async () => {
+    await getSnippetPreviews(USER, ["a", "b", "c"]);
+
+    expect(findItemTags).toHaveBeenCalledOnce();
+  });
+
+  it("does not query when there are no ids", async () => {
+    expect(await getSnippetPreviews(USER, [])).toEqual({});
+    expect(findMany).not.toHaveBeenCalled();
+    expect(findItemTags).not.toHaveBeenCalled();
+  });
+
+  it("maps each id to its first lines, line count, language and sorted tags", async () => {
+    findMany.mockResolvedValue([
+      { id: "a", content: "one\ntwo\nthree\nfour\nfive\nsix\nseven\neight", language: "ts" },
+      { id: "b", content: null, language: null },
+    ]);
+    findItemTags.mockResolvedValue([
+      { itemId: "a", tag: { name: "react" } },
+      { itemId: "a", tag: { name: "hooks" } },
+    ]);
+
+    expect(await getSnippetPreviews(USER, ["a", "b"])).toEqual({
+      a: { code: "one\ntwo\nthree\nfour\nfive\nsix\nseven", lineCount: 8, language: "ts", tags: ["hooks", "react"] },
+      b: { code: "", lineCount: 0, language: null, tags: [] },
     });
   });
 });

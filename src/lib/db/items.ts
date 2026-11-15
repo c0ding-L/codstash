@@ -2,6 +2,7 @@ import { clipCommand } from "@/lib/command-text";
 import { clampLimit, MAX_ITEM_LIMIT } from "@/lib/db/limits";
 import { prisma } from "@/lib/prisma";
 import { countWords, estimateTokens, markdownToPlainText, promptExcerpt } from "@/lib/prompt-text";
+import { snippetPreview } from "@/lib/snippet-text";
 import type { ItemTypeSlug } from "@/types/item-type";
 
 /** Everything a row on the dashboard renders, flattened out of the relations. */
@@ -152,21 +153,13 @@ export async function getPromptPreviews(
 ): Promise<Record<string, PromptPreview>> {
   if (ids.length === 0) return {};
 
-  const [rows, links] = await Promise.all([
+  const [rows, tagsByItem] = await Promise.all([
     prisma.item.findMany({
       where: { userId, id: { in: ids } },
       select: { id: true, content: true },
     }),
-    prisma.itemTag.findMany({
-      where: { itemId: { in: ids }, item: { userId } },
-      select: { itemId: true, tag: { select: { name: true } } },
-    }),
+    getTagsByItem(userId, ids),
   ]);
-
-  const tagsByItem = new Map<string, string[]>();
-  for (const { itemId, tag } of links) {
-    tagsByItem.set(itemId, [...(tagsByItem.get(itemId) ?? []), tag.name]);
-  }
 
   return Object.fromEntries(
     rows.map(({ id, content }) => {
@@ -177,11 +170,63 @@ export async function getPromptPreviews(
           excerpt: promptExcerpt(raw),
           words: countWords(markdownToPlainText(raw)),
           tokens: estimateTokens(raw),
-          tags: (tagsByItem.get(id) ?? []).sort((a, b) => a.localeCompare(b)),
+          tags: tagsByItem.get(id) ?? [],
         },
       ];
     }),
   );
+}
+
+/** What the snippet list shows of a snippet beyond its card. */
+export interface SnippetPreview {
+  /** The first lines, each capped: the list highlights this, never the full code. */
+  code: string;
+  /** Lines in the whole snippet. */
+  lineCount: number;
+  language: string | null;
+  /** Tag names, sorted. */
+  tags: string[];
+}
+
+/**
+ * The first lines, line count, language and tags of each listed snippet. The full
+ * content is read here and never sent to the list; the tags come from one query.
+ */
+export async function getSnippetPreviews(
+  userId: string,
+  ids: string[],
+): Promise<Record<string, SnippetPreview>> {
+  if (ids.length === 0) return {};
+
+  const [rows, tagsByItem] = await Promise.all([
+    prisma.item.findMany({
+      where: { userId, id: { in: ids } },
+      select: { id: true, content: true, language: true },
+    }),
+    getTagsByItem(userId, ids),
+  ]);
+
+  return Object.fromEntries(
+    rows.map(({ id, content, language }) => [
+      id,
+      { ...snippetPreview(content ?? ""), language, tags: tagsByItem.get(id) ?? [] },
+    ]),
+  );
+}
+
+/** The sorted tag names of each of these items, in one query for the whole list. */
+async function getTagsByItem(userId: string, ids: string[]): Promise<Map<string, string[]>> {
+  const links = await prisma.itemTag.findMany({
+    where: { itemId: { in: ids }, item: { userId } },
+    select: { itemId: true, tag: { select: { name: true } } },
+  });
+
+  const tagsByItem = new Map<string, string[]>();
+  for (const { itemId, tag } of links) {
+    tagsByItem.set(itemId, [...(tagsByItem.get(itemId) ?? []), tag.name]);
+  }
+  for (const names of tagsByItem.values()) names.sort((a, b) => a.localeCompare(b));
+  return tagsByItem;
 }
 
 /**

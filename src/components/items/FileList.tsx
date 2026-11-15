@@ -19,7 +19,7 @@ export function FileList({ items, now }: FileListProps) {
   const largest = Math.max(1, ...items.map((item) => item.fileSize ?? 0));
 
   return (
-    <div className="overflow-hidden rounded-lg border border-border bg-card">
+    <div className="overflow-hidden border-y border-border bg-card">
       <table className="w-full table-fixed text-sm">
         <thead className="border-b border-border text-left text-xs text-muted-foreground">
           <tr>

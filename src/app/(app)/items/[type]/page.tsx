@@ -10,8 +10,18 @@ import { ItemCard } from "@/components/items/ItemCard";
 import { ItemDrawerProvider } from "@/components/items/ItemDrawerProvider";
 import { LinkList } from "@/components/items/LinkList";
 import { PromptList } from "@/components/items/PromptList";
-import { getCommandTexts, getItemsByType, getPromptPreviews } from "@/lib/db/items";
-import { itemTypeFromSegment, itemTypeHref, typePluralNames } from "@/lib/item-type-ui";
+import { SnippetList } from "@/components/items/SnippetList";
+import { getCommandTexts, getItemsByType, getPromptPreviews, getSnippetPreviews } from "@/lib/db/items";
+import {
+  colorClasses,
+  itemTypeFromSegment,
+  itemTypeHref,
+  surfaceClasses,
+  typeColors,
+  typeIcons,
+  typePluralNames,
+} from "@/lib/item-type-ui";
+import { cn } from "@/lib/utils";
 
 interface ItemsPageProps {
   params: Promise<{ type: string }>;
@@ -38,13 +48,24 @@ export default async function ItemsPage({ params }: ItemsPageProps) {
   const ids = items.map((item) => item.id);
   const commandTexts = slug === "command" ? await getCommandTexts(session.user.id, ids) : {};
   const promptPreviews = slug === "prompt" ? await getPromptPreviews(session.user.id, ids) : {};
+  const snippetPreviews = slug === "snippet" ? await getSnippetPreviews(session.user.id, ids) : {};
   const label = typePluralNames[slug];
+  const Icon = typeIcons[slug];
+  const color = typeColors[slug];
   const now = new Date().toISOString();
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-baseline justify-between">
-        <h1 className="text-2xl font-semibold">{label}</h1>
+        <h1 className="flex items-center gap-3 text-2xl font-semibold">
+          <span
+            className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", surfaceClasses[color])}
+            aria-hidden
+          >
+            <Icon className={cn("size-5", colorClasses[color])} />
+          </span>
+          {label}
+        </h1>
         {items.length > 0 ? (
           <span className="text-sm text-muted-foreground">
             {items.length} of {totalCount}
@@ -58,6 +79,8 @@ export default async function ItemsPage({ params }: ItemsPageProps) {
             <CommandList items={items} texts={commandTexts} now={now} />
           ) : slug === "file" ? (
             <FileList items={items} now={now} />
+          ) : slug === "snippet" ? (
+            <SnippetList items={items} previews={snippetPreviews} now={now} />
           ) : slug === "prompt" ? (
             <PromptList items={items} previews={promptPreviews} now={now} />
           ) : slug === "link" ? (

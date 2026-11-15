@@ -9,7 +9,7 @@ import { cn, isWebUrl } from "@/lib/utils";
 /** The link list: where each link goes first, then what it is, and a way straight there. */
 export function LinkList({ items }: { items: DashboardItem[] }) {
   return (
-    <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+    <ul className="divide-y divide-border border-y border-border bg-card">
       {items.map((item) => (
         <LinkRow key={item.id} item={item} />
       ))}

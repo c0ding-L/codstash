@@ -52,5 +52,6 @@ const ALIASES: Record<string, string> = {
 export function toMonacoLanguage(language: string | null | undefined): string {
   const name = language?.trim().toLowerCase();
   if (!name) return "plaintext";
-  return ALIASES[name] ?? name;
+  // Own entries only: `language` is free text, and `constructor` is on every object's prototype.
+  return Object.hasOwn(ALIASES, name) ? ALIASES[name]! : name;
 }
