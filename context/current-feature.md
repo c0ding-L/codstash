@@ -1544,3 +1544,11 @@ Environment notes that outlive any one feature:
   it); dev and prod share one R2 bucket (a separate dev bucket recommended); an upload whose
   `createItem` never arrives (tab closed, network, expired session) is orphaned in R2; a file
   cannot be replaced when editing; the drawer's File and Size rows now repeat the file card.
+- 2026-11-15 — Upload size cap fix merged into `main` (`8ac681d`, fast-forward); branch
+  `fix/upload-size-cap` deleted, never pushed. Raised by the automated security review of
+  `246c8a5`: `/api/upload` only checked the declared `Content-Length`, so a chunked request with
+  none made `request.formData()` buffer the whole body in memory. New `readFormDataWithin`
+  (`src/lib/request-body.ts`) counts the bytes as they arrive and returns 413 past the cap. 5 new
+  tests (322 total), build and lint green; a 20 MB chunked upload without `Content-Length` got 413
+  on the dev server, and a normal upload still worked. **Known:** no per-user upload rate limit
+  (suggested by the review, not added).
