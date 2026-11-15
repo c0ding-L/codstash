@@ -26,6 +26,7 @@ const card = {
   id: "item_1",
   title: "Title",
   description: null,
+  fileName: null,
   fileSize: null,
   isPinned: false,
   isFavorite: false,

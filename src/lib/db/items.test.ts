@@ -171,6 +171,15 @@ describe("updateItem", () => {
     update.mockResolvedValue(row);
   });
 
+  it("keeps the file name in the card as well as the detail", async () => {
+    update.mockResolvedValue({ ...row, fileName: "spec.pdf", fileSize: 2048 });
+
+    const { card, detail } = await updateItem(USER, "item_1", { title: "t", tags: [] });
+
+    expect(card).toMatchObject({ fileName: "spec.pdf", fileSize: 2048 });
+    expect(detail.fileName).toBe("spec.pdf");
+  });
+
   it("updates only that owner's item", async () => {
     await updateItem(USER, "item_1", { title: "New title", tags: [] });
 
@@ -220,6 +229,7 @@ describe("updateItem", () => {
       id: "item_1",
       title: "New title",
       description: null,
+      fileName: null,
       fileSize: null,
       isPinned: false,
       isFavorite: true,

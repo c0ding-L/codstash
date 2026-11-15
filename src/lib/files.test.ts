@@ -6,9 +6,11 @@ import {
   buildFileKey,
   contentTypeFor,
   extensionOf,
+  fileKindLabel,
   fromObjectMetadata,
   isOwnKey,
   toObjectMetadata,
+  UPLOAD_RULES,
   validateUpload,
 } from "@/lib/files";
 
@@ -23,6 +25,35 @@ describe("extensionOf", () => {
     [".env", ""],
   ])("%s → %j", (name, extension) => {
     expect(extensionOf(name)).toBe(extension);
+  });
+});
+
+describe("fileKindLabel", () => {
+  it("names the common kinds in plain language", () => {
+    expect(fileKindLabel("spec.pdf")).toBe("PDF document");
+    expect(fileKindLabel("README.md")).toBe("Markdown");
+    expect(fileKindLabel("data.csv")).toBe("CSV spreadsheet");
+    expect(fileKindLabel("notes.txt")).toBe("Plain text");
+  });
+
+  it("gives every allowed file extension a label of its own", () => {
+    for (const extension of Object.keys(UPLOAD_RULES.file.types)) {
+      expect(fileKindLabel(`a.${extension}`), extension).not.toBe("File");
+    }
+  });
+
+  it("gives .yml and .yaml the same label", () => {
+    expect(fileKindLabel("a.yml")).toBe(fileKindLabel("a.yaml"));
+  });
+
+  it("ignores the extension's case", () => {
+    expect(fileKindLabel("SPEC.PDF")).toBe("PDF document");
+  });
+
+  it("falls back to File for an unknown or missing extension", () => {
+    expect(fileKindLabel("archive.zip")).toBe("File");
+    expect(fileKindLabel("Makefile")).toBe("File");
+    expect(fileKindLabel("")).toBe("File");
   });
 });
 

@@ -1,16 +1,48 @@
-# Current Feature
+# Current Feature: File List
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- `/items/files` shows a table with four columns: Name, Kind, Size, Updated
+- Name: a small document icon showing the extension (`PDF`, `JSON`, `MD`, `YAML`…), the file
+  name in Geist Mono, the pin/favorite marks, and the description on a second line
+- Kind: a plain-language name for each allowed extension ("PDF document", "Markdown", "YAML",
+  "CSV spreadsheet", "Plain text"…)
+- Size: right-aligned, tabular numbers, with a thin bar showing the size relative to the
+  largest file in the list
+- Updated: the relative time
+- Clicking a row opens the item drawer
+- On a phone, Kind and the size bar are hidden; Name, Size and Updated stay
+- Every other type is unchanged
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+Spec: `@context/features/file-list-spec.md`. Reference: `lovable-result/files-list.png`.
+
+- **Data: `fileName` joins `DashboardItem`.** Unlike the command text, a file name is short
+  (capped at `MAX_FILE_NAME_LENGTH`, 255), so adding it to the shared select costs nothing and
+  needs no separate query. The dashboard reads get it too but don't use it. `fileSize` is
+  already there.
+- **Name column.** The row shows the file name, not the item title: the mock leads with the
+  name, and in a file list the name is what you recognise. The title is used when there is no
+  file name (should not happen for a file item), and the drawer still shows both.
+- **Kind.** A `fileKindLabel(fileName)` in `src/lib/files.ts`, next to `FILE_TYPES`, one label
+  per allowed extension (`yml` and `yaml` share "YAML"; `ini` is "INI config", `toml` "TOML
+  config"), and "File" for anything else. A unit test checks that every allowed extension has
+  its own label, so a new extension cannot be added without one.
+- **Size bar.** Width = size ÷ largest size in the list, with a small minimum so a tiny file
+  still shows a dot. Purely visual, `aria-hidden`; the number is the information.
+- **Table semantics.** A real `<table>` with column headers, so screen readers announce the
+  columns. The drawer overlay (`ItemDrawerTrigger`, an absolute button) needs a positioned
+  row: `position: relative` on a `<tr>` works in current browsers; check it in the browser.
+- **No files in the demo account yet.** Upload a few allowed types through the New Item dialog
+  for the browser check (R2 and the develop database), then delete them through the drawer
+  (which also removes them from R2).
+- **Tests.** `fileKindLabel` in `src/lib/files.test.ts`; the `fileName` addition in
+  `src/lib/db/items.test.ts` if the select is asserted there. Components: browser check.
 
 ---
 

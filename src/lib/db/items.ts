@@ -8,6 +8,8 @@ export interface DashboardItem {
   id: string;
   title: string;
   description: string | null;
+  /** The uploaded file's original name; null for text items. */
+  fileName: string | null;
   fileSize: number | null;
   isPinned: boolean;
   isFavorite: boolean;
@@ -26,6 +28,7 @@ const dashboardItemSelect = {
   id: true,
   title: true,
   description: true,
+  fileName: true,
   fileSize: true,
   isPinned: true,
   isFavorite: true,
@@ -214,20 +217,19 @@ export async function updateItem(
       ...dashboardItemSelect,
       content: true,
       url: true,
-      fileName: true,
       language: true,
       createdAt: true,
       tags: { select: { tag: { select: { name: true } } } },
     },
   });
 
-  const { content, url, fileName, language, createdAt, tags: links, ...card } = updated;
+  const { content, url, language, createdAt, tags: links, ...card } = updated;
   return {
     card: toDashboardItem(card),
     detail: {
       content,
       url,
-      fileName,
+      fileName: card.fileName,
       language,
       createdAt,
       tags: links.map(({ tag }) => tag.name).sort((a, b) => a.localeCompare(b)),

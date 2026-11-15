@@ -32,6 +32,20 @@ const FILE_TYPES: Record<string, string> = {
   ini: "text/plain",
 };
 
+/** What the file list calls each allowed file extension. */
+const FILE_KIND_LABELS: Record<string, string> = {
+  pdf: "PDF document",
+  txt: "Plain text",
+  md: "Markdown",
+  json: "JSON",
+  yaml: "YAML",
+  yml: "YAML",
+  xml: "XML",
+  csv: "CSV spreadsheet",
+  toml: "TOML config",
+  ini: "INI config",
+};
+
 /** MIME types a browser may report for an allowed file, on top of the stored ones. */
 const EXTRA_FILE_MIMES = ["text/yaml", "text/xml"];
 
@@ -54,6 +68,11 @@ export function isUploadKind(value: unknown): value is UploadKind {
 export function extensionOf(fileName: string) {
   const dot = fileName.lastIndexOf(".");
   return dot > 0 ? fileName.slice(dot + 1).toLowerCase() : "";
+}
+
+/** A plain-language name for the file's kind, from its extension; "File" when unknown. */
+export function fileKindLabel(fileName: string) {
+  return FILE_KIND_LABELS[extensionOf(fileName)] ?? "File";
 }
 
 function acceptedMimes(kind: UploadKind) {
