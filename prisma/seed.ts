@@ -141,10 +141,7 @@ export function cn(...inputs: ClassValue[]) {
         isPinned: true,
         content: `Review the diff below as a senior engineer on this codebase.
 
-Rank every finding by severity: correctness bugs first, then security, then
-performance, then style. For each one give the file and line, one sentence on
-what breaks, and the concrete input or state that triggers it. Skip anything
-you cannot tie to a failure. If the diff is correct, say so plainly.
+Rank every finding by severity: correctness bugs first, then security, then performance, then style. For each one give the file and line, one sentence on what breaks, and the concrete input or state that triggers it. Skip anything you cannot tie to a failure. If the diff is correct, say so plainly.
 
 Diff:
 """
@@ -157,9 +154,7 @@ Diff:
         description: "Documents public API surface without restating the code.",
         content: `Write documentation comments for every exported symbol in the file below.
 
-Explain why the code exists and the constraints callers must respect — not what
-each line does. Document parameters, return values and thrown errors. Match the
-comment style already present in the file. Change no code.
+Explain why the code exists and the constraints callers must respect — not what each line does. Document parameters, return values and thrown errors. Match the comment style already present in the file. Change no code.
 
 File:
 """

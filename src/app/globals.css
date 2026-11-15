@@ -142,6 +142,12 @@
   .markdown-preview > :last-child {
     @apply mb-0;
   }
+  /* A single line break shows as one, as in GitHub comments: prompts and notes are often
+     plain text, and CommonMark would join their lines into one. Paragraphs only, since
+     lists and quotes hold whitespace between their blocks. */
+  .markdown-preview p {
+    @apply whitespace-pre-line;
+  }
   .markdown-preview :is(h1, h2, h3, h4, h5, h6) {
     @apply mt-5 mb-2 leading-tight font-semibold text-neutral-50;
   }
