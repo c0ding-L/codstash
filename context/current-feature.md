@@ -1,40 +1,22 @@
-# Current Feature: Image Gallery View
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- `/items/images` shows a gallery of image thumbnail cards instead of the regular `ItemCard`
-- The gallery is a 3-column grid
-- Each card shows the image at 16:9 (`aspect-video`), filled with `object-cover` (edges may crop)
-- Hovering a card zooms the image subtly: `scale-105` over a 300ms transition
-- Clicking a card still opens the item drawer, as `ItemCard` does today
-- Every other type's page keeps `ItemCard` and its 2-column grid
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-Spec: `@context/features/image-display-spec.md`.
+<!-- Additional context, constraints, or details from spec -->
 
-- **Where it plugs in.** `src/app/(app)/items/[type]/page.tsx` renders every type's list with
-  `ItemCard` in a `md:grid-cols-2` grid. It branches on `slug === "image"` to render a new
-  `ImageCard` (`src/components/items/`) in a 3-column grid.
-- **Image source.** The bucket is private, so the thumbnail reads
-  `/api/items/{id}/download`, as the drawer's preview does (`ItemDetails.tsx:242`). It is a
-  plain `<img>`: `next/image`'s optimiser cannot carry the session. There is no thumbnail
-  generation, so each card loads the full image; `loading="lazy"` keeps that cheap below the fold.
-- **Clipping the zoom.** The image sits in an `overflow-hidden` wrapper so the 5% scale stays
-  inside the card.
-- **Card content.** The spec only describes the image. The proposal: keep the title (and the
-  pin/favorite marks) under the thumbnail so cards can be told apart, and drop the type icon
-  and wash, which say nothing on a page of only images. Alt text is the item title.
-  `DashboardItem` has no `fileName`, so no query change is needed.
-- **Responsive.** Assumed `sm:grid-cols-2 lg:grid-cols-3`, one column on phones; the spec says
-  3 columns without naming a breakpoint.
-- **Missing file.** An image item whose file failed to load shows a muted placeholder at the
-  same 16:9 size, not a broken-image icon.
-- **Tests.** No server action or utility changes, so no new unit tests; check it in the browser.
+---
+
+Previous feature (completed) — Image Gallery View: `/items/images` shows image items as 16:9
+thumbnail cards in a 3-column grid, with a hover zoom. Spec:
+`@context/features/image-display-spec.md`. Outcome in the History below.
 
 ---
 
@@ -1576,3 +1558,16 @@ Environment notes that outlive any one feature:
   tests (322 total), build and lint green; a 20 MB chunked upload without `Content-Length` got 413
   on the dev server, and a normal upload still worked. **Known:** no per-user upload rate limit
   (suggested by the review, not added).
+- 2026-11-15 — Image Gallery View merged into `main` (`a367f82`, fast-forward); branch
+  `feature/image-gallery-view` deleted, never pushed. New `ImageCard` and `ImageThumbnail`
+  (`src/components/items/`); `/items/[type]` renders them for `image` in a
+  `sm:grid-cols-2 lg:grid-cols-3` grid, every other type keeps `ItemCard` in two columns. The
+  thumbnail is a plain lazy `<img>` from `/api/items/[id]/download` at `aspect-video` with
+  `object-cover`, zooming with `group-hover/card:scale-105` over 300ms (Tailwind v4 sets the CSS
+  `scale` property, not `transform`); a file that fails to load shows a muted 16:9 placeholder.
+  Title and pin/favorite marks sit under the image; the type icon and wash were dropped. 322 tests,
+  build and lint green. Verified in Chromium on the dev server: 3 equal columns on desktop, 1 on a
+  phone, 16:9 cover crop, scale 1.05 on hover, the drawer opens, the placeholder shows on a 404,
+  snippets unchanged. **Known:** each card loads the full image (no thumbnail generation); an image
+  that fails before hydration may miss `onError` and show the browser's broken icon; the download
+  URL is built in both `ItemDetails.tsx` and `ImageCard.tsx`.
