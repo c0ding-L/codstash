@@ -1,16 +1,40 @@
-# Current Feature
+# Current Feature: Image Card Details
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- The image gallery keeps its layout (grid, 16:9 thumbnail, hover zoom); only the text under
+  each thumbnail changes
+- First line: the title (with the pin/favorite marks, as today) on the left; the image's
+  dimensions and the relative update time on the right, e.g. `1216×832 / 2w ago`
+- Second line: the item's description, on one line, truncated; left out when there is none
+- Nothing else changes: no search, filters or sort (those were in the Lovable mock, not asked for)
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+Reference: `lovable-result/images-list.png` (Lovable mock). Only its per-image details are
+taken, not its masonry layout.
+
+- **Dimensions are read in the browser.** Nothing stores them: the schema has no width/height
+  and the upload does not measure the image. `ImageThumbnail` is already a client component,
+  so it reads `naturalWidth` × `naturalHeight` on load and shows them. No schema change, no
+  upload change, and it works for images uploaded before this feature.
+  - Trade-off: the dimensions appear only once the image has loaded (lazy-loaded cards below
+    the fold show them when scrolled to), and not at all when the file fails to load.
+  - The alternative, measuring at upload and storing width/height, needs a migration and a
+    backfill for existing images. Not proposed.
+- **Time and description are already in `DashboardItem`** (`updatedAt`, `description`), so no
+  query change. The time uses `formatRelativeTime` with the page's `now`, as `ItemCard` does, so
+  `ImageCard` takes `now` as a prop.
+- **Layout of the details.** Dimensions and time in a small, muted, tabular-nums style,
+  right-aligned; the title truncates first so the right side never wraps.
+- Since the dimensions live in `ImageThumbnail` and the title row in `ImageCard`, the thumbnail
+  and the details row move into one client component, or the thumbnail reports its size up.
+  Decide while building; keep the server/client split minimal.
+- **Tests.** Components only, so no unit tests; check it in the browser with the demo image.
 
 ---
 

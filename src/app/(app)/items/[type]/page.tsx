@@ -51,7 +51,7 @@ export default async function ItemsPage({ params }: ItemsPageProps) {
             <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {items.map((item) => (
                 <li key={item.id}>
-                  <ImageCard item={item} />
+                  <ImageCard item={item} now={now} />
                 </li>
               ))}
             </ul>
