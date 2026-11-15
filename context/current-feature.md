@@ -1,44 +1,22 @@
-# Current Feature: Link List
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- `/items/links` shows one row per link, in three parts:
-  - Left: a square tile with the domain's first letter, then the domain (`docs.github.com`) in
-    Geist Mono, with the path (`/en/actions/…`) muted and truncated under it
-  - Middle: the title, with the pin/favorite marks, and the description under it
-  - Right: an "Open ↗" button that opens the URL in a new tab (`rel="noopener noreferrer"`)
-- Only `http:` and `https:` URLs get the Open button
-- Clicking anywhere else on the row opens the item drawer
-- On a phone, the domain moves above the title and the path is hidden
-- No favicons
-- Every other type is unchanged
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-Spec: `@context/features/link-list-spec.md`. Reference: `lovable-result/links-list.png`.
+<!-- Additional context, constraints, or details from spec -->
 
-- **Data: `url` joins `DashboardItem`**, as `fileName` did: it is normally short, and one field
-  in the shared select needs no extra query. Caveat: unlike file names, URLs have **no length
-  cap** in the item validation (`z.url()` in `src/actions/items.ts`), so a huge URL would travel
-  with every card. Capping it (e.g. 2,048 characters) is a validation change outside this
-  feature; noted, not done.
-- **Only web URLs open.** `z.url()` accepts any scheme the URL parser does, `javascript:`
-  included. The drawer already guards with `isWebUrl` (`src/lib/utils.ts`); the Open button
-  reuses it, and a non-web URL shows as plain text with no button.
-- **Domain and path** come from `parseLinkUrl(url)` in `src/lib/`: hostname without `www.`,
-  path + query + hash (`/` dropped when it is the whole path), and the raw string as the
-  "domain" with no path when the URL does not parse. Unit-tested.
-- **The Open button sits above the drawer overlay** (`ItemDrawerTrigger` is `z-10`), as the
-  command copy button does. It is a link, not a button, so middle-click and "copy link" work.
-- **Layout.** Desktop: a grid of three columns (domain block ~ a third, title block the rest,
-  button). Phone: domain line, then title and description, button on the right.
-- The letter tile uses the link type's lime accent.
-- **Tests.** `parseLinkUrl` unit tests; the `url` addition in `src/lib/db/items.test.ts` (the
-  card shape in `updateItem`). Components: browser check with the demo links.
+---
+
+Previous feature (completed) — Link List: `/items/links` shows each link's domain and path, its
+title and description, and an Open button for web addresses. Spec:
+`@context/features/link-list-spec.md`. Outcome in the History below.
 
 ---
 
@@ -1663,3 +1641,14 @@ Environment notes that outlive any one feature:
   through the drawer afterwards ("No files yet"); R2 removal is that delete path's, not checked
   separately. **Known:** the size bar is linear, so beside one large file every small one shows
   the same minimum dot (a log scale was offered, not chosen); the review step was skipped.
+- 2026-11-15 — Link List merged into `main` (`c0d4092`, fast-forward); branch `feature/link-list`
+  deleted, never pushed. New `parseLinkUrl` (`src/lib/link-url.ts`) and `LinkList` (server).
+  `url` added to `DashboardItem`; `updateItem` keeps it in the card as well as the detail. The
+  Open link (`target="_blank" rel="noopener noreferrer"`) only renders when `isWebUrl` passes;
+  its slot has a fixed width so columns line up on rows without one. 362 tests (9 new), build and
+  lint green. Verified in Chromium on the dev server with the 6 demo links plus 2 temporary ones
+  (removed afterwards, 0 left): a `javascript:` URL gets no Open link and a click on it opens the
+  drawer with no script run; Open opens the URL in a new tab without the drawer; a long path is
+  cut; no horizontal scroll on desktop or phone; the phone layout. **Known:** URLs have no length
+  cap in validation (`z.url()`), so a huge URL travels with every card; the review step was
+  skipped.
