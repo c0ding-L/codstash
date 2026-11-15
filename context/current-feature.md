@@ -1,16 +1,44 @@
-# Current Feature
+# Current Feature: Link List
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- `/items/links` shows one row per link, in three parts:
+  - Left: a square tile with the domain's first letter, then the domain (`docs.github.com`) in
+    Geist Mono, with the path (`/en/actions/…`) muted and truncated under it
+  - Middle: the title, with the pin/favorite marks, and the description under it
+  - Right: an "Open ↗" button that opens the URL in a new tab (`rel="noopener noreferrer"`)
+- Only `http:` and `https:` URLs get the Open button
+- Clicking anywhere else on the row opens the item drawer
+- On a phone, the domain moves above the title and the path is hidden
+- No favicons
+- Every other type is unchanged
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+Spec: `@context/features/link-list-spec.md`. Reference: `lovable-result/links-list.png`.
+
+- **Data: `url` joins `DashboardItem`**, as `fileName` did: it is normally short, and one field
+  in the shared select needs no extra query. Caveat: unlike file names, URLs have **no length
+  cap** in the item validation (`z.url()` in `src/actions/items.ts`), so a huge URL would travel
+  with every card. Capping it (e.g. 2,048 characters) is a validation change outside this
+  feature; noted, not done.
+- **Only web URLs open.** `z.url()` accepts any scheme the URL parser does, `javascript:`
+  included. The drawer already guards with `isWebUrl` (`src/lib/utils.ts`); the Open button
+  reuses it, and a non-web URL shows as plain text with no button.
+- **Domain and path** come from `parseLinkUrl(url)` in `src/lib/`: hostname without `www.`,
+  path + query + hash (`/` dropped when it is the whole path), and the raw string as the
+  "domain" with no path when the URL does not parse. Unit-tested.
+- **The Open button sits above the drawer overlay** (`ItemDrawerTrigger` is `z-10`), as the
+  command copy button does. It is a link, not a button, so middle-click and "copy link" work.
+- **Layout.** Desktop: a grid of three columns (domain block ~ a third, title block the rest,
+  button). Phone: domain line, then title and description, button on the right.
+- The letter tile uses the link type's lime accent.
+- **Tests.** `parseLinkUrl` unit tests; the `url` addition in `src/lib/db/items.test.ts` (the
+  card shape in `updateItem`). Components: browser check with the demo links.
 
 ---
 

@@ -28,6 +28,7 @@ const card = {
   description: null,
   fileName: null,
   fileSize: null,
+  url: null,
   isPinned: false,
   isFavorite: false,
   updatedAt: new Date(1),

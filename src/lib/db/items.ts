@@ -11,6 +11,8 @@ export interface DashboardItem {
   /** The uploaded file's original name; null for text items. */
   fileName: string | null;
   fileSize: number | null;
+  /** A link item's address; free text, so check it with `isWebUrl` before linking. */
+  url: string | null;
   isPinned: boolean;
   isFavorite: boolean;
   updatedAt: Date;
@@ -30,6 +32,7 @@ const dashboardItemSelect = {
   description: true,
   fileName: true,
   fileSize: true,
+  url: true,
   isPinned: true,
   isFavorite: true,
   updatedAt: true,
@@ -216,19 +219,18 @@ export async function updateItem(
     select: {
       ...dashboardItemSelect,
       content: true,
-      url: true,
       language: true,
       createdAt: true,
       tags: { select: { tag: { select: { name: true } } } },
     },
   });
 
-  const { content, url, language, createdAt, tags: links, ...card } = updated;
+  const { content, language, createdAt, tags: links, ...card } = updated;
   return {
     card: toDashboardItem(card),
     detail: {
       content,
-      url,
+      url: card.url,
       fileName: card.fileName,
       language,
       createdAt,

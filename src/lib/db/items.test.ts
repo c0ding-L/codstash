@@ -180,6 +180,15 @@ describe("updateItem", () => {
     expect(detail.fileName).toBe("spec.pdf");
   });
 
+  it("keeps the URL in the card as well as the detail", async () => {
+    update.mockResolvedValue({ ...row, url: "https://lucide.dev" });
+
+    const { card, detail } = await updateItem(USER, "item_1", { title: "t", tags: [] });
+
+    expect(card.url).toBe("https://lucide.dev");
+    expect(detail.url).toBe("https://lucide.dev");
+  });
+
   it("updates only that owner's item", async () => {
     await updateItem(USER, "item_1", { title: "New title", tags: [] });
 
@@ -231,6 +240,7 @@ describe("updateItem", () => {
       description: null,
       fileName: null,
       fileSize: null,
+      url: null,
       isPinned: false,
       isFavorite: true,
       updatedAt: new Date(1),

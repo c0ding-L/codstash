@@ -8,6 +8,7 @@ import { FileList } from "@/components/items/FileList";
 import { ImageCard } from "@/components/items/ImageCard";
 import { ItemCard } from "@/components/items/ItemCard";
 import { ItemDrawerProvider } from "@/components/items/ItemDrawerProvider";
+import { LinkList } from "@/components/items/LinkList";
 import { getCommandTexts, getItemsByType } from "@/lib/db/items";
 import { itemTypeFromSegment, itemTypeHref, typePluralNames } from "@/lib/item-type-ui";
 
@@ -55,6 +56,8 @@ export default async function ItemsPage({ params }: ItemsPageProps) {
             <CommandList items={items} texts={commandTexts} now={now} />
           ) : slug === "file" ? (
             <FileList items={items} now={now} />
+          ) : slug === "link" ? (
+            <LinkList items={items} />
           ) : slug === "image" ? (
             <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {items.map((item) => (
