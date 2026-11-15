@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 
 import { auth } from "@/auth";
+import { ImageCard } from "@/components/items/ImageCard";
 import { ItemCard } from "@/components/items/ItemCard";
 import { ItemDrawerProvider } from "@/components/items/ItemDrawerProvider";
 import { getItemsByType } from "@/lib/db/items";
@@ -46,13 +47,23 @@ export default async function ItemsPage({ params }: ItemsPageProps) {
 
       {items.length > 0 ? (
         <ItemDrawerProvider>
-          <ul className="grid gap-4 md:grid-cols-2">
-            {items.map((item) => (
-              <li key={item.id}>
-                <ItemCard item={item} now={now} />
-              </li>
-            ))}
-          </ul>
+          {slug === "image" ? (
+            <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {items.map((item) => (
+                <li key={item.id}>
+                  <ImageCard item={item} />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <ul className="grid gap-4 md:grid-cols-2">
+              {items.map((item) => (
+                <li key={item.id}>
+                  <ItemCard item={item} now={now} />
+                </li>
+              ))}
+            </ul>
+          )}
         </ItemDrawerProvider>
       ) : (
         <p className="text-sm text-muted-foreground">No {label.toLowerCase()} yet.</p>

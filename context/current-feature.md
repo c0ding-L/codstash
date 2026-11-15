@@ -1,16 +1,40 @@
-# Current Feature
+# Current Feature: Image Gallery View
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- `/items/images` shows a gallery of image thumbnail cards instead of the regular `ItemCard`
+- The gallery is a 3-column grid
+- Each card shows the image at 16:9 (`aspect-video`), filled with `object-cover` (edges may crop)
+- Hovering a card zooms the image subtly: `scale-105` over a 300ms transition
+- Clicking a card still opens the item drawer, as `ItemCard` does today
+- Every other type's page keeps `ItemCard` and its 2-column grid
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+Spec: `@context/features/image-display-spec.md`.
+
+- **Where it plugs in.** `src/app/(app)/items/[type]/page.tsx` renders every type's list with
+  `ItemCard` in a `md:grid-cols-2` grid. It branches on `slug === "image"` to render a new
+  `ImageCard` (`src/components/items/`) in a 3-column grid.
+- **Image source.** The bucket is private, so the thumbnail reads
+  `/api/items/{id}/download`, as the drawer's preview does (`ItemDetails.tsx:242`). It is a
+  plain `<img>`: `next/image`'s optimiser cannot carry the session. There is no thumbnail
+  generation, so each card loads the full image; `loading="lazy"` keeps that cheap below the fold.
+- **Clipping the zoom.** The image sits in an `overflow-hidden` wrapper so the 5% scale stays
+  inside the card.
+- **Card content.** The spec only describes the image. The proposal: keep the title (and the
+  pin/favorite marks) under the thumbnail so cards can be told apart, and drop the type icon
+  and wash, which say nothing on a page of only images. Alt text is the item title.
+  `DashboardItem` has no `fileName`, so no query change is needed.
+- **Responsive.** Assumed `sm:grid-cols-2 lg:grid-cols-3`, one column on phones; the spec says
+  3 columns without naming a breakpoint.
+- **Missing file.** An image item whose file failed to load shows a muted placeholder at the
+  same 16:9 size, not a broken-image icon.
+- **Tests.** No server action or utility changes, so no new unit tests; check it in the browser.
 
 ---
 
