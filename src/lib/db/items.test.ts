@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
+import { MAX_COMMAND_CHARS } from "@/lib/command-text";
 import {
   createItem,
   deleteItem,
+  getCommandTexts,
   getItemDetail,
   getItemFile,
   getItemFileKeys,
@@ -383,5 +385,39 @@ describe("createItem", () => {
 
     expect(card).toMatchObject({ id: "item_new", collectionName: null });
     expect(card).not.toHaveProperty("collection");
+  });
+});
+
+describe("getCommandTexts", () => {
+  it("reads only that user's items, among the ids given", async () => {
+    await getCommandTexts(USER, ["a", "b"]);
+
+    expect(findMany.mock.calls[0]![0].where).toEqual({ userId: USER, id: { in: ["a", "b"] } });
+  });
+
+  it("does not query when there are no ids", async () => {
+    expect(await getCommandTexts(USER, [])).toEqual({});
+    expect(findMany).not.toHaveBeenCalled();
+  });
+
+  it("maps each id to its command, empty when the item has no content", async () => {
+    findMany.mockResolvedValue([
+      { id: "a", content: "ls -la" },
+      { id: "b", content: null },
+    ]);
+
+    expect(await getCommandTexts(USER, ["a", "b"])).toEqual({
+      a: { text: "ls -la", isCut: false },
+      b: { text: "", isCut: false },
+    });
+  });
+
+  it("cuts a command over the cap", async () => {
+    findMany.mockResolvedValue([{ id: "a", content: "x".repeat(MAX_COMMAND_CHARS + 10) }]);
+
+    const { a } = await getCommandTexts(USER, ["a"]);
+
+    expect(a!.isCut).toBe(true);
+    expect(a!.text).toHaveLength(MAX_COMMAND_CHARS);
   });
 });

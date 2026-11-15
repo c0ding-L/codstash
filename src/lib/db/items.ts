@@ -1,3 +1,4 @@
+import { clipCommand } from "@/lib/command-text";
 import { clampLimit, MAX_ITEM_LIMIT } from "@/lib/db/limits";
 import { prisma } from "@/lib/prisma";
 import type { ItemTypeSlug } from "@/types/item-type";
@@ -101,6 +102,25 @@ export async function getItemsByType(
   ]);
 
   return { items: items.map(toDashboardItem), totalCount };
+}
+
+/**
+ * The text of each listed command, for the command list. Kept out of
+ * `DashboardItem`, which the dashboard shares and the drawer trigger receives
+ * whole; a command over the cap comes back cut, and its copy button fetches it.
+ */
+export async function getCommandTexts(
+  userId: string,
+  ids: string[],
+): Promise<Record<string, { text: string; isCut: boolean }>> {
+  if (ids.length === 0) return {};
+
+  const rows = await prisma.item.findMany({
+    where: { userId, id: { in: ids } },
+    select: { id: true, content: true },
+  });
+
+  return Object.fromEntries(rows.map(({ id, content }) => [id, clipCommand(content ?? "")]));
 }
 
 /**

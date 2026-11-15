@@ -22,7 +22,8 @@ export default function AppLayout({
     <TooltipProvider>
       <SidebarProvider>
         <AppSidebar />
-        <SidebarInset>
+        {/* `min-w-0`: a flex item otherwise grows to its widest content, and `truncate` inside never applies. */}
+        <SidebarInset className="min-w-0">
           <TopBar />
           <div className="flex-1 p-6">{children}</div>
         </SidebarInset>

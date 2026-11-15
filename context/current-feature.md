@@ -1,16 +1,46 @@
-# Current Feature
+# Current Feature: Command List
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- `/items/commands` shows one terminal-style frame: a header with three window dots and
+  `~/codstash/commands`, then one row per command
+- Each row: the title as a shell comment (`# Prune Docker disk usage`), and under it `$` and the
+  command in Geist Mono
+- Light shell colouring: the program name, flags, pipes and `&&`
+- Right side of each row, muted: the collection (when there is one), the relative time and the
+  favorite/pin marks
+- A copy button per row, shown on hover and on keyboard focus, copying the full command
+- Clicking the row opens the item drawer
+- A multi-line command shows its first line, then a muted `…`
+- Every other type is unchanged
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+Spec: `@context/features/command-list-spec.md`. Reference: `lovable-result/commands-list.png`.
+
+- **Data: a separate map, not `DashboardItem`.** `DashboardItem` is shared with the dashboard
+  and passed whole to `ItemDrawerTrigger` (a client component), so it stays as it is. A new
+  `getCommandTexts(userId, ids)` in `src/lib/db/items.ts` returns `id → command` for the listed
+  items, and the page passes each row its text. The drawer and the dashboard see no change.
+- **Copy: carry the full command, not fetch it.** Commands are one-liners by nature and the
+  list is capped at `MAX_ITEM_LIMIT` (100), so sending the text is cheap. Fetching on click
+  would also lose the click's user activation in Safari, which can make the clipboard write
+  fail. The copy reuses `copyToClipboard` (`src/lib/clipboard.ts`, toast included).
+  - Guard: a command longer than a cap (e.g. 2,000 characters) is sent cut, and its copy
+    button fetches the full text from `/api/items/[id]` instead. Rare; keeps the payload bounded.
+- **Colouring** is a small tokenizer in `src/lib/` (program = first word and the first word
+  after `|`, `&&`, `||`, `;`; flags = words starting with `-`; operators). Pure function,
+  unit-tested. No new dependency.
+- **Layout.** Rows are a list inside one bordered frame; the copy button sits above the
+  drawer's overlay (`ItemDrawerTrigger` covers the row at `z-10`). On a phone, the collection
+  is hidden and the command wraps instead of being cut.
+- The mock's "c copies the focused line" keyboard shortcut is left out (spec).
+- **Tests.** Unit tests for the tokenizer and for `getCommandTexts`; check the page in the
+  browser with the demo commands.
 
 ---
 

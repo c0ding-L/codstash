@@ -3,10 +3,11 @@ import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 
 import { auth } from "@/auth";
+import { CommandList } from "@/components/items/CommandList";
 import { ImageCard } from "@/components/items/ImageCard";
 import { ItemCard } from "@/components/items/ItemCard";
 import { ItemDrawerProvider } from "@/components/items/ItemDrawerProvider";
-import { getItemsByType } from "@/lib/db/items";
+import { getCommandTexts, getItemsByType } from "@/lib/db/items";
 import { itemTypeFromSegment, itemTypeHref, typePluralNames } from "@/lib/item-type-ui";
 
 interface ItemsPageProps {
@@ -31,6 +32,8 @@ export default async function ItemsPage({ params }: ItemsPageProps) {
   if (!session?.user?.id) redirect(`/sign-in?callbackUrl=${itemTypeHref(slug)}`);
 
   const { items, totalCount } = await getItemsByType(session.user.id, slug);
+  const commandTexts =
+    slug === "command" ? await getCommandTexts(session.user.id, items.map((item) => item.id)) : {};
   const label = typePluralNames[slug];
   const now = new Date().toISOString();
 
@@ -47,7 +50,9 @@ export default async function ItemsPage({ params }: ItemsPageProps) {
 
       {items.length > 0 ? (
         <ItemDrawerProvider>
-          {slug === "image" ? (
+          {slug === "command" ? (
+            <CommandList items={items} texts={commandTexts} now={now} />
+          ) : slug === "image" ? (
             <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {items.map((item) => (
                 <li key={item.id}>
