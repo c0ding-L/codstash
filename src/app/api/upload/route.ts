@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { buildFileKey, isUploadKind, toObjectMetadata, UPLOAD_RULES, validateUpload } from "@/lib/files";
 import { putObject } from "@/lib/r2";
+import { readFormDataWithin } from "@/lib/request-body";
 
 /** Room for the multipart boundaries and the other fields on top of the largest file. */
 const MAX_BODY_BYTES = UPLOAD_RULES.file.maxBytes + 64 * 1024;
@@ -19,18 +20,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "You are not signed in." }, { status: 401 });
   }
 
-  // Refused before reading the body when the browser says up front that it is too big.
-  const declared = Number(request.headers.get("content-length"));
-  if (declared > MAX_BODY_BYTES) {
-    return NextResponse.json({ error: "The file is too large." }, { status: 413 });
+  // Counted as it arrives, so a body with no or a false Content-Length is cut off too.
+  const body = await readFormDataWithin(request, MAX_BODY_BYTES);
+  if (!body.ok) {
+    return body.status === 413
+      ? NextResponse.json({ error: "The file is too large." }, { status: 413 })
+      : NextResponse.json({ error: "Send the file as multipart form data." }, { status: 400 });
   }
-
-  let form: FormData;
-  try {
-    form = await request.formData();
-  } catch {
-    return NextResponse.json({ error: "Send the file as multipart form data." }, { status: 400 });
-  }
+  const { form } = body;
 
   const kind = form.get("kind");
   const file = form.get("file");
