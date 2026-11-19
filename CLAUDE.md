@@ -54,7 +54,7 @@ there is no jsdom or Testing Library. Tests sit next to the file they cover.
 
 ## Stack
 
-- **Next.js 16.2.12, App Router**, React 19.2. Builds run on **Turbopack** by default in 16 —
+- **Next.js 16.4.6, App Router**, React 19.2. Builds run on **Turbopack** by default in 16 —
   the build output confirms this, and no `--turbopack` flag is needed.
 - **TypeScript strict mode**, `noEmit`. Import alias `@/*` → `./src/*`.
 - **Tailwind CSS v4** via the `@tailwindcss/postcss` PostCSS plugin.

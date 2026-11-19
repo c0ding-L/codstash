@@ -25,8 +25,7 @@ const BCRYPT_ROUNDS = 12;
 /**
  * Explicit ids rather than an upsert on `@@unique([userId, slug])`: system
  * types have `userId: null`, and NULLs do not collide in a PostgreSQL unique
- * index, so that constraint would let a duplicate through on every run. The
- * ids match the ones in `src/lib/mock-data.ts`.
+ * index, so that constraint would let a duplicate through on every run.
  *
  * `icon` holds a lucide-react component name and `color` a colour token; both
  * are the shapes `src/lib/item-type-ui.ts` maps to icons and Tailwind classes.
