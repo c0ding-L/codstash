@@ -1709,3 +1709,7 @@ Environment notes that outlive any one feature:
   (3 critical), none from Shiki, all in packages already installed; no cache for highlighting
   (up to 100 snippets per request). The first commit attempt went through with only the file
   rename (a wrong path stopped `git add` but not the script); it was amended before any push.
+- 2026-11-19 — Cleanup: deleted the orphaned `src/lib/mock-data.ts` (nothing imported it; its
+  mention in the `prisma/seed.ts` comment removed), corrected `CLAUDE.md` to Next.js 16.4.6, and
+  deleted two stray session transcripts from the repo root. Merged into `main` (`9de8e35`,
+  fast-forward); branch `chore/cleanup` deleted. Tests (403), build and lint green.
