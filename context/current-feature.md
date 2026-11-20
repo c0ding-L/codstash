@@ -1,54 +1,22 @@
-# Current Feature: Item Collections
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- An item can belong to **zero, one or several** collections.
-- The New Item and Edit Item forms have a **Collections** input: a multi-select of the signed-in
-  user's collections. Nothing selected means the item is in no collection.
-- Saving stores the chosen collections; editing replaces them (add and remove).
-- Only the user's own collections are accepted: the server drops or refuses any id that is not
-  the session user's.
-- After save, the item's collections show wherever the single collection name shows today
-  (dashboard rows, cards, command/snippet lists, item details), and the collection counts in the
-  sidebar and dashboard cards are right.
-- Existing items keep the collection they are in now.
-- Unit tests for the changed server actions and db functions.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- **Schema change needed.** Today `Item.collectionId` is a single nullable foreign key
-  (one-to-many). Several collections per item needs a many-to-many join. Plan: an explicit
-  `ItemCollection` join model like `ItemTag` (`itemId`, `collectionId`, `@@id([itemId,
-  collectionId])`, `@@index([collectionId])`, cascade on both sides, plus `addedAt` for
-  ordering), via `prisma migrate dev` (never `db push`). The migration copies every existing
-  `collectionId` into the join table, then drops `Item.collectionId` and its indexes. Deleting a
-  collection then removes only the links, so its items stay (same as today's `SetNull`).
-- Code that reads `collectionId` moves to the join:
-  - `loadTypeCounts` in `src/lib/db/collections.ts` (`groupBy ["collectionId", "typeId"]`)
-    becomes a count over `ItemCollection` joined to the item's type.
-  - `_count.items` on collections becomes a count of links.
-  - `DashboardItem.collectionName: string | null` becomes `collections: { id, name }[]`; the
-    four places that show it render the names joined with ", ".
-  - `prisma/seed.ts` writes links instead of `collectionId`.
-- **Input:** `collectionIds: string[]` on `CreateItemInput` and `UpdateItemInput`, capped (e.g.
-  20), deduplicated. The action checks the ids belong to the user before writing; an unknown id
-  fails with `field: "collectionIds"`.
-- **Picker UI:** a multi-select built from the existing `ui/` pieces (e.g. `dropdown-menu`
-  checkbox items, with the chosen ones shown as removable chips), in `item-form-fields.tsx` so
-  both forms share it. No new dependency unless the existing pieces can't do it.
-- **Where the options come from:** a `getCollectionOptions(userId)` lib/db function
-  (`{ id, name }[]`, by name), served by `GET /api/collections` and fetched when each form
-  mounts. Props did not fit: `NewItemDialog` sits in the layout's top bar, which must not wait
-  on data, and the edit form lives in the client drawer with no server parent.
-- The migration (`20261120120000_item_collections`) was written from `prisma migrate diff`
-  plus a copy step, because `migrate dev` refuses to generate a column drop non-interactively;
-  it was then applied with `migrate dev`. Develop: 17 items had a collection before, 17 links
-  after.
-- Out of scope: collection pages, adding/removing items from a collection's side, reordering.
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — Item Collections: an item can be in several collections through
+the new `ItemCollection` join; the new and edit forms pick them with a shared multi-select fed by
+`GET /api/collections`. Production needs `prisma migrate deploy`. Outcome in the History below.
 
 ---
 
@@ -1863,3 +1831,5 @@ Environment notes that outlive any one feature:
   462 tests, build and lint green; picker checked in the browser, create/edit verified by the
   author after restarting the dev server. **Production needs `prisma migrate deploy` before this
   code runs there.**
+- 2026-11-20 — Item Collections merged into `main` (`f2b9bef`, fast-forward); branch
+  `feature/item-collections` deleted. Feature completed.
