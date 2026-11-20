@@ -1,41 +1,22 @@
-# Current Feature: Collection Pages
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- `/collections` page lists all of the user's collections using the existing `CollectionCard`
-  (same grid as the dashboard's Recent collections), with a count and an empty state.
-- `/collections/[id]` page shows the collection's name (and description) and its items using
-  the existing item cards (`ItemCard`, opening the item drawer), with an empty state.
-- Unknown id, or a collection owned by another user, answers 404.
-- "View all collections" in the sidebar goes to `/collections`.
-- Every `CollectionCard` (dashboard and `/collections`) links to `/collections/[id]`.
-- The sidebar's favorite and recent collection entries link to `/collections/[id]`.
-- Dashboard collections, sidebar and stats read the session user instead of the demo account.
-- Both routes are protected by the proxy (signed-out users go to sign-in with a `callbackUrl`).
-- Unit tests for the new db queries; `npm test`, `npm run build` and `npm run lint` pass.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Sidebar link already points to `/collections` (`AppSidebar.tsx:103`); today it 404s. Only
-  the page is missing.
-- Pages follow the `items/[type]` pattern: async server page, `await connection()`, `auth()`
-  with redirect, plus `loading.tsx` and `error.tsx` like sibling routes.
-- Add `/collections/:path*` to the matcher in `src/proxy.ts`.
-- New db queries in `src/lib/db/`: all collections for a user (reuse `getRecentCollections`'
-  shape, `RecentCollection`, without the 6-card limit but still clamped), and a collection's
-  items scoped by `userId` — returning `DashboardItem` via `dashboardItemSelect` through the
-  `ItemCollection` join, so `ItemCard` can render them unchanged.
-- User id (decided: a): the new pages use `session.user.id`, and the dashboard collections,
-  sidebar and stats move from `getDemoUserId` to the session user, so a card never links to a
-  collection the page would 404 on.
-- Card link: wrap `CollectionCard` in a `next/link` (whole card clickable) rather than adding a
-  button, keeping its look unchanged.
-- Item list per type (commands, snippets, …) uses specialised lists; a collection mixes types,
-  so it uses the generic `ItemCard` grid (and `ImageCard` for images if it fits).
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — Collection Pages: `/collections` lists the user's collections with
+`CollectionCard`, `/collections/[id]` shows a collection's items as `ItemCard`s; cards and sidebar
+entries link there, and the dashboard reads the session user. Outcome in the History below.
 
 ---
 
@@ -1858,3 +1839,18 @@ Environment notes that outlive any one feature:
   code runs there.**
 - 2026-11-20 — Item Collections merged into `main` (`f2b9bef`, fast-forward); branch
   `feature/item-collections` deleted. Feature completed.
+- 2026-11-20 — Collection Pages: `/collections` (route group `(list)`) lists every collection the
+  user owns with `CollectionCard`, newest first, with a count and an empty state;
+  `/collections/[id]` shows the name, description and items as `ItemCard`s in the item drawer
+  provider, "x of y" count, empty state. `[id]/layout.tsx` checks ownership above `loading.tsx`
+  so a missing or foreign collection is a real 404 (hence the `(list)` group: a boundary in
+  `collections/` would wrap it). New queries `getCollections`, `getCollection` (request-cached)
+  and `getItemsByCollection`; `/collections` added to the proxy matcher. `CollectionCard` links
+  via an overlay like `ItemDrawerTrigger`; sidebar favorite/recent entries link too; "View all
+  collections" moved into its own `SidebarGroup` (was missing the `p-2`, misaligned) with the
+  `Folders` icon. Dashboard stats, recent collections and sidebar moved from the demo account to
+  `session.user.id`; `getDemoUserId`/`getDemoUser` removed (`DEMO_USER_EMAIL` kept for the
+  profile guard). 469 tests, build and lint green; checked in the browser (signed-out redirect,
+  card and sidebar links, drawer, 404 status). Nothing written to the database.
+- 2026-11-20 — Collection Pages merged into `main` (`355174d`, fast-forward); branch
+  `feature/collection-pages` deleted. Feature completed.
