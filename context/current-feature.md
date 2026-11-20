@@ -1,40 +1,22 @@
-# Current Feature: Link List Copy and Logos
-
-Branch: `feature/link-list-copy-logos`.
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- **Copy on each link row** (`src/components/items/LinkList.tsx`): an icon-only Copy button
-  beside Open that copies the link's URL. With a mouse it shows on row hover and on keyboard
-  focus; on a touch screen it is always shown, as in the snippet list. It sits above the drawer
-  overlay (`z-20`), so clicking it does not open the drawer. A success toast, as for the other
-  copy buttons. Rows without a URL get no Copy button.
-- **Site logo instead of the first letter**: for a web address, the square on the left shows the
-  site's favicon from DuckDuckGo (`https://icons.duckduckgo.com/ip3/<hostname>.ico`). When there
-  is no logo (DuckDuckGo answers 404) or it fails to load, the current first letter stays. A
-  non-web URL keeps the letter and asks nothing.
-- Every other type is unchanged; the mobile layout too (the square stays hidden on a phone).
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- **Copy without a fetch.** Unlike snippets and prompts, the list already has the whole URL
-  (`item.url`), so the button calls `copyToClipboard(url)` directly instead of `ItemCopyButton`,
-  which fetches the content. A small client `LinkCopyButton`.
-- **Logo component.** A client `LinkLogo` (an `<img>` needs `onError` to fall back to the
-  letter): `loading="lazy"`, `referrerPolicy="no-referrer"` so the page address is not sent,
-  empty `alt` (decorative, the domain is written beside it). It renders the letter until the
-  image has loaded, so a missing logo never flashes a broken image. The same
-  `eslint-disable-next-line @next/next/no-img-element` as the R2 images: `next/image` would need
-  DuckDuckGo in `remotePatterns` and proxy every icon through the server.
-- **URL helper.** `faviconUrl(url)` in `src/lib/link-url.ts`: the DuckDuckGo address for a web
-  URL's hostname (port and `www.` dropped), `null` for anything else. Unit-tested.
-- **Privacy:** the browser sends each link's hostname (not its path) to DuckDuckGo. No CSP is
-  configured, so nothing else is needed.
-- Reference: `lovable-result/links-list.png`.
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — Link List Copy and Logos: each link row has a Copy button for its
+URL (on hover with a mouse, always on touch) and shows the site's logo from DuckDuckGo instead of
+the first letter, keeping the letter when the site has none. Outcome in the History below.
 
 ---
 
@@ -1765,3 +1747,5 @@ Environment notes that outlive any one feature:
   answering 404 (simulated for lucide.dev), only the hostname sent and no referrer, Copy hidden
   until hover or keyboard focus, copying the URL with a toast and no drawer, always shown on a
   phone, no horizontal scroll.
+- 2026-11-20 — Link List Copy and Logos merged into `main` (`f9eb5bd`, fast-forward); branch
+  `feature/link-list-copy-logos` deleted. Feature completed.
