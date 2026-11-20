@@ -11,17 +11,9 @@ import { ItemDrawerProvider } from "@/components/items/ItemDrawerProvider";
 import { LinkList } from "@/components/items/LinkList";
 import { PromptList } from "@/components/items/PromptList";
 import { SnippetList } from "@/components/items/SnippetList";
+import { TypeIconTile } from "@/components/items/TypeIconTile";
 import { getCommandTexts, getItemsByType, getPromptPreviews, getSnippetPreviews } from "@/lib/db/items";
-import {
-  colorClasses,
-  itemTypeFromSegment,
-  itemTypeHref,
-  surfaceClasses,
-  typeColors,
-  typeIcons,
-  typePluralNames,
-} from "@/lib/item-type-ui";
-import { cn } from "@/lib/utils";
+import { itemTypeFromSegment, itemTypeHref, typeColors, typePluralNames } from "@/lib/item-type-ui";
 
 interface ItemsPageProps {
   params: Promise<{ type: string }>;
@@ -50,7 +42,6 @@ export default async function ItemsPage({ params }: ItemsPageProps) {
   const promptPreviews = slug === "prompt" ? await getPromptPreviews(session.user.id, ids) : {};
   const snippetPreviews = slug === "snippet" ? await getSnippetPreviews(session.user.id, ids) : {};
   const label = typePluralNames[slug];
-  const Icon = typeIcons[slug];
   const color = typeColors[slug];
   const now = new Date().toISOString();
 
@@ -58,12 +49,7 @@ export default async function ItemsPage({ params }: ItemsPageProps) {
     <div className="flex flex-col gap-6">
       <div className="flex items-baseline justify-between">
         <h1 className="flex items-center gap-3 text-2xl font-semibold">
-          <span
-            className={cn("flex size-9 shrink-0 items-center justify-center rounded-lg", surfaceClasses[color])}
-            aria-hidden
-          >
-            <Icon className={cn("size-5", colorClasses[color])} />
-          </span>
+          <TypeIconTile slug={slug} color={color} className="size-9 shrink-0 rounded-lg" iconClassName="size-5" />
           {label}
         </h1>
         {items.length > 0 ? (

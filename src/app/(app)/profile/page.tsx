@@ -5,13 +5,13 @@ import { connection } from "next/server";
 
 import { auth } from "@/auth";
 import { UserAvatar } from "@/components/auth/UserAvatar";
+import { TypeIconTile } from "@/components/items/TypeIconTile";
 import { ChangePasswordDialog } from "@/components/profile/ChangePasswordDialog";
 import { DeleteAccountDialog } from "@/components/profile/DeleteAccountDialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DEMO_USER_EMAIL } from "@/lib/db/collections";
 import { getProfile, getProfileStats } from "@/lib/db/profile";
-import { colorClasses, surfaceClasses, typeIcons, typePluralNames } from "@/lib/item-type-ui";
-import { cn } from "@/lib/utils";
+import { typePluralNames } from "@/lib/item-type-ui";
 
 export const metadata: Metadata = {
   title: "Profile · Codstash",
@@ -85,23 +85,13 @@ export default async function ProfilePage() {
             </CardHeader>
             <CardContent>
               <ul className="grid gap-2 sm:grid-cols-2">
-                {stats.byType.map(({ slug, color, count }) => {
-                  const Icon = typeIcons[slug];
-                  return (
-                    <li key={slug} className="flex items-center gap-3 rounded-lg px-2 py-1.5">
-                      <span
-                        className={cn(
-                          "flex size-8 items-center justify-center rounded-md",
-                          color ? surfaceClasses[color] : "bg-muted",
-                        )}
-                      >
-                        <Icon className={cn("size-4", color ? colorClasses[color] : "text-muted-foreground")} aria-hidden />
-                      </span>
-                      <span className="flex-1">{typePluralNames[slug]}</span>
-                      <span className="font-medium tabular-nums">{count}</span>
-                    </li>
-                  );
-                })}
+                {stats.byType.map(({ slug, color, count }) => (
+                  <li key={slug} className="flex items-center gap-3 rounded-lg px-2 py-1.5">
+                    <TypeIconTile slug={slug} color={color} className="size-8 rounded-md" iconClassName="size-4" mutedFallback />
+                    <span className="flex-1">{typePluralNames[slug]}</span>
+                    <span className="font-medium tabular-nums">{count}</span>
+                  </li>
+                ))}
               </ul>
             </CardContent>
           </Card>

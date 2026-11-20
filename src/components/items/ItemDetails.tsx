@@ -22,9 +22,10 @@ import { TagBadges } from "@/components/items/TagBadges";
 import { Separator } from "@/components/ui/separator";
 import { SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TypeIconTile } from "@/components/items/TypeIconTile";
 import type { DashboardItem, ItemDetailJson } from "@/lib/db/items";
 import { formatFileSize } from "@/lib/format";
-import { colorClasses, surfaceClasses, toColorToken, toItemTypeSlug, typeIcons } from "@/lib/item-type-ui";
+import { colorClasses, toColorToken, toItemTypeSlug, typeIcons } from "@/lib/item-type-ui";
 import { cn } from "@/lib/utils";
 
 export type ItemDetailState =
@@ -38,21 +39,15 @@ function formatDate(date: Date | string) {
 
 /** The drawer's title, next to the type's icon in the type's color, as on the cards. */
 function DrawerHeader({ card, title }: { card: DashboardItem; title: string }) {
-  const slug = toItemTypeSlug(card.type.slug);
-  const color = toColorToken(card.type.color);
-  const Icon = slug ? typeIcons[slug] : Clock;
-
   return (
     <SheetHeader className="flex-row items-center gap-3 pr-12">
-      <span
-        className={cn(
-          "flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground",
-          color && [surfaceClasses[color], colorClasses[color]],
-        )}
-        aria-hidden
-      >
-        <Icon className="size-4.5" />
-      </span>
+      <TypeIconTile
+        slug={toItemTypeSlug(card.type.slug)}
+        color={toColorToken(card.type.color)}
+        className="size-9 shrink-0 rounded-lg"
+        iconClassName="size-4.5"
+        mutedFallback
+      />
       <SheetTitle className="min-w-0 text-lg leading-snug font-semibold break-words">{title}</SheetTitle>
     </SheetHeader>
   );

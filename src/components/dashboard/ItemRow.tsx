@@ -1,35 +1,22 @@
-import { Clock, Pin, Star } from "lucide-react";
+import { Pin, Star } from "lucide-react";
 
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
+import { TypeIconTile } from "@/components/items/TypeIconTile";
 import type { DashboardItem } from "@/lib/db/items";
 import { formatFileSize, formatRelativeTime } from "@/lib/format";
-import {
-  colorClasses,
-  surfaceClasses,
-  toColorToken,
-  toItemTypeSlug,
-  typeIcons,
-} from "@/lib/item-type-ui";
+import { colorClasses, toColorToken, toItemTypeSlug } from "@/lib/item-type-ui";
 import { cn } from "@/lib/utils";
 
 /** `now` is passed in so labels measure against the wall clock, not MOCK_NOW. */
 export function ItemRow({ item, now }: { item: DashboardItem; now: string }) {
   const slug = toItemTypeSlug(item.type.slug);
   const color = toColorToken(item.type.color);
-  const Icon = slug ? typeIcons[slug] : Clock;
 
   return (
     <li className="relative flex items-start gap-3 rounded-lg border border-border p-3 transition-colors hover:bg-muted/50">
       <ItemDrawerTrigger item={item} />
 
-      <span
-        className={cn(
-          "flex size-8 shrink-0 items-center justify-center rounded-lg",
-          color ? surfaceClasses[color] : "bg-muted",
-        )}
-      >
-        <Icon className={cn("size-4", color && colorClasses[color])} aria-hidden />
-      </span>
+      <TypeIconTile slug={slug} color={color} className="size-8 shrink-0 rounded-lg" iconClassName="size-4" />
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex items-center gap-1.5">

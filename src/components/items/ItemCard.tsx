@@ -1,18 +1,11 @@
-import { Clock, Pin, Star } from "lucide-react";
+import { Pin, Star } from "lucide-react";
 
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
 import { Card, CardContent } from "@/components/ui/card";
+import { TypeIconTile } from "@/components/items/TypeIconTile";
 import type { DashboardItem } from "@/lib/db/items";
 import { formatFileSize, formatRelativeTime } from "@/lib/format";
-import {
-  colorClasses,
-  ringClasses,
-  surfaceClasses,
-  toColorToken,
-  toItemTypeSlug,
-  typeIcons,
-  washClasses,
-} from "@/lib/item-type-ui";
+import { ringClasses, toColorToken, toItemTypeSlug, washClasses } from "@/lib/item-type-ui";
 import { cn } from "@/lib/utils";
 
 interface ItemCardProps {
@@ -24,7 +17,6 @@ interface ItemCardProps {
 export function ItemCard({ item, now }: ItemCardProps) {
   const slug = toItemTypeSlug(item.type.slug);
   const color = toColorToken(item.type.color);
-  const Icon = slug ? typeIcons[slug] : Clock;
 
   return (
     <Card className={cn("relative h-full transition-shadow", color && ringClasses[color])}>
@@ -39,14 +31,7 @@ export function ItemCard({ item, now }: ItemCardProps) {
       <ItemDrawerTrigger item={item} />
 
       <CardContent className="relative flex h-full items-start gap-3">
-        <span
-          className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-lg",
-            color ? surfaceClasses[color] : "bg-muted",
-          )}
-        >
-          <Icon className={cn("size-4", color && colorClasses[color])} aria-hidden />
-        </span>
+        <TypeIconTile slug={slug} color={color} className="size-9 shrink-0 rounded-lg" iconClassName="size-4" />
 
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex items-center gap-1.5">

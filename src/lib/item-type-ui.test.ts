@@ -8,6 +8,7 @@ import {
   itemTypeFromPathname,
   itemTypeFromSegment,
   itemTypeHref,
+  primaryTypeOf,
   sidebarTypes,
   toColorToken,
   toItemTypeSlug,
@@ -117,5 +118,31 @@ describe("item form field sets", () => {
     expect(hasContentField(null)).toBe(false);
     expect(hasLanguageField(null)).toBe(false);
     expect(hasUrlField(null)).toBe(false);
+  });
+});
+
+describe("primaryTypeOf", () => {
+  it("takes the first type, with its slug and colour checked", () => {
+    expect(
+      primaryTypeOf({
+        types: [
+          { slug: "snippet", name: "Snippet", color: "emerald" },
+          { slug: "note", name: "Note", color: "blue" },
+        ],
+      }),
+    ).toEqual({ name: "Snippet", slug: "snippet", color: "emerald" });
+  });
+
+  it("keeps the name when the slug or colour is unknown here", () => {
+    expect(primaryTypeOf({ types: [{ slug: "custom", name: "Custom", color: "pink" }] })).toEqual({
+      name: "Custom",
+      slug: null,
+      color: null,
+    });
+    expect(primaryTypeOf({ types: [{ slug: "note", name: "Note", color: null }] })?.color).toBeNull();
+  });
+
+  it("is null for a collection with no items", () => {
+    expect(primaryTypeOf({ types: [] })).toBeNull();
   });
 });

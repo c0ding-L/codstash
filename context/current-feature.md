@@ -1,16 +1,68 @@
-# Current Feature
+# Current Feature: Type Tile and Collection Cards
+
+Refactor, batch 2 of the 2026-11-20 code split review (items 4, 5 and 6). No change on screen:
+every tile stays exactly as it is (decided by the author). Branch: `refactor/type-tile-collections`.
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- **`<TypeIconTile>`** (`src/components/items/TypeIconTile.tsx`): the type's icon in its colour
+  on its tinted square, today hand-written in 8 places. Props: `slug`, `color`, `className` (the
+  square's size, radius and `shrink-0`), `iconClassName` (the icon's size), `fallbackIcon`
+  (default `Clock`) and `mutedFallback`. The classes stay literal at each call site, so Tailwind
+  sees them; there is no size map. **The gain is one place for the colour, fallback and
+  `bg-muted` logic, not fewer variants.** The base holds only `flex items-center justify-center`
+  and the colour classes. The 8 sites, kept pixel for pixel:
+
+  | Site | Square | Icon |
+  |---|---|---|
+  | `/items/[type]` page header | `size-9 rounded-lg shrink-0` | `size-5` |
+  | `RecentCollections` card | `size-9 rounded-lg` | `size-4` |
+  | `ItemCard` | `size-9 rounded-lg shrink-0` | `size-4` |
+  | Drawer header (`ItemDetails`) | `size-9 rounded-lg shrink-0` | `size-4.5` |
+  | `ItemRow` | `size-8 rounded-lg shrink-0` | `size-4` |
+  | Profile, "By type" | `size-8 rounded-md` | `size-4` |
+  | Collection type chips | `size-6 rounded-md` | `size-3` |
+  | Sidebar, recent collections | `size-5 rounded-full shrink-0` | `size-3.5` |
+
+  - **Fallback without a colour:** `bg-muted` on the square everywhere. The icon keeps the text
+    colour, except with `mutedFallback`: the profile (`text-muted-foreground` on the icon) and the
+    drawer header (`bg-muted text-muted-foreground` on the square, which also colours the square
+    itself, not the icon, when there is a colour; same result, since the icon uses
+    `currentColor`).
+  - **Collection type chips:** today the `<li>` is the tile. After the change it becomes
+    `<li><TypeIconTile …/><span className="sr-only">…</span></li>`. It should look the same; the
+    before/after diff confirms it.
+  - The `NewItemDialog` type picker is a button, not a tile, and is left as it is.
+- **`primaryTypeOf(collection)`** in `src/lib/item-type-ui.ts`: the collection's most used type
+  as `{ name, slug, color } | null`, where `slug` and `color` can each be null (unknown slug or
+  colour). Each caller picks its own fallback icon: Star for favorites, Clock elsewhere.
+  Unit-tested in `item-type-ui.test.ts`.
+- **`AppSidebarBody`** (163 lines) split into `<SidebarTypesGroup>` and
+  `<SidebarCollectionsGroup variant="favorite" | "recent">` (favorite: the plain coloured icon,
+  fallback Star; recent: the tile, fallback Clock), both in `AppSidebar.tsx` or beside it.
+- **`RecentCollections`** (142 lines): the card becomes `<CollectionCard collection now>` and its
+  type row `<CollectionTypeChips types>`, in `src/components/dashboard/`.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- **The new components take props and fetch nothing.** `AppSidebarBody` and `RecentCollections`
+  keep their `connection()`, `auth()` and queries, each run once. A group fetching its own data
+  would multiply the per-request `auth()` lookups (audit finding 3).
+- **Verification: a before/after diff.** Before any code, on `main`, with the demo user (the saved
+  session, so the sign-in limit is not hit again):
+  - screenshots of the dashboard (ItemRow, collection cards), the sidebar (expanded, collapsed to
+    icons, phone width), `/items/notes` and `/items/links` (header, ItemCard), the profile page
+    and the open drawer header;
+  - each tile's `outerHTML`.
+
+  After the change, the same captures, compared by class set rather than class order (`cn` can
+  reorder classes), and the screenshots compared.
+- **Not in this batch:** the profile page sections (review item 7), the auth fetch helper
+  (item 8), `ItemListForType` (item 9), `ItemMarks` (item 10), the performance batch.
 
 ---
 
@@ -1775,3 +1827,15 @@ Environment notes that outlive any one feature:
   review (type tile, collection cards, `primaryTypeOf`), the auth fetch helper, the performance
   batch (`next/dynamic` in `item-form-fields.tsx` and `ItemBody.tsx`), and the lost click on New
   Item right after a create.
+- 2026-11-20 — Started Type Tile and Collection Cards on branch `refactor/type-tile-collections`.
+  `TypeIconTile` replaces the 8 hand-written tiles (page header, collection card, `ItemCard`,
+  drawer header, `ItemRow`, profile, collection type chips, sidebar recent), each with its own
+  literal classes; `primaryTypeOf` in `item-type-ui.ts`, unit-tested; `AppSidebarBody` split into
+  `SidebarTypesGroup` and `SidebarCollectionsGroup`; `RecentCollections` card moved to
+  `CollectionCard.tsx` with `CollectionTypeChips`. The new components take props and fetch
+  nothing. 436 tests, build and lint green. **Before/after diff** with the demo user, captured on
+  `main` first: 164 tiles over 8 views (dashboard, sidebar collapsed, notes, drawer, links,
+  profile, phone dashboard, phone sidebar) identical in class set, computed colours, size and
+  radius, except the drawer header, whose colour class moved from the square to the icon (same
+  computed colour); the 8 full-page screenshots identical to the pixel. Nothing written to the
+  database.

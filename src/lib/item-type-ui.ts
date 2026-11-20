@@ -150,6 +150,21 @@ export function toColorToken(color: string | null): ColorToken | null {
   return color !== null && Object.hasOwn(colorClasses, color) ? (color as ColorToken) : null;
 }
 
+/**
+ * A collection's most used type (its types come sorted by count), which sets its
+ * accent. `slug` and `color` are null when the stored values are unknown here.
+ * Structural, so this module never imports the database layer.
+ */
+export function primaryTypeOf(collection: { types: { slug: string; name: string; color: string | null }[] }): {
+  name: string;
+  slug: ItemTypeSlug | null;
+  color: ColorToken | null;
+} | null {
+  const [primary] = collection.types;
+  if (!primary) return null;
+  return { name: primary.name, slug: toItemTypeSlug(primary.slug), color: toColorToken(primary.color) };
+}
+
 /** Routes types to `/items/snippets`, etc. — plural and lowercased. */
 export function itemTypeHref(slug: ItemTypeSlug) {
   return `/items/${typePluralNames[slug].toLowerCase()}`;
