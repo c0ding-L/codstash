@@ -86,16 +86,29 @@ describe("getItemsByType", () => {
     expect(findMany.mock.calls[0]![0]).toMatchObject({ orderBy: { updatedAt: "desc" }, take: MAX_ITEM_LIMIT });
   });
 
-  it("flattens the collection name, and is null once the collection is gone", async () => {
+  it("flattens the collections, and is empty for an item in none", async () => {
     findMany.mockResolvedValue([
-      { id: "a", collection: { name: "DevOps" } },
-      { id: "b", collection: null },
+      { id: "a", collections: [{ collection: { id: "c1", name: "DevOps" } }, { collection: { id: "c2", name: "Infra" } }] },
+      { id: "b", collections: [] },
     ]);
 
     const { items } = await getItemsByType(USER, "link");
 
-    expect(items.map(({ collectionName }) => collectionName)).toEqual(["DevOps", null]);
-    expect(items[0]).not.toHaveProperty("collection");
+    expect(items.map(({ collections }) => collections)).toEqual([
+      [
+        { id: "c1", name: "DevOps" },
+        { id: "c2", name: "Infra" },
+      ],
+      [],
+    ]);
+  });
+
+  it("reads the collections by name", async () => {
+    findMany.mockResolvedValue([]);
+
+    await getItemsByType(USER, "link");
+
+    expect(findMany.mock.calls[0]![0].select.collections).toMatchObject({ orderBy: { collection: { name: "asc" } } });
   });
 });
 
@@ -164,7 +177,7 @@ describe("updateItem", () => {
     isFavorite: true,
     updatedAt: new Date(1),
     type: { slug: "snippet", name: "Snippet", color: "blue" },
-    collection: { name: "DevOps" },
+    collections: [{ collection: { id: "col_1", name: "DevOps" } }],
     content: "body",
     url: null,
     fileName: null,
@@ -180,7 +193,7 @@ describe("updateItem", () => {
   it("keeps the file name in the card as well as the detail", async () => {
     update.mockResolvedValue({ ...row, fileName: "spec.pdf", fileSize: 2048 });
 
-    const { card, detail } = await updateItem(USER, "item_1", { title: "t", tags: [] });
+    const { card, detail } = await updateItem(USER, "item_1", { title: "t", tags: [], collectionIds: [] });
 
     expect(card).toMatchObject({ fileName: "spec.pdf", fileSize: 2048 });
     expect(detail.fileName).toBe("spec.pdf");
@@ -189,20 +202,20 @@ describe("updateItem", () => {
   it("keeps the URL in the card as well as the detail", async () => {
     update.mockResolvedValue({ ...row, url: "https://lucide.dev" });
 
-    const { card, detail } = await updateItem(USER, "item_1", { title: "t", tags: [] });
+    const { card, detail } = await updateItem(USER, "item_1", { title: "t", tags: [], collectionIds: [] });
 
     expect(card.url).toBe("https://lucide.dev");
     expect(detail.url).toBe("https://lucide.dev");
   });
 
   it("updates only that owner's item", async () => {
-    await updateItem(USER, "item_1", { title: "New title", tags: [] });
+    await updateItem(USER, "item_1", { title: "New title", tags: [], collectionIds: [] });
 
     expect(update.mock.calls[0]![0].where).toEqual({ id: "item_1", userId: USER });
   });
 
   it("replaces the tags, linking each name to that user's tag", async () => {
-    await updateItem(USER, "item_1", { title: "t", tags: ["bash"] });
+    await updateItem(USER, "item_1", { title: "t", tags: ["bash"], collectionIds: [] });
 
     expect(update.mock.calls[0]![0].data.tags).toEqual({
       deleteMany: {},
@@ -219,8 +232,23 @@ describe("updateItem", () => {
     });
   });
 
+  it("replaces the collections with the chosen ones", async () => {
+    await updateItem(USER, "item_1", { title: "t", tags: [], collectionIds: ["c1"] });
+
+    expect(update.mock.calls[0]![0].data.collections).toEqual({
+      deleteMany: {},
+      create: [{ collection: { connect: { id: "c1" } } }],
+    });
+  });
+
+  it("takes the item out of every collection when none is chosen", async () => {
+    await updateItem(USER, "item_1", { title: "t", tags: [], collectionIds: [] });
+
+    expect(update.mock.calls[0]![0].data.collections).toEqual({ deleteMany: {}, create: [] });
+  });
+
   it("links a repeated tag name once", async () => {
-    await updateItem(USER, "item_1", { title: "t", tags: ["bash", "ci", "bash"] });
+    await updateItem(USER, "item_1", { title: "t", tags: ["bash", "ci", "bash"], collectionIds: [] });
 
     const created = update.mock.calls[0]![0].data.tags.create;
     expect(created.map((link: { tag: { connectOrCreate: { create: { name: string } } } }) =>
@@ -228,7 +256,7 @@ describe("updateItem", () => {
   });
 
   it("leaves fields that were not sent out of the write, and writes null to clear one", async () => {
-    await updateItem(USER, "item_1", { title: "t", description: null, tags: [] });
+    await updateItem(USER, "item_1", { title: "t", description: null, tags: [], collectionIds: [] });
 
     const { data } = update.mock.calls[0]![0];
     expect(data).toMatchObject({ title: "t", description: null });
@@ -238,7 +266,7 @@ describe("updateItem", () => {
   });
 
   it("returns the card and the detail, with the tags sorted", async () => {
-    const result = await updateItem(USER, "item_1", { title: "New title", tags: ["ci", "bash"] });
+    const result = await updateItem(USER, "item_1", { title: "New title", tags: ["ci", "bash"], collectionIds: [] });
 
     expect(result.card).toEqual({
       id: "item_1",
@@ -251,7 +279,7 @@ describe("updateItem", () => {
       isFavorite: true,
       updatedAt: new Date(1),
       type: { slug: "snippet", name: "Snippet", color: "blue" },
-      collectionName: "DevOps",
+      collections: [{ id: "col_1", name: "DevOps" }],
     });
     expect(result.detail).toEqual({
       content: "body",
@@ -266,7 +294,7 @@ describe("updateItem", () => {
   it("passes Prisma's error through when no item of that owner matches", async () => {
     update.mockRejectedValue(Object.assign(new Error("not found"), { code: "P2025" }));
 
-    await expect(updateItem(USER, "someone_elses", { title: "t", tags: [] })).rejects.toMatchObject({ code: "P2025" });
+    await expect(updateItem(USER, "someone_elses", { title: "t", tags: [], collectionIds: [] })).rejects.toMatchObject({ code: "P2025" });
   });
 });
 
@@ -350,7 +378,7 @@ describe("createItem", () => {
     isFavorite: false,
     updatedAt: new Date(1),
     type: { slug: "note", name: "Note", color: "amber" },
-    collection: null,
+    collections: [],
   };
 
   beforeEach(() => {
@@ -359,7 +387,7 @@ describe("createItem", () => {
   });
 
   it("looks up the system type of that slug, never a user's own", async () => {
-    await createItem(USER, { type: "note", title: "Title", tags: [] });
+    await createItem(USER, { type: "note", title: "Title", tags: [], collectionIds: [] });
 
     expect(findType.mock.calls[0]![0].where).toEqual({ slug: "note", userId: null, isSystem: true });
   });
@@ -367,12 +395,12 @@ describe("createItem", () => {
   it("throws, creating nothing, when there is no such system type", async () => {
     findType.mockResolvedValue(null);
 
-    await expect(createItem(USER, { type: "note", title: "Title", tags: [] })).rejects.toThrow();
+    await expect(createItem(USER, { type: "note", title: "Title", tags: [], collectionIds: [] })).rejects.toThrow();
     expect(create).not.toHaveBeenCalled();
   });
 
   it("creates the item for that owner, under that type, with its fields", async () => {
-    await createItem(USER, { type: "note", title: "Title", content: "body", tags: [] });
+    await createItem(USER, { type: "note", title: "Title", content: "body", tags: [], collectionIds: [] });
 
     const { data } = create.mock.calls[0]![0];
     expect(data).toMatchObject({
@@ -393,6 +421,7 @@ describe("createItem", () => {
       fileName: "Report.pdf",
       fileSize: 2048,
       tags: [],
+      collectionIds: [],
     });
 
     expect(findType.mock.calls[0]![0].where).toMatchObject({ slug: "file" });
@@ -405,7 +434,7 @@ describe("createItem", () => {
   });
 
   it("links each tag once, to that user's tag of that name", async () => {
-    await createItem(USER, { type: "note", title: "Title", tags: ["bash", "bash"] });
+    await createItem(USER, { type: "note", title: "Title", tags: ["bash", "bash"], collectionIds: [] });
 
     expect(create.mock.calls[0]![0].data.tags).toEqual({
       create: [
@@ -421,11 +450,18 @@ describe("createItem", () => {
     });
   });
 
-  it("returns the card with the collection flattened", async () => {
-    const card = await createItem(USER, { type: "note", title: "Title", tags: [] });
+  it("returns the card with the collections flattened", async () => {
+    const card = await createItem(USER, { type: "note", title: "Title", tags: [], collectionIds: [] });
 
-    expect(card).toMatchObject({ id: "item_new", collectionName: null });
-    expect(card).not.toHaveProperty("collection");
+    expect(card).toMatchObject({ id: "item_new", collections: [] });
+  });
+
+  it("links the item to each chosen collection once", async () => {
+    await createItem(USER, { type: "note", title: "Title", tags: [], collectionIds: ["c1", "c2", "c1"] });
+
+    expect(create.mock.calls[0]![0].data.collections).toEqual({
+      create: [{ collection: { connect: { id: "c1" } } }, { collection: { connect: { id: "c2" } } }],
+    });
   });
 });
 

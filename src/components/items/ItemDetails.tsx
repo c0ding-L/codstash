@@ -24,7 +24,7 @@ import { SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TypeIconTile } from "@/components/items/TypeIconTile";
 import type { DashboardItem, ItemDetailJson } from "@/lib/db/items";
-import { formatFileSize } from "@/lib/format";
+import { formatCollectionNames, formatFileSize } from "@/lib/format";
 import { colorClasses, toColorToken, toItemTypeSlug, typeIcons } from "@/lib/item-type-ui";
 import { cn } from "@/lib/utils";
 
@@ -88,9 +88,10 @@ export function ItemDetails({ card, state, onSaved, onDeleted }: ItemDetailsProp
       </span>
     </DetailRow>
   );
-  const collectionRow = card.collectionName ? (
-    <DetailRow icon={Folder} label="Collection">
-      {card.collectionName}
+  const collectionNames = formatCollectionNames(card.collections);
+  const collectionRow = collectionNames ? (
+    <DetailRow icon={Folder} label={card.collections.length > 1 ? "Collections" : "Collection"}>
+      {collectionNames}
     </DetailRow>
   ) : null;
   const updatedRow = (

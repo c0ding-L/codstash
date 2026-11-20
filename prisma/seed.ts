@@ -344,17 +344,22 @@ async function main() {
         description: collection.description,
         isFavorite: collection.isFavorite ?? false,
         userId: user.id,
+        // Each item is created through its link to this collection.
         items: {
           create: collection.items.map((item) => ({
-            title: item.title,
-            description: item.description,
-            content: item.content ?? null,
-            url: item.url ?? null,
-            language: item.language ?? null,
-            isPinned: item.isPinned ?? false,
-            isFavorite: item.isFavorite ?? false,
-            userId: user.id,
-            typeId: typeIds.get(item.type)!,
+            item: {
+              create: {
+                title: item.title,
+                description: item.description,
+                content: item.content ?? null,
+                url: item.url ?? null,
+                language: item.language ?? null,
+                isPinned: item.isPinned ?? false,
+                isFavorite: item.isFavorite ?? false,
+                userId: user.id,
+                typeId: typeIds.get(item.type)!,
+              },
+            },
           })),
         },
       },

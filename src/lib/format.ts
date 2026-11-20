@@ -31,3 +31,8 @@ export function formatFileSize(bytes: number) {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+/** An item's collections as one line, "React, Hooks"; null when it is in none. */
+export function formatCollectionNames(collections: { name: string }[]) {
+  return collections.length > 0 ? collections.map(({ name }) => name).join(", ") : null;
+}

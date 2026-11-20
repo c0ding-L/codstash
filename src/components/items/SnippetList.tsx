@@ -3,7 +3,7 @@ import { Pin, Star } from "lucide-react";
 import { ItemCopyButton } from "@/components/items/ItemCopyButton";
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
 import type { DashboardItem, SnippetPreview } from "@/lib/db/items";
-import { formatRelativeTime } from "@/lib/format";
+import { formatCollectionNames, formatRelativeTime } from "@/lib/format";
 import { highlightCode } from "@/lib/highlight";
 
 interface SnippetListProps {
@@ -45,6 +45,7 @@ function SnippetRow({
   html: string | null;
   now: string;
 }) {
+  const collectionNames = formatCollectionNames(item.collections);
   return (
     <li className="group relative grid transition-colors hover:bg-foreground/[0.02] sm:grid-cols-[minmax(0,1fr)_minmax(0,3fr)]">
       <ItemDrawerTrigger item={item} />
@@ -77,10 +78,10 @@ function SnippetRow({
             {preview.language ? <span aria-hidden>/ </span> : null}
             {preview.lineCount === 1 ? "1 line" : `${preview.lineCount} lines`}
           </span>
-          {item.collectionName ? (
+          {collectionNames ? (
             <span className="whitespace-nowrap">
               <span aria-hidden>/ </span>
-              {item.collectionName}
+              {collectionNames}
             </span>
           ) : null}
           <span className="whitespace-nowrap">

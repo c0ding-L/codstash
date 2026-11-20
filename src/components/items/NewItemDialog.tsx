@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 import { type CreatableType, createItem, type CreateItemField, type CreateItemInput } from "@/actions/items";
 import { FileUpload } from "@/components/items/FileUpload";
-import { ContentField, Field, TagsField, useFieldErrors } from "@/components/items/item-form-fields";
+import { CollectionsField, ContentField, Field, TagsField, useFieldErrors } from "@/components/items/item-form-fields";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -89,6 +89,7 @@ function NewItemForm({ saving, startSaving, onCreated }: NewItemFormProps) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");
+  const [collectionIds, setCollectionIds] = useState<string[]>([]);
   const [content, setContent] = useState("");
   const [language, setLanguage] = useState("");
   const [url, setUrl] = useState("");
@@ -111,6 +112,7 @@ function NewItemForm({ saving, startSaving, onCreated }: NewItemFormProps) {
       title,
       description,
       tags: toTags(tags),
+      collectionIds,
       ...(hasContent && { content }),
       ...(hasLanguage && { language }),
       ...(hasUrl && { url }),
@@ -212,6 +214,17 @@ function NewItemForm({ saving, startSaving, onCreated }: NewItemFormProps) {
       ) : null}
 
       <TagsField id={id} value={tags} error={messageFor("tags")} inputProps={fieldProps("tags", setTags)} />
+
+      <CollectionsField
+        id={id}
+        value={collectionIds}
+        error={messageFor("collectionIds")}
+        disabled={saving}
+        onChange={(ids) => {
+          setCollectionIds(ids);
+          clearFor("collectionIds");
+        }}
+      />
 
       <DialogFooter>
         <DialogClose render={<Button type="button" variant="ghost" />} disabled={saving}>

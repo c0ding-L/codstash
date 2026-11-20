@@ -124,7 +124,8 @@ model Collection {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  items Item[]
+  // Links, not items: an item can sit in several collections.
+  items ItemCollection[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -157,9 +158,8 @@ model Item {
   typeId String
   type   ItemType @relation(fields: [typeId], references: [id], onDelete: Restrict)
 
-  // Deleting a collection keeps its items and leaves them uncategorised.
-  collectionId String?
-  collection   Collection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+  // Zero, one or several. Deleting a collection drops only its links, so the items stay.
+  collections ItemCollection[]
 
   tags ItemTag[]
 
@@ -168,11 +168,9 @@ model Item {
 
   @@index([userId])
   @@index([typeId])
-  @@index([collectionId])
   @@index([userId, updatedAt])
   @@index([userId, isPinned])
   @@index([userId, isFavorite])
-  @@index([collectionId, typeId])
 }
 
 model Tag {
@@ -189,6 +187,18 @@ model Tag {
   // A user cannot create the same tag twice.
   @@unique([userId, name])
   @@index([userId])
+}
+
+model ItemCollection {
+  itemId       String
+  collectionId String
+  addedAt      DateTime @default(now())
+
+  item       Item       @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@id([itemId, collectionId])
+  @@index([collectionId])
 }
 
 model ItemTag {

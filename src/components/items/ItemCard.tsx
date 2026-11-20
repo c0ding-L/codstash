@@ -4,7 +4,7 @@ import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
 import { Card, CardContent } from "@/components/ui/card";
 import { TypeIconTile } from "@/components/items/TypeIconTile";
 import type { DashboardItem } from "@/lib/db/items";
-import { formatFileSize, formatRelativeTime } from "@/lib/format";
+import { formatCollectionNames, formatFileSize, formatRelativeTime } from "@/lib/format";
 import { ringClasses, toColorToken, toItemTypeSlug, washClasses } from "@/lib/item-type-ui";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +15,7 @@ interface ItemCardProps {
 }
 
 export function ItemCard({ item, now }: ItemCardProps) {
+  const collectionNames = formatCollectionNames(item.collections);
   const slug = toItemTypeSlug(item.type.slug);
   const color = toColorToken(item.type.color);
 
@@ -52,7 +53,7 @@ export function ItemCard({ item, now }: ItemCardProps) {
           ) : null}
 
           <div className="mt-auto flex flex-wrap items-center gap-x-2 pt-1 text-xs text-muted-foreground">
-            {item.collectionName ? <span>{item.collectionName}</span> : null}
+            {collectionNames ? <span>{collectionNames}</span> : null}
             {item.fileSize ? <span>{formatFileSize(item.fileSize)}</span> : null}
             <span>{formatRelativeTime(item.updatedAt.toISOString(), now)}</span>
           </div>

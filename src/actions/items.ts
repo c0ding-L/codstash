@@ -3,6 +3,7 @@
 import { z } from "zod";
 
 import { auth } from "@/auth";
+import { ownsCollections } from "@/lib/db/collections";
 import { fromObjectMetadata, isOwnKey } from "@/lib/files";
 import { deleteObjectsQuietly, headObject } from "@/lib/r2";
 import {
@@ -22,6 +23,8 @@ export interface UpdateItemInput {
   url?: string | null;
   language?: string | null;
   tags: string[];
+  /** Replaces every collection the item is in; empty takes it out of all of them. */
+  collectionIds: string[];
 }
 
 export type UpdateItemField = keyof UpdateItemInput;
@@ -54,6 +57,7 @@ const ITEM_LIMITS = {
   language: 50,
   tag: 50,
   tags: 20,
+  collections: 20,
 } as const;
 
 function optionalText(max: number, label: string) {
@@ -89,7 +93,14 @@ const updateItemSchema = z.object({
         .max(ITEM_LIMITS.tag, `Each tag can be at most ${ITEM_LIMITS.tag} characters.`),
     )
     .max(ITEM_LIMITS.tags, `An item can have at most ${ITEM_LIMITS.tags} tags.`),
+  collectionIds: z
+    .array(z.string().min(1, "Choose a collection from the list."))
+    .max(ITEM_LIMITS.collections, `An item can be in at most ${ITEM_LIMITS.collections} collections.`)
+    // Deduplicated here, so the cap and the ownership check count each one once.
+    .transform((ids) => [...new Set(ids)]),
 });
+
+const UNKNOWN_COLLECTION = "One of the chosen collections no longer exists. Choose again.";
 
 function isNotFound(error: unknown) {
   return typeof error === "object" && error !== null && "code" in error && error.code === "P2025";
@@ -111,6 +122,11 @@ export async function updateItem(itemId: string, input: UpdateItemInput): Promis
   try {
     const session = await auth();
     if (!session?.user?.id) return { success: false, data: null, error: "You are not signed in." };
+
+    // `connect` does not filter on the owner, so the ids are checked here.
+    if (!(await ownsCollections(session.user.id, parsed.data.collectionIds))) {
+      return { success: false, data: null, error: UNKNOWN_COLLECTION, field: "collectionIds" };
+    }
 
     // The query filters on the owner, so another user's item is not found either.
     const { card, detail } = await updateItemQuery(session.user.id, itemId, parsed.data);
@@ -140,6 +156,8 @@ export interface CreateItemInput {
   /** File and image items: the key `/api/upload` returned for the uploaded file. */
   fileKey?: string;
   tags: string[];
+  /** The collections to add it to; empty for none. */
+  collectionIds: string[];
 }
 
 export type CreateItemField = keyof CreateItemInput;
@@ -153,6 +171,7 @@ const CREATE_ITEM_FIELDS: ReadonlySet<string> = new Set<CreateItemField>([
   "language",
   "fileKey",
   "tags",
+  "collectionIds",
 ]);
 
 export type CreateItemResult =
@@ -164,6 +183,7 @@ const baseFields = {
   title: updateItemSchema.shape.title,
   description: updateItemSchema.shape.description,
   tags: updateItemSchema.shape.tags,
+  collectionIds: updateItemSchema.shape.collectionIds,
 };
 const contentField = updateItemSchema.shape.content;
 const languageField = updateItemSchema.shape.language;
@@ -212,6 +232,16 @@ export async function createItem(input: CreateItemInput): Promise<CreateItemResu
     if (!session?.user?.id) return { success: false, data: null, error: "You are not signed in." };
 
     const userId = session.user.id;
+
+    // `connect` does not filter on the owner, so the ids are checked here.
+    if (!(await ownsCollections(userId, parsed.data.collectionIds))) {
+      // The form uploads again on the next try, so this upload would point nowhere.
+      if ("fileKey" in parsed.data) {
+        const { fileKey } = parsed.data;
+        if (isOwnKey(userId, fileKey) && !(await isFileKeyInUse(userId, fileKey))) await deleteObjectsQuietly([fileKey]);
+      }
+      return { success: false, data: null, error: UNKNOWN_COLLECTION, field: "collectionIds" };
+    }
 
     if (parsed.data.type !== "file" && parsed.data.type !== "image") {
       const card = await createItemQuery(userId, parsed.data);

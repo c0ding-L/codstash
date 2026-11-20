@@ -1,6 +1,6 @@
 import { cache } from "react";
 
-import type { Prisma } from "@/generated/prisma/client";
+import { Prisma } from "@/generated/prisma/client";
 
 import { clampLimit, MAX_COLLECTION_LIMIT } from "@/lib/db/limits";
 import { prisma } from "@/lib/prisma";
@@ -92,9 +92,10 @@ interface TypeCount {
 }
 
 /**
- * Item counts per type for each collection, from one `groupBy`, so the cost
- * scales with collections × types rather than with every item row. A collection
- * with no items has no entry.
+ * Item counts per type for each collection, grouped in the database, so the
+ * cost scales with collections × types rather than with every item row. A
+ * collection with no items has no entry. Raw SQL because Prisma's `groupBy`
+ * cannot group the links by a column of the linked item.
  */
 async function loadTypeCounts(
   userId: string,
@@ -103,16 +104,17 @@ async function loadTypeCounts(
   const byCollection = new Map<string, TypeCount[]>();
   if (collectionIds.length === 0) return byCollection;
 
-  const groups = await prisma.item.groupBy({
-    by: ["collectionId", "typeId"],
-    where: { userId, collectionId: { in: collectionIds } },
-    _count: { _all: true },
-  });
+  const groups = await prisma.$queryRaw<{ collectionId: string; typeId: string; count: bigint }[]>`
+    SELECT ic."collectionId", i."typeId", COUNT(*) AS "count"
+    FROM "ItemCollection" ic
+    JOIN "Item" i ON i."id" = ic."itemId"
+    WHERE i."userId" = ${userId} AND ic."collectionId" IN (${Prisma.join(collectionIds)})
+    GROUP BY ic."collectionId", i."typeId"
+  `;
 
   for (const group of groups) {
-    if (!group.collectionId) continue;
     const counts = byCollection.get(group.collectionId) ?? [];
-    counts.push({ typeId: group.typeId, count: group._count._all });
+    counts.push({ typeId: group.typeId, count: Number(group.count) });
     byCollection.set(group.collectionId, counts);
   }
 
@@ -246,4 +248,27 @@ export async function createCollection(
   });
 
   return { ...created, itemCount: 0, types: [] };
+}
+
+export interface CollectionOption {
+  id: string;
+  name: string;
+}
+
+/** The user's collections for the item forms' picker, by name, up to the ceiling. */
+export async function getCollectionOptions(userId: string): Promise<CollectionOption[]> {
+  return prisma.collection.findMany({
+    where: { userId },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+    take: MAX_COLLECTION_LIMIT,
+  });
+}
+
+/** Whether every one of these ids is a collection the user owns. */
+export async function ownsCollections(userId: string, collectionIds: string[]): Promise<boolean> {
+  const ids = [...new Set(collectionIds)];
+  if (ids.length === 0) return true;
+  const owned = await prisma.collection.count({ where: { userId, id: { in: ids } } });
+  return owned === ids.length;
 }

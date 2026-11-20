@@ -53,7 +53,7 @@ async function main() {
           title: "Smoke Item",
           userId: user.id,
           typeId: type.id,
-          collectionId: collection.id,
+          collections: { create: { collectionId: collection.id } },
         },
       });
       const tag = await tx.tag.create({ data: { name: "smoke", userId: user.id } });
@@ -61,11 +61,11 @@ async function main() {
 
       const readBack = await tx.item.findUniqueOrThrow({
         where: { id: item.id },
-        include: { type: true, collection: true, tags: { include: { tag: true } } },
+        include: { type: true, collections: { include: { collection: true } }, tags: { include: { tag: true } } },
       });
       console.log(
         `  created and read back "${readBack.title}" ` +
-          `(type ${readBack.type.name}, collection ${readBack.collection?.name}, ` +
+          `(type ${readBack.type.name}, collection ${readBack.collections[0]?.collection.name}, ` +
           `${readBack.tags.length} tag)`,
       );
 

@@ -1,11 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { ChevronDown, X } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import { CodeEditor } from "@/components/items/CodeEditor";
 import { MarkdownEditor } from "@/components/items/MarkdownEditor";
 import { TagBadges } from "@/components/items/TagBadges";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import type { CollectionOption } from "@/lib/db/collections";
 import { isCodeType } from "@/lib/code-language";
 import { toTags } from "@/lib/tags";
 import type { ItemTypeSlug } from "@/types/item-type";
@@ -124,6 +134,130 @@ export function TagsField({ id, value, error, inputProps }: TagsFieldProps) {
       hint={tags.length > 0 ? <TagBadges tags={tags} /> : "Separate tags with commas."}
     >
       <Input value={value} placeholder="react, hooks" {...inputProps} />
+    </Field>
+  );
+}
+
+type CollectionOptionsState =
+  | { status: "loading" }
+  | { status: "ready"; options: CollectionOption[] }
+  | { status: "error" };
+
+/**
+ * The user's collections, read from `/api/collections` when the form mounts.
+ * Both forms mount when they open, so a collection made a moment ago is listed.
+ */
+function useCollectionOptions(): CollectionOptionsState {
+  const [state, setState] = useState<CollectionOptionsState>({ status: "loading" });
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/collections", { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        setState({ status: "ready", options: (await response.json()) as CollectionOption[] });
+      })
+      .catch((error: unknown) => {
+        if (!controller.signal.aborted) {
+          console.error("[items] could not load collections:", error);
+          setState({ status: "error" });
+        }
+      });
+    return () => controller.abort();
+  }, []);
+
+  return state;
+}
+
+interface CollectionsFieldProps {
+  /** The form's `useId`; the field's id is `${id}-collectionIds`. */
+  id: string;
+  value: string[];
+  /** Names for ids already chosen, shown before the options arrive. */
+  known?: CollectionOption[];
+  error?: string;
+  disabled?: boolean;
+  onChange: (ids: string[]) => void;
+}
+
+/** A multi-select of the user's collections, the chosen ones listed as removable badges. */
+export function CollectionsField({ id, value, known = [], error, disabled, onChange }: CollectionsFieldProps) {
+  const fieldId = `${id}-collectionIds`;
+  const state = useCollectionOptions();
+  const options = state.status === "ready" ? state.options : [];
+
+  const nameOf = new Map([...known, ...options].map(({ id: optionId, name }) => [optionId, name]));
+  const chosen = value.map((optionId) => ({ id: optionId, name: nameOf.get(optionId) ?? "Unknown collection" }));
+
+  const toggle = (optionId: string, checked: boolean) =>
+    onChange(checked ? [...value, optionId] : value.filter((other) => other !== optionId));
+
+  const placeholder =
+    state.status === "loading"
+      ? "Loading collections…"
+      : state.status === "error"
+        ? "Could not load collections"
+        : options.length === 0
+          ? "No collections yet"
+          : value.length === 0
+            ? "Choose collections"
+            : `${value.length} selected`;
+
+  return (
+    <Field
+      id={fieldId}
+      label="Collections"
+      error={error}
+      hint={
+        chosen.length > 0 ? (
+          <span className="flex flex-wrap gap-1">
+            {chosen.map(({ id: optionId, name }) => (
+              <Badge key={optionId} variant="secondary" className="pr-0.5">
+                {name}
+                <button
+                  type="button"
+                  className="rounded-full p-0.5 hover:bg-foreground/10 disabled:pointer-events-none"
+                  aria-label={`Remove from ${name}`}
+                  disabled={disabled}
+                  onClick={() => toggle(optionId, false)}
+                >
+                  <X className="size-3" aria-hidden />
+                </button>
+              </Badge>
+            ))}
+          </span>
+        ) : undefined
+      }
+    >
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              id={fieldId}
+              type="button"
+              variant="outline"
+              className="w-full justify-between font-normal"
+              aria-invalid={error !== undefined || undefined}
+              aria-describedby={`${fieldId}-message`}
+              disabled={disabled || state.status !== "ready" || options.length === 0}
+            />
+          }
+        >
+          <span className={value.length === 0 ? "text-muted-foreground" : undefined}>{placeholder}</span>
+          <ChevronDown className="text-muted-foreground" aria-hidden />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          {options.map((option) => (
+            <DropdownMenuCheckboxItem
+              key={option.id}
+              checked={value.includes(option.id)}
+              onCheckedChange={(checked) => toggle(option.id, checked)}
+            >
+              <span className="truncate">{option.name}</span>
+            </DropdownMenuCheckboxItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </Field>
   );
 }

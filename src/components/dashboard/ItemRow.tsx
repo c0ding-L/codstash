@@ -3,12 +3,13 @@ import { Pin, Star } from "lucide-react";
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
 import { TypeIconTile } from "@/components/items/TypeIconTile";
 import type { DashboardItem } from "@/lib/db/items";
-import { formatFileSize, formatRelativeTime } from "@/lib/format";
+import { formatCollectionNames, formatFileSize, formatRelativeTime } from "@/lib/format";
 import { colorClasses, toColorToken, toItemTypeSlug } from "@/lib/item-type-ui";
 import { cn } from "@/lib/utils";
 
 /** `now` is passed in so labels measure against the wall clock, not MOCK_NOW. */
 export function ItemRow({ item, now }: { item: DashboardItem; now: string }) {
+  const collectionNames = formatCollectionNames(item.collections);
   const slug = toItemTypeSlug(item.type.slug);
   const color = toColorToken(item.type.color);
 
@@ -38,7 +39,7 @@ export function ItemRow({ item, now }: { item: DashboardItem; now: string }) {
 
         <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
           <span className={cn(color && colorClasses[color])}>{item.type.name}</span>
-          {item.collectionName ? <span>· {item.collectionName}</span> : null}
+          {collectionNames ? <span>· {collectionNames}</span> : null}
           {item.fileSize ? <span>· {formatFileSize(item.fileSize)}</span> : null}
         </div>
       </div>

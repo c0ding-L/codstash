@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatFileSize, formatRelativeTime } from "@/lib/format";
+import { formatCollectionNames, formatFileSize, formatRelativeTime } from "@/lib/format";
 
 describe("formatRelativeTime", () => {
   const now = "2026-08-15T12:00:00.000Z";
@@ -45,5 +45,15 @@ describe("formatFileSize", () => {
     [2_418_704, "2.3 MB"],
   ])("labels %d bytes as %s", (bytes, label) => {
     expect(formatFileSize(bytes)).toBe(label);
+  });
+});
+
+describe("formatCollectionNames", () => {
+  it("joins the names in the order given", () => {
+    expect(formatCollectionNames([{ name: "DevOps" }, { name: "React" }])).toBe("DevOps, React");
+  });
+
+  it("is null for an item in no collection", () => {
+    expect(formatCollectionNames([])).toBeNull();
   });
 });

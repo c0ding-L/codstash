@@ -20,13 +20,18 @@ export interface DashboardItem {
   updatedAt: Date;
   /** `Item.typeId` is required, so every item has one. */
   type: { slug: string; name: string; color: string | null };
-  /** Null once a collection is deleted — `Item.collectionId` is SetNull. */
-  collectionName: string | null;
+  /** The collections the item is in, by name; empty when it is in none. */
+  collections: ItemCollectionRef[];
+}
+
+export interface ItemCollectionRef {
+  id: string;
+  name: string;
 }
 
 /**
- * Shared shape for both reads. The type and the collection name come back with
- * the items so neither section has to look them up per row.
+ * Shared shape for both reads. The type and the collections come back with the
+ * items so neither section has to look them up per row.
  */
 const dashboardItemSelect = {
   id: true,
@@ -39,17 +44,28 @@ const dashboardItemSelect = {
   isFavorite: true,
   updatedAt: true,
   type: { select: { slug: true, name: true, color: true } },
-  collection: { select: { name: true } },
+  collections: {
+    select: { collection: { select: { id: true, name: true } } },
+    orderBy: { collection: { name: "asc" } },
+  },
 } as const;
 
-/** What the select above returns: a `DashboardItem` with the relation unflattened. */
-type SelectedItem = Omit<DashboardItem, "collectionName"> & {
-  collection: { name: string } | null;
+/** What the select above returns: a `DashboardItem` with the links unflattened. */
+type SelectedItem = Omit<DashboardItem, "collections"> & {
+  collections: { collection: ItemCollectionRef }[];
 };
 
 function toDashboardItem(item: SelectedItem): DashboardItem {
-  const { collection, ...rest } = item;
-  return { ...rest, collectionName: collection?.name ?? null };
+  const { collections, ...rest } = item;
+  return { ...rest, collections: collections.map(({ collection }) => collection) };
+}
+
+/**
+ * The links of an item to these collections, one per distinct id. The caller
+ * checks the ids are the user's first: `connect` does not filter on the owner.
+ */
+function collectionLinks(collectionIds: string[]) {
+  return [...new Set(collectionIds)].map((id) => ({ collection: { connect: { id } } }));
 }
 
 /** Pinned items, newest first, up to the ceiling. Empty when nothing is pinned. */
@@ -282,6 +298,8 @@ export interface ItemUpdate {
   language?: string | null;
   /** Replaces every tag on the item. */
   tags: string[];
+  /** Replaces every collection the item is in. Must be the user's own. */
+  collectionIds: string[];
 }
 
 /**
@@ -306,18 +324,20 @@ function tagLinks(userId: string, tags: string[]) {
  * Prisma's P2025 just as a missing one does, and nothing is read beforehand.
  *
  * Tags are rewritten in the same write: every link is dropped, then each name
- * is linked to this user's tag of that name, created if they have none.
+ * is linked to this user's tag of that name, created if they have none. The
+ * collections are rewritten the same way.
  */
 export async function updateItem(
   userId: string,
   id: string,
-  { tags, ...fields }: ItemUpdate,
+  { tags, collectionIds, ...fields }: ItemUpdate,
 ): Promise<{ card: DashboardItem; detail: ItemDetail }> {
   const updated = await prisma.item.update({
     where: { id, userId },
     data: {
       ...fields,
       tags: { deleteMany: {}, create: tagLinks(userId, tags) },
+      collections: { deleteMany: {}, create: collectionLinks(collectionIds) },
     },
     select: {
       ...dashboardItemSelect,
@@ -357,6 +377,8 @@ export interface ItemCreate {
   fileSize?: number;
   contentType?: "text" | "file";
   tags: string[];
+  /** The collections to add it to. Must be the user's own. */
+  collectionIds: string[];
 }
 
 /**
@@ -366,7 +388,7 @@ export interface ItemCreate {
  */
 export async function createItem(
   userId: string,
-  { type: slug, tags, ...fields }: ItemCreate,
+  { type: slug, tags, collectionIds, ...fields }: ItemCreate,
 ): Promise<DashboardItem> {
   const type = await prisma.itemType.findFirst({
     where: { slug, userId: null, isSystem: true },
@@ -380,6 +402,7 @@ export async function createItem(
       user: { connect: { id: userId } },
       type: { connect: { id: type.id } },
       tags: { create: tagLinks(userId, tags) },
+      collections: { create: collectionLinks(collectionIds) },
     },
     select: dashboardItemSelect,
   });
@@ -390,7 +413,8 @@ export async function createItem(
 /**
  * Deletes the item and returns its R2 key, if it had a file, so the caller can
  * delete that too. Filtered on the owner, so another user's item throws
- * Prisma's P2025 just as a missing one does. Its tag links cascade; the tags stay.
+ * Prisma's P2025 just as a missing one does. Its tag and collection links
+ * cascade; the tags and collections stay.
  */
 export async function deleteItem(userId: string, id: string): Promise<{ fileUrl: string | null }> {
   return prisma.item.delete({ where: { id, userId }, select: { fileUrl: true } });

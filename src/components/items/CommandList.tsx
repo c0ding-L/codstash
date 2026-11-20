@@ -4,7 +4,7 @@ import { CommandCopyButton } from "@/components/items/CommandCopyButton";
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
 import { commandFirstLine, tokenizeCommand, type CommandTokenKind } from "@/lib/command-text";
 import type { DashboardItem } from "@/lib/db/items";
-import { formatRelativeTime } from "@/lib/format";
+import { formatCollectionNames, formatRelativeTime } from "@/lib/format";
 
 const tokenClasses: Record<CommandTokenKind, string> = {
   program: "text-cyan-400",
@@ -52,6 +52,7 @@ function CommandRow({
   command?: { text: string; isCut: boolean };
   now: string;
 }) {
+  const collectionNames = formatCollectionNames(item.collections);
   const { line, hasMore } = commandFirstLine(command.text);
 
   return (
@@ -73,8 +74,8 @@ function CommandRow({
 
       <div className="flex shrink-0 items-center gap-3 text-xs text-muted-foreground">
         <span>
-          {item.collectionName ? (
-            <span className="hidden sm:inline">{item.collectionName} / </span>
+          {collectionNames ? (
+            <span className="hidden sm:inline">{collectionNames} / </span>
           ) : null}
           {formatRelativeTime(item.updatedAt.toISOString(), now)}
         </span>

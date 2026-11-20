@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import { createItem, deleteItem, updateItem } from "@/actions/items";
 import { auth } from "@/auth";
+import { ownsCollections } from "@/lib/db/collections";
 import {
   createItem as createItemQuery,
   deleteItem as deleteItemQuery,
@@ -12,6 +13,7 @@ import { deleteObjectsQuietly, headObject } from "@/lib/r2";
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/db/items", () => ({ createItem: vi.fn(), updateItem: vi.fn(), deleteItem: vi.fn(), isFileKeyInUse: vi.fn() }));
+vi.mock("@/lib/db/collections", () => ({ ownsCollections: vi.fn() }));
 vi.mock("@/lib/r2", () => ({ headObject: vi.fn(), deleteObjectsQuietly: vi.fn() }));
 
 const session = auth as unknown as Mock;
@@ -21,6 +23,7 @@ const createQuery = createItemQuery as unknown as Mock;
 const head = headObject as unknown as Mock;
 const deleteObjects = deleteObjectsQuietly as unknown as Mock;
 const keyInUse = isFileKeyInUse as unknown as Mock;
+const owns = ownsCollections as unknown as Mock;
 
 const USER_ID = "user_1";
 
@@ -35,7 +38,7 @@ const card = {
   isFavorite: false,
   updatedAt: new Date(1),
   type: { slug: "snippet", name: "Snippet", color: null },
-  collectionName: null,
+  collections: [],
 };
 const detail = { content: "body", url: null, fileName: null, language: null, createdAt: new Date(0), tags: [] };
 
@@ -47,6 +50,7 @@ beforeEach(() => {
   deleteObjects.mockResolvedValue(undefined);
   createQuery.mockResolvedValue(card);
   keyInUse.mockResolvedValue(false);
+  owns.mockResolvedValue(true);
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -54,35 +58,35 @@ describe("updateItem", () => {
   it("refuses when not signed in", async () => {
     session.mockResolvedValue(null);
 
-    const result = await updateItem("item_1", { title: "Title", tags: [] });
+    const result = await updateItem("item_1", { title: "Title", tags: [], collectionIds: [] });
 
     expect(result).toEqual({ success: false, data: null, error: "You are not signed in." });
     expect(query).not.toHaveBeenCalled();
   });
 
   it.each([
-    ["an empty title", { title: "", tags: [] }, "Title is required.", "title"],
-    ["a title of only spaces", { title: "   ", tags: [] }, "Title is required.", "title"],
-    ["an invalid URL", { title: "Link", url: "not a url", tags: [] }, "Enter a valid URL.", "url"],
-    ["an empty tag", { title: "Title", tags: ["bash", " "] }, "Tags cannot be empty.", "tags"],
-    ["a title over 200 characters", { title: "a".repeat(201), tags: [] }, "Title can be at most 200 characters.", "title"],
+    ["an empty title", { title: "", tags: [], collectionIds: [] }, "Title is required.", "title"],
+    ["a title of only spaces", { title: "   ", tags: [], collectionIds: [] }, "Title is required.", "title"],
+    ["an invalid URL", { title: "Link", url: "not a url", tags: [], collectionIds: [] }, "Enter a valid URL.", "url"],
+    ["an empty tag", { title: "Title", tags: ["bash", " "], collectionIds: [] }, "Tags cannot be empty.", "tags"],
+    ["a title over 200 characters", { title: "a".repeat(201), tags: [], collectionIds: [] }, "Title can be at most 200 characters.", "title"],
     [
       "a description over 2,000 characters",
-      { title: "Title", description: "a".repeat(2_001), tags: [] },
+      { title: "Title", description: "a".repeat(2_001), tags: [], collectionIds: [] },
       "Description can be at most 2,000 characters.",
       "description",
     ],
     [
       "content over 100,000 characters",
-      { title: "Title", content: "a".repeat(100_001), tags: [] },
+      { title: "Title", content: "a".repeat(100_001), tags: [], collectionIds: [] },
       "Content can be at most 100,000 characters.",
       "content",
     ],
-    ["a language over 50 characters", { title: "Title", language: "a".repeat(51), tags: [] }, "Language can be at most 50 characters.", "language"],
-    ["a tag over 50 characters", { title: "Title", tags: ["a".repeat(51)] }, "Each tag can be at most 50 characters.", "tags"],
+    ["a language over 50 characters", { title: "Title", language: "a".repeat(51), tags: [], collectionIds: [] }, "Language can be at most 50 characters.", "language"],
+    ["a tag over 50 characters", { title: "Title", tags: ["a".repeat(51)], collectionIds: [] }, "Each tag can be at most 50 characters.", "tags"],
     [
       "more than 20 tags",
-      { title: "Title", tags: Array.from({ length: 21 }, (_, i) => `tag${i}`) },
+      { title: "Title", tags: Array.from({ length: 21 }, (_, i) => `tag${i}`), collectionIds: [] },
       "An item can have at most 20 tags.",
       "tags",
     ],
@@ -99,31 +103,31 @@ describe("updateItem", () => {
       title: "  Title ",
       description: " About ",
       url: " https://example.com ",
-      tags: [" bash ", "ci"],
+      tags: [" bash ", "ci"], collectionIds: [],
     });
 
     expect(query).toHaveBeenCalledWith(USER_ID, "item_1", {
       title: "Title",
       description: "About",
       url: "https://example.com",
-      tags: ["bash", "ci"],
+      tags: ["bash", "ci"], collectionIds: [],
     });
   });
 
   it("keeps the content exactly as typed, since indentation and newlines are part of code", async () => {
-    await updateItem("item_1", { title: "Title", content: "  indented\n\n", tags: [] });
+    await updateItem("item_1", { title: "Title", content: "  indented\n\n", tags: [], collectionIds: [] });
 
     expect(query.mock.calls[0]![2].content).toBe("  indented\n\n");
   });
 
   it("clears content of only whitespace", async () => {
-    await updateItem("item_1", { title: "Title", content: " \n ", tags: [] });
+    await updateItem("item_1", { title: "Title", content: " \n ", tags: [], collectionIds: [] });
 
     expect(query.mock.calls[0]![2].content).toBeNull();
   });
 
   it("clears a field left blank, and leaves out the fields not sent", async () => {
-    await updateItem("item_1", { title: "Title", description: "  ", url: "", tags: [] });
+    await updateItem("item_1", { title: "Title", description: "  ", url: "", tags: [], collectionIds: [] });
 
     const data = query.mock.calls[0]![2];
     expect(data).toMatchObject({ description: null, url: null });
@@ -132,7 +136,7 @@ describe("updateItem", () => {
   });
 
   it("returns the card and the detail, with the date as the drawer receives it", async () => {
-    const result = await updateItem("item_1", { title: "Title", tags: [] });
+    const result = await updateItem("item_1", { title: "Title", tags: [], collectionIds: [] });
 
     expect(result).toEqual({
       success: true,
@@ -144,7 +148,7 @@ describe("updateItem", () => {
   it("reports an item that does not exist or is not the user's", async () => {
     query.mockRejectedValue(Object.assign(new Error("not found"), { code: "P2025" }));
 
-    const result = await updateItem("someone_elses", { title: "Title", tags: [] });
+    const result = await updateItem("someone_elses", { title: "Title", tags: [], collectionIds: [] });
 
     expect(result).toEqual({ success: false, data: null, error: "This item no longer exists." });
   });
@@ -152,7 +156,7 @@ describe("updateItem", () => {
   it("reports any other failure without the details", async () => {
     query.mockRejectedValue(new Error("connection lost"));
 
-    const result = await updateItem("item_1", { title: "Title", tags: [] });
+    const result = await updateItem("item_1", { title: "Title", tags: [], collectionIds: [] });
 
     expect(result).toEqual({ success: false, data: null, error: "Could not save the item. Try again." });
   });
@@ -162,31 +166,31 @@ describe("createItem", () => {
   it("refuses when not signed in", async () => {
     session.mockResolvedValue(null);
 
-    const result = await createItem({ type: "note", title: "Title", tags: [] });
+    const result = await createItem({ type: "note", title: "Title", tags: [], collectionIds: [] });
 
     expect(result).toEqual({ success: false, data: null, error: "You are not signed in." });
     expect(createQuery).not.toHaveBeenCalled();
   });
 
   it.each([
-    ["an empty title", { type: "note", title: " ", tags: [] }, "Title is required.", "title"],
-    ["a link without a URL", { type: "link", title: "Docs", tags: [] }, "URL is required.", "url"],
-    ["a link with a blank URL", { type: "link", title: "Docs", url: "  ", tags: [] }, "URL is required.", "url"],
-    ["a link with an invalid URL", { type: "link", title: "Docs", url: "nope", tags: [] }, "Enter a valid URL.", "url"],
-    ["an empty tag", { type: "note", title: "Title", tags: ["a", " "] }, "Tags cannot be empty.", "tags"],
-    ["a file without an upload", { type: "file", title: "Title", tags: [] }, "Choose a file to upload.", "fileKey"],
-    ["an image with a blank key", { type: "image", title: "Title", fileKey: "", tags: [] }, "Choose a file to upload.", "fileKey"],
-    ["an unknown type", { type: "custom", title: "Title", tags: [] }, "Choose a type.", "type"],
-    ["a title over 200 characters", { type: "note", title: "a".repeat(201), tags: [] }, "Title can be at most 200 characters.", "title"],
+    ["an empty title", { type: "note", title: " ", tags: [], collectionIds: [] }, "Title is required.", "title"],
+    ["a link without a URL", { type: "link", title: "Docs", tags: [], collectionIds: [] }, "URL is required.", "url"],
+    ["a link with a blank URL", { type: "link", title: "Docs", url: "  ", tags: [], collectionIds: [] }, "URL is required.", "url"],
+    ["a link with an invalid URL", { type: "link", title: "Docs", url: "nope", tags: [], collectionIds: [] }, "Enter a valid URL.", "url"],
+    ["an empty tag", { type: "note", title: "Title", tags: ["a", " "], collectionIds: [] }, "Tags cannot be empty.", "tags"],
+    ["a file without an upload", { type: "file", title: "Title", tags: [], collectionIds: [] }, "Choose a file to upload.", "fileKey"],
+    ["an image with a blank key", { type: "image", title: "Title", fileKey: "", tags: [], collectionIds: [] }, "Choose a file to upload.", "fileKey"],
+    ["an unknown type", { type: "custom", title: "Title", tags: [], collectionIds: [] }, "Choose a type.", "type"],
+    ["a title over 200 characters", { type: "note", title: "a".repeat(201), tags: [], collectionIds: [] }, "Title can be at most 200 characters.", "title"],
     [
       "more than 20 tags",
-      { type: "note", title: "Title", tags: Array.from({ length: 21 }, (_, i) => `tag${i}`) },
+      { type: "note", title: "Title", tags: Array.from({ length: 21 }, (_, i) => `tag${i}`), collectionIds: [] },
       "An item can have at most 20 tags.",
       "tags",
     ],
     [
       "a snippet language over 50 characters",
-      { type: "snippet", title: "Title", language: "a".repeat(51), tags: [] },
+      { type: "snippet", title: "Title", language: "a".repeat(51), tags: [], collectionIds: [] },
       "Language can be at most 50 characters.",
       "language",
     ],
@@ -205,7 +209,7 @@ describe("createItem", () => {
       description: " About ",
       content: "  const a = 1;\n",
       language: " ts ",
-      tags: [" react ", "hooks"],
+      tags: [" react ", "hooks"], collectionIds: [],
     });
 
     expect(createQuery).toHaveBeenCalledWith(USER_ID, {
@@ -214,12 +218,12 @@ describe("createItem", () => {
       description: "About",
       content: "  const a = 1;\n",
       language: "ts",
-      tags: ["react", "hooks"],
+      tags: ["react", "hooks"], collectionIds: [],
     });
   });
 
   it("creates a link with its URL", async () => {
-    await createItem({ type: "link", title: "Docs", url: " https://example.com ", tags: [] });
+    await createItem({ type: "link", title: "Docs", url: " https://example.com ", tags: [], collectionIds: [] });
 
     expect(createQuery.mock.calls[0]![1]).toMatchObject({ type: "link", url: "https://example.com" });
   });
@@ -231,13 +235,13 @@ describe("createItem", () => {
       content: "body",
       language: "ts",
       url: "https://example.com",
-      tags: [],
+      tags: [], collectionIds: [],
       // Not part of the input type, as a tampered request might send it.
       ...({ userId: "someone_else" } as object),
     });
 
     const data = createQuery.mock.calls[0]![1];
-    expect(data).toEqual({ type: "note", title: "Title", content: "body", tags: [] });
+    expect(data).toEqual({ type: "note", title: "Title", content: "body", tags: [], collectionIds: [] });
   });
 
   it.each([
@@ -253,7 +257,7 @@ describe("createItem", () => {
       content: "body",
       language: "bash",
       url: "https://example.com",
-      tags: [],
+      tags: [], collectionIds: [],
     });
 
     const data = createQuery.mock.calls[0]![1];
@@ -263,13 +267,13 @@ describe("createItem", () => {
   });
 
   it("stores blank fields as null", async () => {
-    await createItem({ type: "snippet", title: "Title", description: " ", content: " \n ", language: "", tags: [] });
+    await createItem({ type: "snippet", title: "Title", description: " ", content: " \n ", language: "", tags: [], collectionIds: [] });
 
     expect(createQuery.mock.calls[0]![1]).toMatchObject({ description: null, content: null, language: null });
   });
 
   it("returns the new card", async () => {
-    const result = await createItem({ type: "note", title: "Title", tags: [] });
+    const result = await createItem({ type: "note", title: "Title", tags: [], collectionIds: [] });
 
     expect(result).toEqual({ success: true, data: card, error: null });
   });
@@ -277,9 +281,76 @@ describe("createItem", () => {
   it("reports a failure without the details", async () => {
     createQuery.mockRejectedValue(new Error("connection lost"));
 
-    const result = await createItem({ type: "note", title: "Title", tags: [] });
+    const result = await createItem({ type: "note", title: "Title", tags: [], collectionIds: [] });
 
     expect(result).toEqual({ success: false, data: null, error: "Could not create the item. Try again." });
+  });
+});
+
+describe("collections on an item", () => {
+  const UNKNOWN = "One of the chosen collections no longer exists. Choose again.";
+
+  it("passes the chosen collections through once each, after checking they are the user's", async () => {
+    await updateItem("item_1", { title: "Title", tags: [], collectionIds: ["col_a", "col_b", "col_a"] });
+
+    expect(owns).toHaveBeenCalledWith(USER_ID, ["col_a", "col_b"]);
+    expect(query.mock.calls[0]![2].collectionIds).toEqual(["col_a", "col_b"]);
+  });
+
+  it("creates an item in the chosen collections", async () => {
+    await createItem({ type: "note", title: "Title", tags: [], collectionIds: ["col_a"] });
+
+    expect(owns).toHaveBeenCalledWith(USER_ID, ["col_a"]);
+    expect(createQuery.mock.calls[0]![1].collectionIds).toEqual(["col_a"]);
+  });
+
+  it("refuses a collection that is not the user's on update, naming the field", async () => {
+    owns.mockResolvedValue(false);
+
+    const result = await updateItem("item_1", { title: "Title", tags: [], collectionIds: ["someone_elses"] });
+
+    expect(result).toEqual({ success: false, data: null, error: UNKNOWN, field: "collectionIds" });
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  it("refuses a collection that is not the user's on create, naming the field", async () => {
+    owns.mockResolvedValue(false);
+
+    const result = await createItem({ type: "note", title: "Title", tags: [], collectionIds: ["someone_elses"] });
+
+    expect(result).toEqual({ success: false, data: null, error: UNKNOWN, field: "collectionIds" });
+    expect(createQuery).not.toHaveBeenCalled();
+  });
+
+  it("deletes an unused upload when a chosen collection is refused", async () => {
+    owns.mockResolvedValue(false);
+    const fileKey = `${USER_ID}/0f8fad5b-d9cb-469f-a165-70867728950e/report.pdf`;
+
+    await createItem({ type: "file", title: "Report", fileKey, tags: [], collectionIds: ["someone_elses"] });
+
+    expect(deleteObjects).toHaveBeenCalledWith([fileKey]);
+    expect(createQuery).not.toHaveBeenCalled();
+  });
+
+  it("rejects more than 20 collections before reaching the database", async () => {
+    const collectionIds = Array.from({ length: 21 }, (_, i) => `col_${i}`);
+
+    const result = await updateItem("item_1", { title: "Title", tags: [], collectionIds });
+
+    expect(result).toEqual({
+      success: false,
+      data: null,
+      error: "An item can be in at most 20 collections.",
+      field: "collectionIds",
+    });
+    expect(session).not.toHaveBeenCalled();
+  });
+
+  it("refuses an input without the collections", async () => {
+    const result = await updateItem("item_1", { title: "Title", tags: [] } as never);
+
+    expect(result).toMatchObject({ success: false, field: "collectionIds" });
+    expect(query).not.toHaveBeenCalled();
   });
 });
 
@@ -296,7 +367,7 @@ describe("createItem with an upload", () => {
       type: "file",
       title: " Report ",
       fileKey: KEY,
-      tags: [],
+      tags: [], collectionIds: [],
       // Not part of the input, as a tampered request might send them.
       ...({ fileSize: 1, fileName: "fake.pdf" } as object),
     });
@@ -305,7 +376,7 @@ describe("createItem with an upload", () => {
     expect(createQuery).toHaveBeenCalledWith(USER_ID, {
       type: "file",
       title: "Report",
-      tags: [],
+      tags: [], collectionIds: [],
       contentType: "file",
       fileUrl: KEY,
       fileName: "Rapport été.pdf",
@@ -319,7 +390,7 @@ describe("createItem with an upload", () => {
     ["a key that climbs out of the user's folder", `${USER_ID}/../user_2/report.pdf`],
     ["a key the server did not build", `${USER_ID}/report.pdf`],
   ])("refuses %s without asking R2", async (_name, fileKey) => {
-    const result = await createItem({ type: "file", title: "Report", fileKey, tags: [] });
+    const result = await createItem({ type: "file", title: "Report", fileKey, tags: [], collectionIds: [] });
 
     expect(result).toEqual({ success: false, data: null, error: NOT_FOUND, field: "fileKey" });
     expect(head).not.toHaveBeenCalled();
@@ -329,14 +400,14 @@ describe("createItem with an upload", () => {
   it("refuses a key with nothing behind it in R2", async () => {
     head.mockResolvedValue(null);
 
-    const result = await createItem({ type: "file", title: "Report", fileKey: KEY, tags: [] });
+    const result = await createItem({ type: "file", title: "Report", fileKey: KEY, tags: [], collectionIds: [] });
 
     expect(result).toEqual({ success: false, data: null, error: NOT_FOUND, field: "fileKey" });
     expect(createQuery).not.toHaveBeenCalled();
   });
 
   it("refuses a file uploaded as the other kind and deletes the unused upload", async () => {
-    const result = await createItem({ type: "image", title: "Report", fileKey: KEY, tags: [] });
+    const result = await createItem({ type: "image", title: "Report", fileKey: KEY, tags: [], collectionIds: [] });
 
     expect(result).toEqual({ success: false, data: null, error: NOT_FOUND, field: "fileKey" });
     expect(createQuery).not.toHaveBeenCalled();
@@ -347,7 +418,7 @@ describe("createItem with an upload", () => {
   it("keeps the object when the refused key is an existing item's", async () => {
     keyInUse.mockResolvedValue(true);
 
-    const result = await createItem({ type: "image", title: "Report", fileKey: KEY, tags: [] });
+    const result = await createItem({ type: "image", title: "Report", fileKey: KEY, tags: [], collectionIds: [] });
 
     expect(result).toEqual({ success: false, data: null, error: NOT_FOUND, field: "fileKey" });
     expect(deleteObjects).not.toHaveBeenCalled();
@@ -356,7 +427,7 @@ describe("createItem with an upload", () => {
   it("deletes nothing when the key has nothing behind it", async () => {
     head.mockResolvedValue(null);
 
-    await createItem({ type: "file", title: "Report", fileKey: KEY, tags: [] });
+    await createItem({ type: "file", title: "Report", fileKey: KEY, tags: [], collectionIds: [] });
 
     expect(keyInUse).not.toHaveBeenCalled();
     expect(deleteObjects).not.toHaveBeenCalled();
@@ -365,7 +436,7 @@ describe("createItem with an upload", () => {
   it("deletes the upload when the item cannot be saved", async () => {
     createQuery.mockRejectedValue(new Error("connection lost"));
 
-    const result = await createItem({ type: "file", title: "Report", fileKey: KEY, tags: [] });
+    const result = await createItem({ type: "file", title: "Report", fileKey: KEY, tags: [], collectionIds: [] });
 
     expect(result).toEqual({ success: false, data: null, error: "Could not create the item. Try again." });
     expect(deleteObjects).toHaveBeenCalledWith([KEY]);
@@ -374,7 +445,7 @@ describe("createItem with an upload", () => {
   it("refuses when not signed in, before looking at the key", async () => {
     session.mockResolvedValue(null);
 
-    const result = await createItem({ type: "file", title: "Report", fileKey: KEY, tags: [] });
+    const result = await createItem({ type: "file", title: "Report", fileKey: KEY, tags: [], collectionIds: [] });
 
     expect(result).toEqual({ success: false, data: null, error: "You are not signed in." });
     expect(head).not.toHaveBeenCalled();

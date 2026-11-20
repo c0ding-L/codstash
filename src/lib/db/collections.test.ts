@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import {
   aggregateCollectionTypes,
   createCollection,
+  getCollectionOptions,
+  ownsCollections,
   getFavoriteCollections,
   getItemTypes,
   getRecentCollections,
@@ -13,8 +15,8 @@ import { prisma } from "@/lib/prisma";
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
-    collection: { findMany: vi.fn(), create: vi.fn() },
-    item: { groupBy: vi.fn() },
+    $queryRaw: vi.fn(),
+    collection: { findMany: vi.fn(), create: vi.fn(), count: vi.fn() },
     itemType: { findMany: vi.fn() },
     user: { findUnique: vi.fn() },
   },
@@ -22,7 +24,13 @@ vi.mock("@/lib/prisma", () => ({
 
 const asMock = (fn: unknown) => fn as Mock;
 const findCollections = asMock(prisma.collection.findMany);
-const groupItems = asMock(prisma.item.groupBy);
+const groupItems = asMock(prisma.$queryRaw);
+
+/** The values bound into the type-count query: the user, then the collection ids. */
+function boundValues() {
+  const [, userId, ids] = groupItems.mock.calls[0]! as [unknown, string, { values: unknown[] }];
+  return { userId, ids: ids.values };
+}
 const findTypes = asMock(prisma.itemType.findMany);
 
 const USER = "user_a";
@@ -59,15 +67,16 @@ describe("account isolation", () => {
     await read();
 
     expect(findCollections.mock.calls[0]![0].where).toEqual(where);
-    expect(groupItems.mock.calls[0]![0].where).toEqual({ userId: USER, collectionId: { in: ["col_1"] } });
+    expect(boundValues()).toEqual({ userId: USER, ids: ["col_1"] });
   });
 });
 
 describe("getRecentCollections", () => {
   it("returns the counts with their types, most used first", async () => {
     groupItems.mockResolvedValue([
-      { collectionId: "col_1", typeId: "typ_snippet", _count: { _all: 1 } },
-      { collectionId: "col_1", typeId: "typ_link", _count: { _all: 2 } },
+      // Postgres counts come back as bigint.
+      { collectionId: "col_1", typeId: "typ_snippet", count: BigInt(1) },
+      { collectionId: "col_1", typeId: "typ_link", count: BigInt(2) },
     ]);
 
     const [collection] = await getRecentCollections(USER);
@@ -143,5 +152,40 @@ describe("createCollection", () => {
         data: { name: "React", description: null, user: { connect: { id: USER } } },
       }),
     );
+  });
+});
+
+describe("getCollectionOptions", () => {
+  it("lists only that user's collections, by name", async () => {
+    await getCollectionOptions(USER);
+
+    expect(findCollections.mock.calls[0]![0]).toMatchObject({
+      where: { userId: USER },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+      take: MAX_COLLECTION_LIMIT,
+    });
+  });
+});
+
+describe("ownsCollections", () => {
+  const countRows = asMock(prisma.collection.count);
+
+  it("is true when every distinct id is one of the user's", async () => {
+    countRows.mockResolvedValue(2);
+
+    await expect(ownsCollections(USER, ["a", "b", "a"])).resolves.toBe(true);
+    expect(countRows.mock.calls[0]![0].where).toEqual({ userId: USER, id: { in: ["a", "b"] } });
+  });
+
+  it("is false when any id is not the user's", async () => {
+    countRows.mockResolvedValue(1);
+
+    await expect(ownsCollections(USER, ["mine", "theirs"])).resolves.toBe(false);
+  });
+
+  it("does not query for no ids", async () => {
+    await expect(ownsCollections(USER, [])).resolves.toBe(true);
+    expect(countRows).not.toHaveBeenCalled();
   });
 });

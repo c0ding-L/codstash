@@ -5,7 +5,7 @@ import { useId, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { updateItem, type UpdateItemField, type UpdateItemInput } from "@/actions/items";
-import { ContentField, Field, TagsField, useFieldErrors } from "@/components/items/item-form-fields";
+import { CollectionsField, ContentField, Field, TagsField, useFieldErrors } from "@/components/items/item-form-fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -39,6 +39,7 @@ export function ItemEditForm({ card, detail, slug, onCancel, onSaved, children }
   const [title, setTitle] = useState(card.title);
   const [description, setDescription] = useState(card.description ?? "");
   const [tags, setTags] = useState(detail.tags.join(", "));
+  const [collectionIds, setCollectionIds] = useState(() => card.collections.map(({ id: collectionId }) => collectionId));
   const [content, setContent] = useState(detail.content ?? "");
   const [language, setLanguage] = useState(detail.language ?? "");
   const [url, setUrl] = useState(detail.url ?? "");
@@ -55,6 +56,7 @@ export function ItemEditForm({ card, detail, slug, onCancel, onSaved, children }
       title,
       description,
       tags: toTags(tags),
+      collectionIds,
       ...(hasContent && { content }),
       ...(hasLanguage && { language }),
       ...(hasUrl && { url }),
@@ -113,6 +115,18 @@ export function ItemEditForm({ card, detail, slug, onCancel, onSaved, children }
         ) : null}
 
         <TagsField id={id} value={tags} error={messageFor("tags")} inputProps={fieldProps("tags", setTags)} />
+
+        <CollectionsField
+          id={id}
+          value={collectionIds}
+          known={card.collections}
+          error={messageFor("collectionIds")}
+          disabled={saving}
+          onChange={(ids) => {
+            setCollectionIds(ids);
+            clearFor("collectionIds");
+          }}
+        />
 
         <Separator />
 

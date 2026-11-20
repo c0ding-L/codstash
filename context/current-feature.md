@@ -1,16 +1,54 @@
-# Current Feature
+# Current Feature: Item Collections
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- An item can belong to **zero, one or several** collections.
+- The New Item and Edit Item forms have a **Collections** input: a multi-select of the signed-in
+  user's collections. Nothing selected means the item is in no collection.
+- Saving stores the chosen collections; editing replaces them (add and remove).
+- Only the user's own collections are accepted: the server drops or refuses any id that is not
+  the session user's.
+- After save, the item's collections show wherever the single collection name shows today
+  (dashboard rows, cards, command/snippet lists, item details), and the collection counts in the
+  sidebar and dashboard cards are right.
+- Existing items keep the collection they are in now.
+- Unit tests for the changed server actions and db functions.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- **Schema change needed.** Today `Item.collectionId` is a single nullable foreign key
+  (one-to-many). Several collections per item needs a many-to-many join. Plan: an explicit
+  `ItemCollection` join model like `ItemTag` (`itemId`, `collectionId`, `@@id([itemId,
+  collectionId])`, `@@index([collectionId])`, cascade on both sides, plus `addedAt` for
+  ordering), via `prisma migrate dev` (never `db push`). The migration copies every existing
+  `collectionId` into the join table, then drops `Item.collectionId` and its indexes. Deleting a
+  collection then removes only the links, so its items stay (same as today's `SetNull`).
+- Code that reads `collectionId` moves to the join:
+  - `loadTypeCounts` in `src/lib/db/collections.ts` (`groupBy ["collectionId", "typeId"]`)
+    becomes a count over `ItemCollection` joined to the item's type.
+  - `_count.items` on collections becomes a count of links.
+  - `DashboardItem.collectionName: string | null` becomes `collections: { id, name }[]`; the
+    four places that show it render the names joined with ", ".
+  - `prisma/seed.ts` writes links instead of `collectionId`.
+- **Input:** `collectionIds: string[]` on `CreateItemInput` and `UpdateItemInput`, capped (e.g.
+  20), deduplicated. The action checks the ids belong to the user before writing; an unknown id
+  fails with `field: "collectionIds"`.
+- **Picker UI:** a multi-select built from the existing `ui/` pieces (e.g. `dropdown-menu`
+  checkbox items, with the chosen ones shown as removable chips), in `item-form-fields.tsx` so
+  both forms share it. No new dependency unless the existing pieces can't do it.
+- **Where the options come from:** a `getCollectionOptions(userId)` lib/db function
+  (`{ id, name }[]`, by name), served by `GET /api/collections` and fetched when each form
+  mounts. Props did not fit: `NewItemDialog` sits in the layout's top bar, which must not wait
+  on data, and the edit form lives in the client drawer with no server parent.
+- The migration (`20261120120000_item_collections`) was written from `prisma migrate diff`
+  plus a copy step, because `migrate dev` refuses to generate a column drop non-interactively;
+  it was then applied with `migrate dev`. Develop: 17 items had a collection before, 17 links
+  after.
+- Out of scope: collection pages, adding/removing items from a collection's side, reordering.
 
 ---
 
@@ -1815,3 +1853,13 @@ Environment notes that outlive any one feature:
   375px because of an item list section, not the top bar — left for its own fix.
 - 2026-11-20 — Create Collection merged into `main` (`bdc4205`, fast-forward); branch
   `feature/create-collection` deleted. Feature completed.
+- 2026-11-20 — Item Collections: an item can be in zero, one or several collections. Schema:
+  `Item.collectionId` replaced by the `ItemCollection` join (`20261120120000_item_collections`,
+  existing links copied first; develop 17 before, 17 after). New and edit forms share a
+  `CollectionsField` multi-select (dropdown checkboxes + removable chips) fed by
+  `GET /api/collections`; `createItem`/`updateItem` take `collectionIds` (deduplicated, max 20,
+  ownership checked with `ownsCollections`; a refused upload is deleted). `DashboardItem.collections`
+  replaces `collectionName`, shown comma-joined; type counts per collection now a raw `GROUP BY`.
+  462 tests, build and lint green; picker checked in the browser, create/edit verified by the
+  author after restarting the dev server. **Production needs `prisma migrate deploy` before this
+  code runs there.**
