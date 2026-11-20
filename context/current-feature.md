@@ -1,60 +1,23 @@
-# Current Feature: Shared Item Form and Details
-
-Refactor, batch 1 of the 2026-11-20 code split review (items 1, 2 and 3). No behaviour or look
-changes. Branch: `refactor/item-form-details`.
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- **Shared form fields.** New `src/components/items/item-form-fields.tsx`, used by both
-  `NewItemDialog` (`NewItemForm`, 215 lines) and `ItemEditForm` (149 lines), which today copy each
-  other:
-  - `Field` (moved from `ItemEditForm`, which `NewItemDialog` imports it from today).
-  - `useFieldErrors<F extends string>(id)`: the error state, `fieldProps(field, setValue)`,
-    `messageFor(field)` and `setError`, generic over `CreateItemField` / `UpdateItemField`.
-  - `<ContentField>`: the code-or-Markdown editor block, written once instead of twice per form.
-  - `<TagsField>`: the tags input with its badge preview.
-- **Each form keeps its own field order** (decided by the author): create is Title, Description,
-  File, URL, Content, Language, Tags; edit is Title, Description, Content, Language, URL, Tags.
-  Only create has `autoFocus` on Title. The shared pieces are single fields, not a whole field
-  list, so each form still lays out its own.
-- **Type field sets in one place.** `CONTENT_TYPES` and `LANGUAGE_TYPES` (in both forms) and
-  `URL_TYPES` move to `src/lib/item-type-ui.ts` as `hasContentField(slug)`,
-  `hasLanguageField(slug)`, `hasUrlField(slug)`. Unit-tested.
-- **`toTags` moves to `src/lib`** (`src/lib/tags.ts`), unit-tested.
-- **`NewItemForm`'s type picker** becomes a `<TypePicker>` in `NewItemDialog.tsx`.
-- **`ItemDetails.tsx` (422 lines, 6 inner components) split into files** under
-  `src/components/items/`: `ItemActionBar.tsx` (`ActionBar` + `IconAction`), `ItemFileCard.tsx`
-  (`FileCard`), `ItemBody.tsx` (`ItemBody`). `DrawerHeader` and `DetailRow` stay, as they are
-  small and only used there. The misplaced doc comment above `FileCard` (lines 184-185) goes to
-  `ItemBody`.
-- **`<TagBadges tags>`**: the badge list, used by `ItemDetails`' Tags row and `<TagsField>`.
-- **Tag writes in `src/lib/db/items.ts`**: `createItem` and `updateItem` share a
-  `tagLinks(userId, tags)` helper (dedupe, then `connectOrCreate` per name). Small, about 12
-  lines twice; the existing db tests cover both callers.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- **Not in this batch:** the metadata list in `ItemDetails` stays as it is. Type, Collection and
-  Updated rows are already shared variables, and the view list adds language, file, size, tags
-  and skeletons, so a shared component would be mostly conditionals.
-- **Then the performance batch gets smaller:** the forms import `CodeEditor` and
-  `MarkdownEditor` only through `<ContentField>`, so audit finding 4 (`next/dynamic`) touches two
-  files: `item-form-fields.tsx` and `ItemBody.tsx` (the drawer's read-only view). Not folded in
-  here: one focused commit per change.
-- **Verification.** Components are not unit-tested; `tagLinks`, `toTags` and the field-set helpers
-  are. The rest in the browser, on the dev server with the demo user:
-  - create one item of each text type (snippet, prompt, command, note, link), and a file upload;
-  - edit each, including a tag change;
-  - a field error marked under its field, including a cap from the hardening batch (21 tags);
-  - the tag preview while typing, and the Tags row in the drawer;
-  - the drawer's actions (copy, edit, delete) still work, the file card's download too;
-    favorite and pin render as they do today.
-- **Clean-up:** items created land in the develop database under the demo user. Delete them
-  afterwards (and their R2 object for the upload) and check they are gone.
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — Shared Item Form and Details: the create and edit forms share their
+fields (`item-form-fields.tsx`), each keeping its own field order, and `ItemDetails` is split into
+`ItemActionBar`, `ItemFileCard` and `ItemBody`. Batch 1 of the 2026-11-20 code split review.
+Outcome in the History below.
 
 ---
 
@@ -1807,3 +1770,8 @@ Environment notes that outlive any one feature:
   afterwards and checked gone (demo back to 25 items). **Found, pre-existing:** a click on New
   Item right after creating an item is lost while `router.refresh()` re-renders; reproduced on
   `main` with the changes stashed, so not from this refactor.
+- 2026-11-20 — Shared Item Form and Details merged into `main` (`5d88ed9`, fast-forward); branch
+  `refactor/item-form-details` deleted. Feature completed. Left for later: batch 2 of the split
+  review (type tile, collection cards, `primaryTypeOf`), the auth fetch helper, the performance
+  batch (`next/dynamic` in `item-form-fields.tsx` and `ItemBody.tsx`), and the lost click on New
+  Item right after a create.
