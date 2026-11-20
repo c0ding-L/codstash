@@ -5,12 +5,13 @@ import { auth } from "@/auth";
 import {
   createItem as createItemQuery,
   deleteItem as deleteItemQuery,
+  isFileKeyInUse,
   updateItem as updateItemQuery,
 } from "@/lib/db/items";
 import { deleteObjectsQuietly, headObject } from "@/lib/r2";
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
-vi.mock("@/lib/db/items", () => ({ createItem: vi.fn(), updateItem: vi.fn(), deleteItem: vi.fn() }));
+vi.mock("@/lib/db/items", () => ({ createItem: vi.fn(), updateItem: vi.fn(), deleteItem: vi.fn(), isFileKeyInUse: vi.fn() }));
 vi.mock("@/lib/r2", () => ({ headObject: vi.fn(), deleteObjectsQuietly: vi.fn() }));
 
 const session = auth as unknown as Mock;
@@ -19,6 +20,7 @@ const deleteQuery = deleteItemQuery as unknown as Mock;
 const createQuery = createItemQuery as unknown as Mock;
 const head = headObject as unknown as Mock;
 const deleteObjects = deleteObjectsQuietly as unknown as Mock;
+const keyInUse = isFileKeyInUse as unknown as Mock;
 
 const USER_ID = "user_1";
 
@@ -44,6 +46,7 @@ beforeEach(() => {
   head.mockResolvedValue(null);
   deleteObjects.mockResolvedValue(undefined);
   createQuery.mockResolvedValue(card);
+  keyInUse.mockResolvedValue(false);
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -62,6 +65,27 @@ describe("updateItem", () => {
     ["a title of only spaces", { title: "   ", tags: [] }, "Title is required.", "title"],
     ["an invalid URL", { title: "Link", url: "not a url", tags: [] }, "Enter a valid URL.", "url"],
     ["an empty tag", { title: "Title", tags: ["bash", " "] }, "Tags cannot be empty.", "tags"],
+    ["a title over 200 characters", { title: "a".repeat(201), tags: [] }, "Title can be at most 200 characters.", "title"],
+    [
+      "a description over 2,000 characters",
+      { title: "Title", description: "a".repeat(2_001), tags: [] },
+      "Description can be at most 2,000 characters.",
+      "description",
+    ],
+    [
+      "content over 100,000 characters",
+      { title: "Title", content: "a".repeat(100_001), tags: [] },
+      "Content can be at most 100,000 characters.",
+      "content",
+    ],
+    ["a language over 50 characters", { title: "Title", language: "a".repeat(51), tags: [] }, "Language can be at most 50 characters.", "language"],
+    ["a tag over 50 characters", { title: "Title", tags: ["a".repeat(51)] }, "Each tag can be at most 50 characters.", "tags"],
+    [
+      "more than 20 tags",
+      { title: "Title", tags: Array.from({ length: 21 }, (_, i) => `tag${i}`) },
+      "An item can have at most 20 tags.",
+      "tags",
+    ],
   ])("rejects %s before reaching the database, naming the field", async (_name, input, error, field) => {
     const result = await updateItem("item_1", input);
 
@@ -153,6 +177,19 @@ describe("createItem", () => {
     ["a file without an upload", { type: "file", title: "Title", tags: [] }, "Choose a file to upload.", "fileKey"],
     ["an image with a blank key", { type: "image", title: "Title", fileKey: "", tags: [] }, "Choose a file to upload.", "fileKey"],
     ["an unknown type", { type: "custom", title: "Title", tags: [] }, "Choose a type.", "type"],
+    ["a title over 200 characters", { type: "note", title: "a".repeat(201), tags: [] }, "Title can be at most 200 characters.", "title"],
+    [
+      "more than 20 tags",
+      { type: "note", title: "Title", tags: Array.from({ length: 21 }, (_, i) => `tag${i}`) },
+      "An item can have at most 20 tags.",
+      "tags",
+    ],
+    [
+      "a snippet language over 50 characters",
+      { type: "snippet", title: "Title", language: "a".repeat(51), tags: [] },
+      "Language can be at most 50 characters.",
+      "language",
+    ],
   ])("rejects %s before reaching the database, naming the field", async (_name, input, error, field) => {
     const result = await createItem(input as Parameters<typeof createItem>[0]);
 
@@ -298,11 +335,31 @@ describe("createItem with an upload", () => {
     expect(createQuery).not.toHaveBeenCalled();
   });
 
-  it("refuses a file uploaded as the other kind", async () => {
+  it("refuses a file uploaded as the other kind and deletes the unused upload", async () => {
     const result = await createItem({ type: "image", title: "Report", fileKey: KEY, tags: [] });
 
     expect(result).toEqual({ success: false, data: null, error: NOT_FOUND, field: "fileKey" });
     expect(createQuery).not.toHaveBeenCalled();
+    expect(keyInUse).toHaveBeenCalledWith(USER_ID, KEY);
+    expect(deleteObjects).toHaveBeenCalledWith([KEY]);
+  });
+
+  it("keeps the object when the refused key is an existing item's", async () => {
+    keyInUse.mockResolvedValue(true);
+
+    const result = await createItem({ type: "image", title: "Report", fileKey: KEY, tags: [] });
+
+    expect(result).toEqual({ success: false, data: null, error: NOT_FOUND, field: "fileKey" });
+    expect(deleteObjects).not.toHaveBeenCalled();
+  });
+
+  it("deletes nothing when the key has nothing behind it", async () => {
+    head.mockResolvedValue(null);
+
+    await createItem({ type: "file", title: "Report", fileKey: KEY, tags: [] });
+
+    expect(keyInUse).not.toHaveBeenCalled();
+    expect(deleteObjects).not.toHaveBeenCalled();
   });
 
   it("deletes the upload when the item cannot be saved", async () => {

@@ -13,6 +13,7 @@ import {
   getPromptPreviews,
   getSnippetPreviews,
   getRecentItems,
+  isFileKeyInUse,
   updateItem,
 } from "@/lib/db/items";
 import { MAX_ITEM_LIMIT } from "@/lib/db/limits";
@@ -291,6 +292,21 @@ describe("deleteItem", () => {
     remove.mockRejectedValue(Object.assign(new Error("not found"), { code: "P2025" }));
 
     await expect(deleteItem(USER, "someone_elses")).rejects.toMatchObject({ code: "P2025" });
+  });
+});
+
+describe("isFileKeyInUse", () => {
+  it("looks for the key among that owner's items", async () => {
+    findFirst.mockResolvedValue({ id: "item_1" });
+
+    await expect(isFileKeyInUse(USER, "user_a/key/a.pdf")).resolves.toBe(true);
+    expect(findFirst.mock.calls[0]![0].where).toEqual({ userId: USER, fileUrl: "user_a/key/a.pdf" });
+  });
+
+  it("is false when no item stores it", async () => {
+    findFirst.mockResolvedValue(null);
+
+    await expect(isFileKeyInUse(USER, "user_a/key/a.pdf")).resolves.toBe(false);
   });
 });
 

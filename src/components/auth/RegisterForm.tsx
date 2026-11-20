@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
+const MAX_NAME_LENGTH = 100;
 
 export function RegisterForm() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export function RegisterForm() {
     const confirmPassword = String(form.get("confirmPassword") ?? "");
 
     if (!name) return setError("Name is required.");
+    if (name.length > MAX_NAME_LENGTH) return setError(`Name can be at most ${MAX_NAME_LENGTH} characters.`);
     if (!EMAIL_PATTERN.test(email)) return setError("Enter a valid email address.");
     if (password.length < MIN_PASSWORD_LENGTH) {
       return setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
@@ -84,7 +86,7 @@ export function RegisterForm() {
       <form onSubmit={onSubmit} className="grid gap-3" noValidate>
         <label className="grid gap-1.5 text-sm font-medium">
           Name
-          <Input name="name" autoComplete="name" required />
+          <Input name="name" autoComplete="name" maxLength={MAX_NAME_LENGTH} required />
         </label>
         <label className="grid gap-1.5 text-sm font-medium">
           Email

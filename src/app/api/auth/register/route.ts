@@ -10,6 +10,8 @@ import { issueVerificationEmail } from "@/lib/verification";
 
 const BCRYPT_ROUNDS = 12;
 const MIN_PASSWORD_LENGTH = 8;
+/** The name goes into the verification email, sent to an address the registrant typed. */
+const MAX_NAME_LENGTH = 100;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function fail(error: string, status: number) {
@@ -70,6 +72,9 @@ export async function POST(request: Request) {
   const normalizedEmail = email.trim().toLowerCase();
 
   if (!trimmedName) return fail("Name is required.", 400);
+  if (trimmedName.length > MAX_NAME_LENGTH) {
+    return fail(`Name can be at most ${MAX_NAME_LENGTH} characters.`, 400);
+  }
   if (!EMAIL_PATTERN.test(normalizedEmail)) return fail("Email is not valid.", 400);
   if (password.length < MIN_PASSWORD_LENGTH) {
     return fail(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`, 400);

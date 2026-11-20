@@ -415,6 +415,12 @@ export async function getItemFile(userId: string, id: string): Promise<{ fileUrl
   return { fileUrl: item.fileUrl, fileName: item.fileName ?? "file" };
 }
 
+/** Whether one of the user's items already stores this R2 key, so the object must stay. */
+export async function isFileKeyInUse(userId: string, fileKey: string): Promise<boolean> {
+  const item = await prisma.item.findFirst({ where: { userId, fileUrl: fileKey }, select: { id: true } });
+  return item !== null;
+}
+
 /** Every R2 key the user's items point at, for deleting the account. */
 export async function getItemFileKeys(userId: string): Promise<string[]> {
   const items = await prisma.item.findMany({

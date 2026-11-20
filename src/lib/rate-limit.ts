@@ -8,6 +8,10 @@ const LIMITS = {
   forgotPassword: { attempts: 3, window: "1 h" },
   resetPassword: { attempts: 5, window: "15 m" },
   resendVerification: { attempts: 3, window: "15 m" },
+  /** Per user: each upload lands in R2 before any item points at it. */
+  upload: { attempts: 20, window: "1 h" },
+  /** Per user: the current-password checks of change password and delete account. */
+  reauth: { attempts: 5, window: "15 m" },
 } satisfies Record<string, { attempts: number; window: Duration }>;
 
 export type RateLimitName = keyof typeof LIMITS;
@@ -34,7 +38,7 @@ function getLimiter(name: RateLimitName) {
     const url = process.env.UPSTASH_REDIS_REST_URL;
     const token = process.env.UPSTASH_REDIS_REST_TOKEN;
     if (!url || !token) {
-      console.warn("[rate-limit] UPSTASH_REDIS_REST_URL / TOKEN not set; auth rate limiting is off.");
+      console.warn("[rate-limit] UPSTASH_REDIS_REST_URL / TOKEN not set; rate limiting is off.");
       limiters = null;
     } else {
       const redis = new Redis({ url, token });

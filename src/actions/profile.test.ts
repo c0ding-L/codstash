@@ -6,6 +6,7 @@ import { changePassword, deleteAccount, type ActionResult } from "@/actions/prof
 import { auth, signIn, signOut } from "@/auth";
 import { getItemFileKeys } from "@/lib/db/items";
 import { prisma } from "@/lib/prisma";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { deleteObjectsQuietly } from "@/lib/r2";
 
 vi.mock("@/auth", () => ({ auth: vi.fn(), signIn: vi.fn(), signOut: vi.fn() }));
@@ -17,6 +18,10 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("@/lib/db/items", () => ({ getItemFileKeys: vi.fn() }));
 vi.mock("@/lib/r2", () => ({ deleteObjectsQuietly: vi.fn() }));
+vi.mock("@/lib/rate-limit", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/rate-limit")>()),
+  checkRateLimit: vi.fn(),
+}));
 vi.mock("bcryptjs", () => ({ default: { compare: vi.fn(), hash: vi.fn() } }));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
@@ -42,11 +47,13 @@ const compare = asMock(bcrypt.compare);
 const hash = asMock(bcrypt.hash);
 const session = asMock(auth);
 const transaction = asMock(prisma.$transaction);
+const rateLimit = asMock(checkRateLimit);
 
 const USER = { id: "user_1", email: "Ada@Example.com", password: "stored-hash" };
 
 beforeEach(() => {
   session.mockResolvedValue({ user: { id: USER.id } });
+  rateLimit.mockResolvedValue({ success: true, remaining: 4, reset: Date.now() });
   findUser.mockResolvedValue(USER);
   compare.mockResolvedValue(true);
   hash.mockResolvedValue("new-hash");
@@ -87,6 +94,17 @@ describe("changePassword", () => {
 
     expect(result.error).toBe("This account has no password to change.");
     expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("stops before checking the password once the re-auth limit is hit", async () => {
+    rateLimit.mockResolvedValue({ success: false, remaining: 0, reset: Date.now() + 10 * 60_000 });
+
+    const result = await changePassword(INITIAL, form(valid));
+
+    expect(rateLimit).toHaveBeenCalledWith("reauth", USER.id);
+    expect(result).toEqual({ success: false, error: "Too many attempts. Please try again in 10 minutes." });
+    expect(compare).not.toHaveBeenCalled();
+    expect(prisma.user.update).not.toHaveBeenCalled();
   });
 
   it("changes nothing when the current password is wrong", async () => {
@@ -146,6 +164,17 @@ describe("deleteAccount", () => {
 
     expect(result.error).toBe("Type your email to confirm.");
     expect(auth).not.toHaveBeenCalled();
+  });
+
+  it("stops before checking the password once the re-auth limit is hit", async () => {
+    rateLimit.mockResolvedValue({ success: false, remaining: 0, reset: Date.now() + 60_000 });
+
+    const result = await deleteAccount(INITIAL, form(confirm));
+
+    expect(rateLimit).toHaveBeenCalledWith("reauth", USER.id);
+    expect(result).toEqual({ success: false, error: "Too many attempts. Please try again in 1 minute." });
+    expect(compare).not.toHaveBeenCalled();
+    expect(transaction).not.toHaveBeenCalled();
   });
 
   it("requires a session", async () => {

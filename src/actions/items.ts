@@ -8,6 +8,7 @@ import { deleteObjectsQuietly, headObject } from "@/lib/r2";
 import {
   createItem as createItemQuery,
   deleteItem as deleteItemQuery,
+  isFileKeyInUse,
   updateItem as updateItemQuery,
   type DashboardItem,
   type ItemDetailJson,
@@ -42,15 +43,52 @@ function blankToNullUntrimmed(value: unknown) {
   return value.trim() ? value : null;
 }
 
-const optionalText = z.preprocess(blankToNull, z.string().nullable().optional());
+/**
+ * Caps on what one item can hold. Without them only the 1 MB action body limits a
+ * field, and every tag is its own upsert in the same write.
+ */
+const ITEM_LIMITS = {
+  title: 200,
+  description: 2_000,
+  content: 100_000,
+  language: 50,
+  tag: 50,
+  tags: 20,
+} as const;
+
+function optionalText(max: number, label: string) {
+  return z.preprocess(
+    blankToNull,
+    z.string().max(max, `${label} can be at most ${max.toLocaleString("en-US")} characters.`).nullable().optional(),
+  );
+}
 
 const updateItemSchema = z.object({
-  title: z.string().trim().min(1, "Title is required."),
-  description: optionalText,
-  content: z.preprocess(blankToNullUntrimmed, z.string().nullable().optional()),
-  language: optionalText,
+  title: z
+    .string()
+    .trim()
+    .min(1, "Title is required.")
+    .max(ITEM_LIMITS.title, `Title can be at most ${ITEM_LIMITS.title} characters.`),
+  description: optionalText(ITEM_LIMITS.description, "Description"),
+  content: z.preprocess(
+    blankToNullUntrimmed,
+    z
+      .string()
+      .max(ITEM_LIMITS.content, `Content can be at most ${ITEM_LIMITS.content.toLocaleString("en-US")} characters.`)
+      .nullable()
+      .optional(),
+  ),
+  language: optionalText(ITEM_LIMITS.language, "Language"),
   url: z.preprocess(blankToNull, z.url("Enter a valid URL.").nullable().optional()),
-  tags: z.array(z.string().trim().min(1, "Tags cannot be empty.")),
+  tags: z
+    .array(
+      z
+        .string()
+        .trim()
+        .min(1, "Tags cannot be empty.")
+        .max(ITEM_LIMITS.tag, `Each tag can be at most ${ITEM_LIMITS.tag} characters.`),
+    )
+    .max(ITEM_LIMITS.tags, `An item can have at most ${ITEM_LIMITS.tags} tags.`),
 });
 
 function isNotFound(error: unknown) {
@@ -124,10 +162,11 @@ export type CreateItemResult =
 
 const baseFields = {
   title: updateItemSchema.shape.title,
-  description: optionalText,
+  description: updateItemSchema.shape.description,
   tags: updateItemSchema.shape.tags,
 };
 const contentField = updateItemSchema.shape.content;
+const languageField = updateItemSchema.shape.language;
 const fileKeyField = z.string({ error: "Choose a file to upload." }).min(1, "Choose a file to upload.");
 
 const UPLOAD_NOT_FOUND = "The uploaded file was not found. Upload it again.";
@@ -139,8 +178,8 @@ const UPLOAD_NOT_FOUND = "The uploaded file was not found. Upload it again.";
 const createItemSchema = z.discriminatedUnion(
   "type",
   [
-    z.object({ type: z.literal("snippet"), ...baseFields, content: contentField, language: optionalText }),
-    z.object({ type: z.literal("command"), ...baseFields, content: contentField, language: optionalText }),
+    z.object({ type: z.literal("snippet"), ...baseFields, content: contentField, language: languageField }),
+    z.object({ type: z.literal("command"), ...baseFields, content: contentField, language: languageField }),
     z.object({ type: z.literal("prompt"), ...baseFields, content: contentField }),
     z.object({ type: z.literal("note"), ...baseFields, content: contentField }),
     z.object({
@@ -186,6 +225,9 @@ export async function createItem(input: CreateItemInput): Promise<CreateItemResu
     const head = isOwnKey(userId, fileKey) ? await headObject(fileKey) : null;
     const stored = fromObjectMetadata(head?.metadata);
     if (!head || stored?.kind !== fields.type) {
+      // Uploaded as the other kind: nothing will point at it, unless the key is an
+      // existing item's, sent again. Only an unused object is removed.
+      if (head && !(await isFileKeyInUse(userId, fileKey))) await deleteObjectsQuietly([fileKey]);
       return { success: false, data: null, error: UPLOAD_NOT_FOUND, field: "fileKey" };
     }
 

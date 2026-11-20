@@ -9,6 +9,7 @@ import { DEMO_USER_EMAIL } from "@/lib/db/collections";
 import { getItemFileKeys } from "@/lib/db/items";
 import { prisma } from "@/lib/prisma";
 import { deleteObjectsQuietly } from "@/lib/r2";
+import { checkRateLimit, tooManyAttemptsMessage } from "@/lib/rate-limit";
 
 const BCRYPT_ROUNDS = 12;
 const MIN_PASSWORD_LENGTH = 8;
@@ -43,6 +44,10 @@ export async function changePassword(_previous: ActionResult, formData: FormData
   try {
     const session = await auth();
     if (!session?.user?.id) return { success: false, error: "You are not signed in." };
+
+    // Caps password guesses from a session that is not its owner's.
+    const limit = await checkRateLimit("reauth", session.user.id);
+    if (!limit.success) return { success: false, error: tooManyAttemptsMessage(limit.reset) };
 
     const user = await prisma.user.findUnique({ where: { id: session.user.id } });
     if (!user?.password) return { success: false, error: "This account has no password to change." };
@@ -98,6 +103,10 @@ export async function deleteAccount(_previous: ActionResult, formData: FormData)
   try {
     const session = await auth();
     if (!session?.user?.id) return { success: false, error: "You are not signed in." };
+
+    // Caps password guesses from a session that is not its owner's.
+    const limit = await checkRateLimit("reauth", session.user.id);
+    if (!limit.success) return { success: false, error: tooManyAttemptsMessage(limit.reset) };
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
