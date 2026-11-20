@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import {
   aggregateCollectionTypes,
   createCollection,
+  getCollection,
+  getCollections,
   getCollectionOptions,
   ownsCollections,
   getFavoriteCollections,
@@ -16,7 +18,7 @@ import { prisma } from "@/lib/prisma";
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     $queryRaw: vi.fn(),
-    collection: { findMany: vi.fn(), create: vi.fn(), count: vi.fn() },
+    collection: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), count: vi.fn() },
     itemType: { findMany: vi.fn() },
     user: { findUnique: vi.fn() },
   },
@@ -107,6 +109,37 @@ describe("getRecentCollections", () => {
     await getRecentCollections(USER, MAX_COLLECTION_LIMIT + 1);
 
     expect(findCollections.mock.calls[0]![0].take).toBe(MAX_COLLECTION_LIMIT);
+  });
+});
+
+describe("getCollections", () => {
+  it("reads every collection the user owns, newest first, up to the ceiling", async () => {
+    const collections = await getCollections(USER);
+
+    expect(findCollections.mock.calls[0]![0]).toMatchObject({
+      where: { userId: USER },
+      orderBy: { updatedAt: "desc" },
+      take: MAX_COLLECTION_LIMIT,
+    });
+    expect(collections.map((collection) => collection.id)).toEqual(["col_1"]);
+  });
+});
+
+describe("getCollection", () => {
+  const findCollection = asMock(prisma.collection.findFirst);
+
+  it("looks the collection up by id and owner, so another user's is not found", async () => {
+    findCollection.mockResolvedValue(null);
+
+    expect(await getCollection(USER, "col_other")).toBeNull();
+    expect(findCollection.mock.calls[0]![0].where).toEqual({ id: "col_other", userId: USER });
+  });
+
+  it("returns the collection's name and description", async () => {
+    const row = { id: "col_1", name: "DevOps", description: "Infra notes" };
+    findCollection.mockResolvedValue(row);
+
+    expect(await getCollection(USER, "col_1")).toEqual(row);
   });
 });
 

@@ -5,52 +5,8 @@ import { Prisma } from "@/generated/prisma/client";
 import { clampLimit, MAX_COLLECTION_LIMIT } from "@/lib/db/limits";
 import { prisma } from "@/lib/prisma";
 
-/**
- * The dashboard has no session yet — NextAuth is installed but not configured.
- * Every query needs a `userId`, so the seeded demo account stands in for one.
- * This is the single seam to delete once auth lands: the queries below take a
- * `userId` and know nothing about the demo user.
- */
+/** The seeded demo account, which the profile page refuses to delete. */
 export const DEMO_USER_EMAIL = "demo@codstash.io";
-
-// `cache` memoises per request, so the five dashboard components that each ask
-// for the user share one query per render. It never outlives the request.
-export const getDemoUserId = cache(async () => {
-  const user = await prisma.user.findUnique({
-    where: { email: DEMO_USER_EMAIL },
-    select: { id: true },
-  });
-
-  if (!user) {
-    throw new Error(
-      `No user with email ${DEMO_USER_EMAIL}. Run \`npm run db:seed\` first.`,
-    );
-  }
-
-  return user.id;
-});
-
-export interface DemoUser {
-  name: string | null;
-  email: string;
-  image: string | null;
-}
-
-/** Footer avatar block — same demo account as `getDemoUserId`. */
-export const getDemoUser = cache(async (): Promise<DemoUser> => {
-  const user = await prisma.user.findUnique({
-    where: { email: DEMO_USER_EMAIL },
-    select: { name: true, email: true, image: true },
-  });
-
-  if (!user) {
-    throw new Error(
-      `No user with email ${DEMO_USER_EMAIL}. Run \`npm run db:seed\` first.`,
-    );
-  }
-
-  return user;
-});
 
 export interface ItemTypeRow {
   id: string;
@@ -231,6 +187,29 @@ export async function getRecentCollections(
     types: aggregateCollectionTypes(typeCounts.get(collection.id) ?? [], typeById),
   }));
 }
+
+/** Every collection the user owns, most recently updated first, up to the ceiling. */
+export async function getCollections(userId: string): Promise<RecentCollection[]> {
+  return getRecentCollections(userId, MAX_COLLECTION_LIMIT);
+}
+
+export interface CollectionSummary {
+  id: string;
+  name: string;
+  description: string | null;
+}
+
+/**
+ * One collection, or null when it does not exist or is another user's. Cached per
+ * request so the layout's 404 check and the page share one query.
+ */
+export const getCollection = cache(
+  async (userId: string, id: string): Promise<CollectionSummary | null> =>
+    prisma.collection.findFirst({
+      where: { id, userId },
+      select: { id: true, name: true, description: true },
+    }),
+);
 
 export interface CollectionCreate {
   name: string;

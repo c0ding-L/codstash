@@ -8,6 +8,7 @@ import {
   getItemDetail,
   getItemFile,
   getItemFileKeys,
+  getItemsByCollection,
   getItemsByType,
   getPinnedItems,
   getPromptPreviews,
@@ -60,6 +61,11 @@ describe("account isolation", () => {
     ["getPinnedItems", () => getPinnedItems(USER), { userId: USER, isPinned: true }],
     ["getRecentItems", () => getRecentItems(USER), { userId: USER }],
     ["getItemsByType", () => getItemsByType(USER, "snippet"), { userId: USER, type: { slug: "snippet" } }],
+    [
+      "getItemsByCollection",
+      () => getItemsByCollection(USER, "col_1"),
+      { userId: USER, collections: { some: { collectionId: "col_1" } } },
+    ],
   ])("%s reads only that user's items", async (_name, read, where) => {
     await read();
 
@@ -69,10 +75,34 @@ describe("account isolation", () => {
   it.each([
     ["getRecentItems", () => getRecentItems(USER), { userId: USER }],
     ["getItemsByType", () => getItemsByType(USER, "note"), { userId: USER, type: { slug: "note" } }],
+    [
+      "getItemsByCollection",
+      () => getItemsByCollection(USER, "col_1"),
+      { userId: USER, collections: { some: { collectionId: "col_1" } } },
+    ],
   ])("%s counts only that user's items", async (_name, read, where) => {
     await read();
 
     expect(count).toHaveBeenCalledWith({ where });
+  });
+});
+
+describe("getItemsByCollection", () => {
+  it("reads the newest first, up to the ceiling, and reports the full total", async () => {
+    count.mockResolvedValue(250);
+
+    const { totalCount } = await getItemsByCollection(USER, "col_1");
+
+    expect(totalCount).toBe(250);
+    expect(findMany.mock.calls[0]![0]).toMatchObject({ orderBy: { updatedAt: "desc" }, take: MAX_ITEM_LIMIT });
+  });
+
+  it("flattens the collections of each item", async () => {
+    findMany.mockResolvedValue([{ id: "a", collections: [{ collection: { id: "col_1", name: "DevOps" } }] }]);
+
+    const { items } = await getItemsByCollection(USER, "col_1");
+
+    expect(items[0]!.collections).toEqual([{ id: "col_1", name: "DevOps" }]);
   });
 });
 

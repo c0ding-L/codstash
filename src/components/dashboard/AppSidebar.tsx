@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock, Code2, FolderOpen, Settings, Star } from "lucide-react";
+import { Clock, Code2, Folders, Settings, Star } from "lucide-react";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
@@ -22,7 +22,6 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import {
-  getDemoUserId,
   getFavoriteCollections,
   getItemTypes,
   getSidebarRecentCollections,
@@ -77,12 +76,9 @@ async function AppSidebarBody() {
   // The proxy already keeps anonymous requests out of /dashboard; this only
   // narrows the type.
   const session = await auth();
-  if (!session?.user) redirect("/sign-in");
+  if (!session?.user?.id) redirect("/sign-in");
   const user = session.user;
-
-  // Collections and items still come from the demo account until the queries
-  // move to the session user.
-  const userId = await getDemoUserId();
+  const userId = session.user.id;
   const [itemTypes, favoriteCollections, recentCollections] = await Promise.all([
     getItemTypes(userId),
     getFavoriteCollections(userId),
@@ -96,17 +92,22 @@ async function AppSidebarBody() {
         <SidebarCollectionsGroup variant="favorite" collections={favoriteCollections} />
         <SidebarCollectionsGroup variant="recent" collections={recentCollections} />
 
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              tooltip="View all collections"
-              render={<Link href="/collections" />}
-            >
-              <FolderOpen aria-hidden />
-              <span>View all collections</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        {/* In a group like the entries above, so it gets their padding and lines up. */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  tooltip="View all collections"
+                  render={<Link href="/collections" />}
+                >
+                  <Folders aria-hidden />
+                  <span>View all collections</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
       </SidebarContent>
 
       <SidebarFooter>
@@ -200,7 +201,10 @@ function SidebarCollectionsGroup({ variant, collections }: SidebarCollectionsGro
 
             return (
               <SidebarMenuItem key={collection.id}>
-                <SidebarMenuButton tooltip={collection.name}>
+                <SidebarMenuButton
+                  tooltip={collection.name}
+                  render={<Link href={`/collections/${collection.id}`} />}
+                >
                   {variant === "favorite" ? (
                     <FavoriteIcon slug={slug} color={color} />
                   ) : (

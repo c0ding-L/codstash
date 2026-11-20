@@ -1,9 +1,9 @@
 import { connection } from "next/server";
 
 import { CollectionCard } from "@/components/dashboard/CollectionCard";
-import { getDemoUserId, getRecentCollections } from "@/lib/db/collections";
+import { getRecentCollections } from "@/lib/db/collections";
 
-export async function RecentCollections() {
+export async function RecentCollections({ userId }: { userId: string }) {
   // Without this the route still prerenders: a Prisma query is invisible to
   // Next's static analysis, so the rows — and `now` below — would be baked in
   // at build time and never change. `connection()` is what the docs prescribe
@@ -11,7 +11,6 @@ export async function RecentCollections() {
   // headers.
   await connection();
 
-  const userId = await getDemoUserId();
   const collections = await getRecentCollections(userId);
   // Real rows, so labels measure against the wall clock. The default anchors to
   // MOCK_NOW, which only suits the mock's fixed timestamps.

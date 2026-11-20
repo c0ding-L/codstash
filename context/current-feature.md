@@ -1,16 +1,41 @@
-# Current Feature
+# Current Feature: Collection Pages
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- `/collections` page lists all of the user's collections using the existing `CollectionCard`
+  (same grid as the dashboard's Recent collections), with a count and an empty state.
+- `/collections/[id]` page shows the collection's name (and description) and its items using
+  the existing item cards (`ItemCard`, opening the item drawer), with an empty state.
+- Unknown id, or a collection owned by another user, answers 404.
+- "View all collections" in the sidebar goes to `/collections`.
+- Every `CollectionCard` (dashboard and `/collections`) links to `/collections/[id]`.
+- The sidebar's favorite and recent collection entries link to `/collections/[id]`.
+- Dashboard collections, sidebar and stats read the session user instead of the demo account.
+- Both routes are protected by the proxy (signed-out users go to sign-in with a `callbackUrl`).
+- Unit tests for the new db queries; `npm test`, `npm run build` and `npm run lint` pass.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Sidebar link already points to `/collections` (`AppSidebar.tsx:103`); today it 404s. Only
+  the page is missing.
+- Pages follow the `items/[type]` pattern: async server page, `await connection()`, `auth()`
+  with redirect, plus `loading.tsx` and `error.tsx` like sibling routes.
+- Add `/collections/:path*` to the matcher in `src/proxy.ts`.
+- New db queries in `src/lib/db/`: all collections for a user (reuse `getRecentCollections`'
+  shape, `RecentCollection`, without the 6-card limit but still clamped), and a collection's
+  items scoped by `userId` — returning `DashboardItem` via `dashboardItemSelect` through the
+  `ItemCollection` join, so `ItemCard` can render them unchanged.
+- User id (decided: a): the new pages use `session.user.id`, and the dashboard collections,
+  sidebar and stats move from `getDemoUserId` to the session user, so a card never links to a
+  collection the page would 404 on.
+- Card link: wrap `CollectionCard` in a `next/link` (whole card clickable) rather than adding a
+  button, keeping its look unchanged.
+- Item list per type (commands, snippets, …) uses specialised lists; a collection mixes types,
+  so it uses the generic `ItemCard` grid (and `ImageCard` for images if it fits).
 
 ---
 

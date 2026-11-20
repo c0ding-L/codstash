@@ -1,4 +1,5 @@
 import { Clock, Star } from "lucide-react";
+import Link from "next/link";
 
 import { TypeIconTile } from "@/components/items/TypeIconTile";
 import { Card, CardContent } from "@/components/ui/card";
@@ -7,7 +8,7 @@ import { formatRelativeTime } from "@/lib/format";
 import { colorClasses, primaryTypeOf, ringClasses, toColorToken, toItemTypeSlug, washClasses } from "@/lib/item-type-ui";
 import { cn } from "@/lib/utils";
 
-/** A collection on the dashboard, accented by its most used type. `now` is the page's moment. */
+/** A collection card linking to its page, accented by its most used type. `now` is the page's moment. */
 export function CollectionCard({ collection, now }: { collection: RecentCollection; now: string }) {
   // Most-used type first, so it sets the card's accent.
   const primary = primaryTypeOf(collection);
@@ -24,6 +25,13 @@ export function CollectionCard({ collection, now }: { collection: RecentCollecti
       {primaryColor ? (
         <span className={cn("pointer-events-none absolute inset-0", washClasses[primaryColor])} aria-hidden />
       ) : null}
+
+      {/* An overlay, like `ItemDrawerTrigger`, so the whole card is the link. */}
+      <Link
+        href={`/collections/${collection.id}`}
+        aria-label={`Open ${collection.name}`}
+        className="absolute inset-0 z-10 rounded-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+      />
 
       <CardContent className="relative flex h-full flex-col gap-3">
         <div className="flex items-start justify-between">

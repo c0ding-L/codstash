@@ -2,14 +2,12 @@ import { FolderHeart, FolderOpen, Layers, Star } from "lucide-react";
 import { connection } from "next/server";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { getDemoUserId } from "@/lib/db/collections";
 import { getDashboardStats } from "@/lib/db/stats";
 
-export async function StatsCards() {
+export async function StatsCards({ userId }: { userId: string }) {
   // A Prisma query does not opt the route out of prerendering on its own.
   await connection();
 
-  const userId = await getDemoUserId();
   const stats = await getDashboardStats(userId);
 
   const cards = [

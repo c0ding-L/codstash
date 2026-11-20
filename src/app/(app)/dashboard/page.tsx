@@ -14,8 +14,6 @@ export const metadata: Metadata = {
 
 export default async function DashboardPage() {
   // The proxy already guards `/dashboard`; this also narrows the session's type.
-  // The item lists use the session because the drawer's route checks ownership
-  // against it. The other sections still read the demo account.
   const session = await auth();
   if (!session?.user?.id) redirect("/sign-in?callbackUrl=/dashboard");
 
@@ -28,8 +26,8 @@ export default async function DashboardPage() {
         </p>
       </div>
 
-      <StatsCards />
-      <RecentCollections />
+      <StatsCards userId={session.user.id} />
+      <RecentCollections userId={session.user.id} />
 
       <ItemDrawerProvider>
         <div className="grid gap-8 xl:grid-cols-2">

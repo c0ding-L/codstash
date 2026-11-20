@@ -129,6 +129,30 @@ export async function getItemsByType(
 }
 
 /**
+ * The user's items in one collection, most recently updated first, plus the total
+ * so the page can say when the ceiling cut the list short. The caller checks the
+ * collection is the user's; `userId` keeps another user's items out regardless.
+ */
+export async function getItemsByCollection(
+  userId: string,
+  collectionId: string,
+): Promise<{ items: DashboardItem[]; totalCount: number }> {
+  const where = { userId, collections: { some: { collectionId } } };
+
+  const [items, totalCount] = await Promise.all([
+    prisma.item.findMany({
+      where,
+      orderBy: { updatedAt: "desc" },
+      take: MAX_ITEM_LIMIT,
+      select: dashboardItemSelect,
+    }),
+    prisma.item.count({ where }),
+  ]);
+
+  return { items: items.map(toDashboardItem), totalCount };
+}
+
+/**
  * The text of each listed command, for the command list. Kept out of
  * `DashboardItem`, which the dashboard shares and the drawer trigger receives
  * whole; a command over the cap comes back cut, and its copy button fetches it.
