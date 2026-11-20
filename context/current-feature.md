@@ -1,51 +1,22 @@
 # Current Feature
 
-Security Hardening — input caps and rate limits from the 2026-11-19 code-scanner audit (findings
-1, 2, 6 and 7). Branch: `fix/security-hardening`.
-
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- **Item field caps** (`src/actions/items.ts`): add `.max()` to `updateItemSchema`, which
-  `baseFields` and the create schema reuse, so create and update both get them. Proposed limits:
-  title 200, description 2,000, language 50, each tag 50, at most 20 tags, content 100,000
-  characters. Today only the 1 MB server-action body limits them, and every tag becomes its own
-  `connectOrCreate` in `src/lib/db/items.ts:311,385`.
-- **Upload rate limit** (`src/app/api/upload/route.ts`): add an `upload` entry to `LIMITS` in
-  `src/lib/rate-limit.ts` (proposed 20 per hour), keyed by `userId` and checked after the
-  session, before the body is read. Answer 429 with `tooManyAttemptsResponse`.
-- **No orphan on a rejected upload** (`src/actions/items.ts`, the `UPLOAD_NOT_FOUND` branch):
-  when the key is the user's own and `head` exists but `kind` does not match, delete the object
-  (quietly, as on a failed insert) before returning the error.
-- **Re-auth rate limit** (`src/actions/profile.ts`): `changePassword` and `deleteAccount` check
-  a new `reauth` limit (proposed 5 per 15 minutes) keyed by `userId` before `bcrypt.compare`.
-- **Name cap at registration** (`src/app/api/auth/register/route.ts`): reject a trimmed name
-  longer than 100 characters (the name appears in the verification email). Match the cap in
-  `RegisterForm` (`maxLength` on the input). The profile has no name field, so this is the
-  only place a name is set.
-- Unit tests for each new cap and limit, next to the existing action and lib tests.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Limit values are proposals, to confirm before implementing.
-- `checkRateLimit` lets everything through when Upstash is not configured (as in tests), so
-  tests mock it.
-- **Deviations from the plan:**
-  - New `isFileKeyInUse` in `src/lib/db/items.ts`: a refused key can be an existing item's,
-    sent again, so the object is only deleted when no item stores it.
-  - The rate-limit warning now says "rate limiting is off", not "auth rate limiting": the
-    limits are no longer auth-only.
-  - `RegisterForm` checks the name length too, as well as `maxLength`.
-  - The caps also apply to existing items: one already over a cap (21 tags, say) cannot be
-    saved from the edit form until it is trimmed.
-- **Out of scope:** the `catch` branch of `createItem` still deletes the key when the insert
-  fails, whatever item stores it: the reused-key hazard of finding 9, which `fileUrl @unique`
-  would close. An R2 sweep or lifecycle rule for uploads no item refers to, a per-user
-  storage quota, a per-recipient throttle on the account-exists email (finding 8), and the
-  performance, index and duplication batches.
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — Security Hardening: caps on item fields, per-user rate limits on
+uploads and current-password checks, rejected uploads cleaned up, and a capped registration name
+(audit findings 1, 2, 6 and 7 of the 2026-11-19 code-scanner audit). Outcome in the History below.
 
 ---
 
@@ -1756,3 +1727,8 @@ Environment notes that outlive any one feature:
   error and toast, a 101-character name gets a 400; nothing written. The upload limit is not
   exercised: route code is outside Vitest, and hitting it live would lock the demo user's
   uploads for an hour.
+- 2026-11-20 — Security Hardening merged into `main` (`972a585`, fast-forward); branch
+  `fix/security-hardening` deleted. Feature completed. Left for later: the `catch` branch of
+  `createItem` still deletes the key on a failed insert whatever item stores it (finding 9,
+  closed by `fileUrl @unique`), an R2 sweep for unused uploads, a per-user storage quota, and a
+  per-recipient throttle on the account-exists email (finding 8).
