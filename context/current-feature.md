@@ -1,16 +1,60 @@
-# Current Feature
+# Current Feature: Shared Item Form and Details
+
+Refactor, batch 1 of the 2026-11-20 code split review (items 1, 2 and 3). No behaviour or look
+changes. Branch: `refactor/item-form-details`.
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- **Shared form fields.** New `src/components/items/item-form-fields.tsx`, used by both
+  `NewItemDialog` (`NewItemForm`, 215 lines) and `ItemEditForm` (149 lines), which today copy each
+  other:
+  - `Field` (moved from `ItemEditForm`, which `NewItemDialog` imports it from today).
+  - `useFieldErrors<F extends string>(id)`: the error state, `fieldProps(field, setValue)`,
+    `messageFor(field)` and `setError`, generic over `CreateItemField` / `UpdateItemField`.
+  - `<ContentField>`: the code-or-Markdown editor block, written once instead of twice per form.
+  - `<TagsField>`: the tags input with its badge preview.
+- **Each form keeps its own field order** (decided by the author): create is Title, Description,
+  File, URL, Content, Language, Tags; edit is Title, Description, Content, Language, URL, Tags.
+  Only create has `autoFocus` on Title. The shared pieces are single fields, not a whole field
+  list, so each form still lays out its own.
+- **Type field sets in one place.** `CONTENT_TYPES` and `LANGUAGE_TYPES` (in both forms) and
+  `URL_TYPES` move to `src/lib/item-type-ui.ts` as `hasContentField(slug)`,
+  `hasLanguageField(slug)`, `hasUrlField(slug)`. Unit-tested.
+- **`toTags` moves to `src/lib`** (`src/lib/tags.ts`), unit-tested.
+- **`NewItemForm`'s type picker** becomes a `<TypePicker>` in `NewItemDialog.tsx`.
+- **`ItemDetails.tsx` (422 lines, 6 inner components) split into files** under
+  `src/components/items/`: `ItemActionBar.tsx` (`ActionBar` + `IconAction`), `ItemFileCard.tsx`
+  (`FileCard`), `ItemBody.tsx` (`ItemBody`). `DrawerHeader` and `DetailRow` stay, as they are
+  small and only used there. The misplaced doc comment above `FileCard` (lines 184-185) goes to
+  `ItemBody`.
+- **`<TagBadges tags>`**: the badge list, used by `ItemDetails`' Tags row and `<TagsField>`.
+- **Tag writes in `src/lib/db/items.ts`**: `createItem` and `updateItem` share a
+  `tagLinks(userId, tags)` helper (dedupe, then `connectOrCreate` per name). Small, about 12
+  lines twice; the existing db tests cover both callers.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- **Not in this batch:** the metadata list in `ItemDetails` stays as it is. Type, Collection and
+  Updated rows are already shared variables, and the view list adds language, file, size, tags
+  and skeletons, so a shared component would be mostly conditionals.
+- **Then the performance batch gets smaller:** the forms import `CodeEditor` and
+  `MarkdownEditor` only through `<ContentField>`, so audit finding 4 (`next/dynamic`) touches two
+  files: `item-form-fields.tsx` and `ItemBody.tsx` (the drawer's read-only view). Not folded in
+  here: one focused commit per change.
+- **Verification.** Components are not unit-tested; `tagLinks`, `toTags` and the field-set helpers
+  are. The rest in the browser, on the dev server with the demo user:
+  - create one item of each text type (snippet, prompt, command, note, link), and a file upload;
+  - edit each, including a tag change;
+  - a field error marked under its field, including a cap from the hardening batch (21 tags);
+  - the tag preview while typing, and the Tags row in the drawer;
+  - the drawer's actions (copy, edit, delete) still work, the file card's download too;
+    favorite and pin render as they do today.
+- **Clean-up:** items created land in the develop database under the demo user. Delete them
+  afterwards (and their R2 object for the upload) and check they are gone.
 
 ---
 
@@ -1749,3 +1793,17 @@ Environment notes that outlive any one feature:
   phone, no horizontal scroll.
 - 2026-11-20 — Link List Copy and Logos merged into `main` (`f9eb5bd`, fast-forward); branch
   `feature/link-list-copy-logos` deleted. Feature completed.
+- 2026-11-20 — Started Shared Item Form and Details on branch `refactor/item-form-details`.
+  New `item-form-fields.tsx` (`Field`, `useFieldErrors`, `ContentField`, `TagsField`),
+  `TagBadges`, and `ItemActionBar` / `ItemFileCard` / `ItemBody` split out of `ItemDetails` (422
+  to 205 lines); `NewItemForm` gets a `TypePicker`; `toTags` in `src/lib/tags.ts`, field sets as
+  `hasContentField` / `hasLanguageField` / `hasUrlField`, and `tagLinks` in `src/lib/db/items.ts`.
+  Each form keeps its own field order. 433 tests, build and lint green. Verified on the dev
+  server with the demo user: create for every text type and a file upload, the tag preview
+  (repeats dropped), edit with the 21-tag cap error under Tags and cleared on typing, the saved
+  tags in the drawer, the drawer's Copy, Monaco and Language in the snippet edit form, and the
+  file card's download, and Delete from the drawer (toast, drawer closed, row gone without a
+  reload). The 7 test items, their R2 object and the 3 `rfcheck-*` tags deleted
+  afterwards and checked gone (demo back to 25 items). **Found, pre-existing:** a click on New
+  Item right after creating an item is lost while `router.refresh()` re-renders; reproduced on
+  `main` with the changes stashed, so not from this refactor.

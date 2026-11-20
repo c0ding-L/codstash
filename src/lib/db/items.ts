@@ -285,6 +285,22 @@ export interface ItemUpdate {
 }
 
 /**
+ * The tag links of an item, one per distinct name, each to this user's tag of
+ * that name, created if they have none. A repeated name would link the same tag
+ * twice, which the join's key forbids.
+ */
+function tagLinks(userId: string, tags: string[]) {
+  return [...new Set(tags)].map((name) => ({
+    tag: {
+      connectOrCreate: {
+        where: { userId_name: { userId, name } },
+        create: { name, userId },
+      },
+    },
+  }));
+}
+
+/**
  * Updates the item and returns both halves the drawer shows: the card and the
  * detail. One `update` filtered on the owner, so another user's item throws
  * Prisma's P2025 just as a missing one does, and nothing is read beforehand.
@@ -297,24 +313,11 @@ export async function updateItem(
   id: string,
   { tags, ...fields }: ItemUpdate,
 ): Promise<{ card: DashboardItem; detail: ItemDetail }> {
-  // A repeated name would link the same tag twice, which the join's key forbids.
-  const names = [...new Set(tags)];
-
   const updated = await prisma.item.update({
     where: { id, userId },
     data: {
       ...fields,
-      tags: {
-        deleteMany: {},
-        create: names.map((name) => ({
-          tag: {
-            connectOrCreate: {
-              where: { userId_name: { userId, name } },
-              create: { name, userId },
-            },
-          },
-        })),
-      },
+      tags: { deleteMany: {}, create: tagLinks(userId, tags) },
     },
     select: {
       ...dashboardItemSelect,
@@ -371,24 +374,12 @@ export async function createItem(
   });
   if (!type) throw new Error(`No system item type "${slug}".`);
 
-  // A repeated name would link the same tag twice, which the join's key forbids.
-  const names = [...new Set(tags)];
-
   const created = await prisma.item.create({
     data: {
       ...fields,
       user: { connect: { id: userId } },
       type: { connect: { id: type.id } },
-      tags: {
-        create: names.map((name) => ({
-          tag: {
-            connectOrCreate: {
-              where: { userId_name: { userId, name } },
-              create: { name, userId },
-            },
-          },
-        })),
-      },
+      tags: { create: tagLinks(userId, tags) },
     },
     select: dashboardItemSelect,
   });

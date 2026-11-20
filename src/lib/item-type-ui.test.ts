@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  hasContentField,
+  hasLanguageField,
+  hasUrlField,
   initialsFromName,
   itemTypeFromPathname,
   itemTypeFromSegment,
@@ -92,5 +95,27 @@ describe("initialsFromName", () => {
     ["  Grace   Brewster Hopper ", "GB"],
   ])("derives initials from %j", (name, initials) => {
     expect(initialsFromName(name)).toBe(initials);
+  });
+});
+
+describe("item form field sets", () => {
+  it.each<[ItemTypeSlug, boolean, boolean, boolean]>([
+    ["snippet", true, true, false],
+    ["command", true, true, false],
+    ["prompt", true, false, false],
+    ["note", true, false, false],
+    ["link", false, false, true],
+    ["file", false, false, false],
+    ["image", false, false, false],
+  ])("%s: content %s, language %s, URL %s", (slug, content, language, url) => {
+    expect(hasContentField(slug)).toBe(content);
+    expect(hasLanguageField(slug)).toBe(language);
+    expect(hasUrlField(slug)).toBe(url);
+  });
+
+  it("shows none of them for an unknown type", () => {
+    expect(hasContentField(null)).toBe(false);
+    expect(hasLanguageField(null)).toBe(false);
+    expect(hasUrlField(null)).toBe(false);
   });
 });

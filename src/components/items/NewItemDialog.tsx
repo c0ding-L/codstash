@@ -6,11 +6,8 @@ import { useId, useState, useTransition, type TransitionStartFunction } from "re
 import { toast } from "sonner";
 
 import { type CreatableType, createItem, type CreateItemField, type CreateItemInput } from "@/actions/items";
-import { CodeEditor } from "@/components/items/CodeEditor";
 import { FileUpload } from "@/components/items/FileUpload";
-import { MarkdownEditor } from "@/components/items/MarkdownEditor";
-import { Field, toTags } from "@/components/items/ItemEditForm";
-import { Badge } from "@/components/ui/badge";
+import { ContentField, Field, TagsField, useFieldErrors } from "@/components/items/item-form-fields";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,9 +21,18 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { isCodeType } from "@/lib/code-language";
 import { isUploadKind } from "@/lib/files";
-import { colorClasses, itemTypeFromPathname, surfaceClasses, typeColors, typeIcons } from "@/lib/item-type-ui";
+import {
+  colorClasses,
+  hasContentField,
+  hasLanguageField,
+  hasUrlField,
+  itemTypeFromPathname,
+  surfaceClasses,
+  typeColors,
+  typeIcons,
+} from "@/lib/item-type-ui";
+import { toTags } from "@/lib/tags";
 import { uploadFile } from "@/lib/upload-client";
 import { cn } from "@/lib/utils";
 
@@ -39,9 +45,6 @@ const TYPES: { slug: CreatableType; label: string }[] = [
   { slug: "image", label: "Image" },
   { slug: "link", label: "Link" },
 ];
-
-const CONTENT_TYPES: ReadonlySet<CreatableType> = new Set(["snippet", "prompt", "command", "note"]);
-const LANGUAGE_TYPES: ReadonlySet<CreatableType> = new Set(["snippet", "command"]);
 
 /** The top bar's "New Item" button and the dialog it opens. */
 export function NewItemDialog() {
@@ -76,7 +79,7 @@ interface NewItemFormProps {
 function NewItemForm({ saving, startSaving, onCreated }: NewItemFormProps) {
   const router = useRouter();
   const id = useId();
-  const [error, setError] = useState<{ field: CreateItemField; message: string } | null>(null);
+  const { setError, isInvalid, messageFor, clearFor, fieldProps } = useFieldErrors<CreateItemField>(id);
 
   // Starts on the type of the listing page it was opened from, when that type can be created here.
   const pageType = itemTypeFromPathname(usePathname());
@@ -92,27 +95,11 @@ function NewItemForm({ saving, startSaving, onCreated }: NewItemFormProps) {
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
 
-  const hasContent = CONTENT_TYPES.has(type);
-  const hasLanguage = LANGUAGE_TYPES.has(type);
-  const hasUrl = type === "link";
+  const hasContent = hasContentField(type);
+  const hasLanguage = hasLanguageField(type);
+  const hasUrl = hasUrlField(type);
   const uploadKind = isUploadKind(type) ? type : null;
-  const parsedTags = toTags(tags);
   const canSubmit = title.trim() !== "" && (!hasUrl || url.trim() !== "") && (!uploadKind || file !== null);
-
-  /** Props tying an input to its label and message, and marking it while it is at fault. */
-  function fieldProps(field: CreateItemField, setValue: (value: string) => void) {
-    const invalid = error?.field === field;
-    return {
-      id: `${id}-${field}`,
-      "aria-invalid": invalid || undefined,
-      "aria-describedby": `${id}-${field}-message`,
-      onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        setValue(event.target.value);
-        if (invalid) setError(null);
-      },
-    };
-  }
-  const messageFor = (field: CreateItemField) => (error?.field === field ? error.message : undefined);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -123,7 +110,7 @@ function NewItemForm({ saving, startSaving, onCreated }: NewItemFormProps) {
       type,
       title,
       description,
-      tags: parsedTags,
+      tags: toTags(tags),
       ...(hasContent && { content }),
       ...(hasLanguage && { language }),
       ...(hasUrl && { url }),
@@ -160,34 +147,16 @@ function NewItemForm({ saving, startSaving, onCreated }: NewItemFormProps) {
 
   return (
     <form onSubmit={handleSubmit} noValidate className="flex min-w-0 flex-col gap-4">
-      <div role="radiogroup" aria-label="Type" className="flex flex-wrap gap-1.5">
-        {TYPES.map(({ slug, label }) => {
-          const Icon = typeIcons[slug];
-          const color = typeColors[slug];
-          const selected = slug === type;
-          return (
-            <Button
-              key={slug}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              variant="ghost"
-              size="sm"
-              className={cn(selected && ["ring-1 ring-foreground/20", surfaceClasses[color]])}
-              disabled={saving}
-              onClick={() => {
-                // A file chosen as one kind is not valid as the other.
-                if (slug !== type) setFile(null);
-                setType(slug);
-                setError(null);
-              }}
-            >
-              <Icon className={colorClasses[color]} aria-hidden />
-              {label}
-            </Button>
-          );
-        })}
-      </div>
+      <TypePicker
+        value={type}
+        disabled={saving}
+        onChange={(slug) => {
+          // A file chosen as one kind is not valid as the other.
+          if (slug !== type) setFile(null);
+          setType(slug);
+          setError(null);
+        }}
+      />
 
       <Field id={`${id}-title`} label="Title" error={messageFor("title")}>
         <Input value={title} autoFocus {...fieldProps("title", setTitle)} />
@@ -203,13 +172,13 @@ function NewItemForm({ saving, startSaving, onCreated }: NewItemFormProps) {
             kind={uploadKind}
             file={file}
             id={`${id}-fileKey`}
-            invalid={error?.field === "fileKey"}
+            invalid={isInvalid("fileKey")}
             describedBy={`${id}-fileKey-message`}
             progress={progress}
             disabled={saving}
             onFileChange={(next) => {
               setFile(next);
-              if (error?.field === "fileKey") setError(null);
+              clearFor("fileKey");
             }}
             onReject={(message) => setError({ field: "fileKey", message })}
           />
@@ -223,31 +192,17 @@ function NewItemForm({ saving, startSaving, onCreated }: NewItemFormProps) {
       ) : null}
 
       {hasContent ? (
-        <Field id={`${id}-content`} label="Content" error={messageFor("content")}>
-          {isCodeType(type) ? (
-            <CodeEditor
-              value={content}
-              language={language}
-              ariaLabel="Content"
-              onChange={(value) => {
-                setContent(value);
-                if (error?.field === "content") setError(null);
-              }}
-            />
-          ) : (
-            <MarkdownEditor
-              value={content}
-              id={`${id}-content`}
-              ariaLabel="Content"
-              invalid={error?.field === "content"}
-              describedBy={`${id}-content-message`}
-              onChange={(value) => {
-                setContent(value);
-                if (error?.field === "content") setError(null);
-              }}
-            />
-          )}
-        </Field>
+        <ContentField
+          id={id}
+          slug={type}
+          value={content}
+          language={language}
+          error={messageFor("content")}
+          onChange={(value) => {
+            setContent(value);
+            clearFor("content");
+          }}
+        />
       ) : null}
 
       {hasLanguage ? (
@@ -256,26 +211,7 @@ function NewItemForm({ saving, startSaving, onCreated }: NewItemFormProps) {
         </Field>
       ) : null}
 
-      <Field
-        id={`${id}-tags`}
-        label="Tags"
-        error={messageFor("tags")}
-        hint={
-          parsedTags.length > 0 ? (
-            <span className="flex flex-wrap gap-1">
-              {parsedTags.map((tag) => (
-                <Badge key={tag} variant="secondary">
-                  {tag}
-                </Badge>
-              ))}
-            </span>
-          ) : (
-            "Separate tags with commas."
-          )
-        }
-      >
-        <Input value={tags} placeholder="react, hooks" {...fieldProps("tags", setTags)} />
-      </Field>
+      <TagsField id={id} value={tags} error={messageFor("tags")} inputProps={fieldProps("tags", setTags)} />
 
       <DialogFooter>
         <DialogClose render={<Button type="button" variant="ghost" />} disabled={saving}>
@@ -286,5 +222,40 @@ function NewItemForm({ saving, startSaving, onCreated }: NewItemFormProps) {
         </Button>
       </DialogFooter>
     </form>
+  );
+}
+
+interface TypePickerProps {
+  value: CreatableType;
+  disabled: boolean;
+  onChange: (slug: CreatableType) => void;
+}
+
+/** The types the dialog can create, as a row of radio buttons in each type's colour. */
+function TypePicker({ value, disabled, onChange }: TypePickerProps) {
+  return (
+    <div role="radiogroup" aria-label="Type" className="flex flex-wrap gap-1.5">
+      {TYPES.map(({ slug, label }) => {
+        const Icon = typeIcons[slug];
+        const color = typeColors[slug];
+        const selected = slug === value;
+        return (
+          <Button
+            key={slug}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            variant="ghost"
+            size="sm"
+            className={cn(selected && ["ring-1 ring-foreground/20", surfaceClasses[color]])}
+            disabled={disabled}
+            onClick={() => onChange(slug)}
+          >
+            <Icon className={colorClasses[color]} aria-hidden />
+            {label}
+          </Button>
+        );
+      })}
+    </div>
   );
 }

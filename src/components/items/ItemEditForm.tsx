@@ -5,20 +5,15 @@ import { useId, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { updateItem, type UpdateItemField, type UpdateItemInput } from "@/actions/items";
-import { CodeEditor } from "@/components/items/CodeEditor";
-import { MarkdownEditor } from "@/components/items/MarkdownEditor";
-import { Badge } from "@/components/ui/badge";
+import { ContentField, Field, TagsField, useFieldErrors } from "@/components/items/item-form-fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { isCodeType } from "@/lib/code-language";
 import type { DashboardItem, ItemDetailJson } from "@/lib/db/items";
+import { hasContentField, hasLanguageField, hasUrlField } from "@/lib/item-type-ui";
+import { toTags } from "@/lib/tags";
 import type { ItemTypeSlug } from "@/types/item-type";
-
-const CONTENT_TYPES: ReadonlySet<ItemTypeSlug> = new Set(["snippet", "prompt", "command", "note"]);
-const LANGUAGE_TYPES: ReadonlySet<ItemTypeSlug> = new Set(["snippet", "command"]);
-const URL_TYPES: ReadonlySet<ItemTypeSlug> = new Set(["link"]);
 
 export interface SavedItem {
   card: DashboardItem;
@@ -35,49 +30,11 @@ interface ItemEditFormProps {
   children: React.ReactNode;
 }
 
-interface FieldProps {
-  id: string;
-  label: string;
-  /** Shown under the input, in place of `hint`. */
-  error?: string;
-  hint?: React.ReactNode;
-  children: React.ReactNode;
-}
-
-export function Field({ id, label, error, hint, children }: FieldProps) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-xs font-medium text-muted-foreground">
-        {label}
-      </label>
-      {children}
-      {error ? (
-        <p id={`${id}-message`} className="text-xs text-destructive">
-          {error}
-        </p>
-      ) : hint ? (
-        <div id={`${id}-message`} className="text-xs text-muted-foreground">
-          {hint}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-/** The tags as they will be saved: trimmed, without blanks or repeats. */
-export function toTags(text: string) {
-  const tags = text
-    .split(",")
-    .map((tag) => tag.trim())
-    .filter(Boolean);
-  return [...new Set(tags)];
-}
-
 export function ItemEditForm({ card, detail, slug, onCancel, onSaved, children }: ItemEditFormProps) {
   const router = useRouter();
   const id = useId();
   const [saving, startSaving] = useTransition();
-  const [error, setError] = useState<{ field: UpdateItemField; message: string } | null>(null);
+  const { setError, messageFor, clearFor, fieldProps } = useFieldErrors<UpdateItemField>(id);
 
   const [title, setTitle] = useState(card.title);
   const [description, setDescription] = useState(card.description ?? "");
@@ -86,25 +43,9 @@ export function ItemEditForm({ card, detail, slug, onCancel, onSaved, children }
   const [language, setLanguage] = useState(detail.language ?? "");
   const [url, setUrl] = useState(detail.url ?? "");
 
-  const hasContent = slug !== null && CONTENT_TYPES.has(slug);
-  const hasLanguage = slug !== null && LANGUAGE_TYPES.has(slug);
-  const hasUrl = slug !== null && URL_TYPES.has(slug);
-  const parsedTags = toTags(tags);
-
-  /** Props tying an input to its label and message, and marking it while it is at fault. */
-  function fieldProps(field: UpdateItemField, setValue: (value: string) => void) {
-    const invalid = error?.field === field;
-    return {
-      id: `${id}-${field}`,
-      "aria-invalid": invalid || undefined,
-      "aria-describedby": `${id}-${field}-message`,
-      onChange: (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-        setValue(event.target.value);
-        if (invalid) setError(null);
-      },
-    };
-  }
-  const messageFor = (field: UpdateItemField) => (error?.field === field ? error.message : undefined);
+  const hasContent = hasContentField(slug);
+  const hasLanguage = hasLanguageField(slug);
+  const hasUrl = hasUrlField(slug);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -113,7 +54,7 @@ export function ItemEditForm({ card, detail, slug, onCancel, onSaved, children }
     const input: UpdateItemInput = {
       title,
       description,
-      tags: parsedTags,
+      tags: toTags(tags),
       ...(hasContent && { content }),
       ...(hasLanguage && { language }),
       ...(hasUrl && { url }),
@@ -146,31 +87,17 @@ export function ItemEditForm({ card, detail, slug, onCancel, onSaved, children }
         </Field>
 
         {hasContent ? (
-          <Field id={`${id}-content`} label="Content" error={messageFor("content")}>
-            {isCodeType(slug) ? (
-              <CodeEditor
-                value={content}
-                language={language}
-                ariaLabel="Content"
-                onChange={(value) => {
-                  setContent(value);
-                  if (error?.field === "content") setError(null);
-                }}
-              />
-            ) : (
-              <MarkdownEditor
-                value={content}
-                id={`${id}-content`}
-                ariaLabel="Content"
-                invalid={error?.field === "content"}
-                describedBy={`${id}-content-message`}
-                onChange={(value) => {
-                  setContent(value);
-                  if (error?.field === "content") setError(null);
-                }}
-              />
-            )}
-          </Field>
+          <ContentField
+            id={id}
+            slug={slug}
+            value={content}
+            language={language}
+            error={messageFor("content")}
+            onChange={(value) => {
+              setContent(value);
+              clearFor("content");
+            }}
+          />
         ) : null}
 
         {hasLanguage ? (
@@ -185,26 +112,7 @@ export function ItemEditForm({ card, detail, slug, onCancel, onSaved, children }
           </Field>
         ) : null}
 
-        <Field
-          id={`${id}-tags`}
-          label="Tags"
-          error={messageFor("tags")}
-          hint={
-            parsedTags.length > 0 ? (
-              <span className="flex flex-wrap gap-1">
-                {parsedTags.map((tag) => (
-                  <Badge key={tag} variant="secondary">
-                    {tag}
-                  </Badge>
-                ))}
-              </span>
-            ) : (
-              "Separate tags with commas."
-            )
-          }
-        >
-          <Input value={tags} placeholder="react, hooks" {...fieldProps("tags", setTags)} />
-        </Field>
+        <TagsField id={id} value={tags} error={messageFor("tags")} inputProps={fieldProps("tags", setTags)} />
 
         <Separator />
 

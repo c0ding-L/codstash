@@ -119,6 +119,24 @@ export const sidebarTypes: { slug: ItemTypeSlug; label: string }[] = [
   { slug: "link", label: "Links" },
 ];
 
+const CONTENT_FIELD_TYPES: ReadonlySet<ItemTypeSlug> = new Set(["snippet", "prompt", "command", "note"]);
+const LANGUAGE_FIELD_TYPES: ReadonlySet<ItemTypeSlug> = new Set(["snippet", "command"]);
+
+/** Whether the item forms show a Content field for this type. */
+export function hasContentField(slug: ItemTypeSlug | null) {
+  return slug !== null && CONTENT_FIELD_TYPES.has(slug);
+}
+
+/** Whether the item forms show a Language field for this type. */
+export function hasLanguageField(slug: ItemTypeSlug | null) {
+  return slug !== null && LANGUAGE_FIELD_TYPES.has(slug);
+}
+
+/** Whether the item forms show a URL field for this type. */
+export function hasUrlField(slug: ItemTypeSlug | null) {
+  return slug === "link";
+}
+
 /**
  * Database rows carry `slug` and `color` as plain strings. These narrow them to
  * the keys of the records above, returning null for anything unrecognised so a
