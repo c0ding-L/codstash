@@ -1,38 +1,22 @@
-# Current Feature: Create Collection
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- A "New Collection" button in the dashboard top bar (`TopBar.tsx`), next to "New Item".
-- It opens a modal with **Name** (required) and **Description** (optional).
-- Saving creates a collection owned by the signed-in user only (`userId` from the session,
-  never from the client).
-- A toast on success ("Collection created.") and on failure (the server's error message).
-- After save everything shows the new collection without a manual reload: the sidebar's
-  collection list, the dashboard's recent collections and the stats counts.
-- Unit tests for the new server action and db function.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- **Follow the item create pattern**: `NewItemDialog` calls the `createItem` server action
-  (`src/actions/items.ts`), which validates with zod, checks `auth()`, calls a query in
-  `src/lib/db/items.ts`, and returns `{ success, data, error, field? }`. The dialog toasts via
-  `sonner` and calls `router.refresh()` so server components re-fetch.
-- New pieces:
-  - `createCollection(userId, { name, description })` in `src/lib/db/collections.ts`.
-  - `createCollection` server action in a new `src/actions/collections.ts` (zod: name trimmed,
-    required, capped; description optional, blank → null, capped — same style as the item caps).
-  - `NewCollectionDialog` client component in `src/components/collections/` (or `dashboard/`),
-    reusing `ui/dialog`, `Input`, `Button`; field errors marked via `field` like the item form.
-- Reads stay in server components via `lib/db` functions. Items use **server actions for
-  mutations** and API routes only for client-side reads (`/api/items/[id]`). The create needs no
-  client-side read, so no new API route is planned — the server action + `router.refresh()`
-  covers it. (Add a route only if a client-side fetch turns out to be needed.)
-- `isFavorite` stays at its default (false); no favorite toggle in the modal.
-- Out of scope: edit, delete, collections page, adding items to a collection.
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — Create Collection: a "New Collection" button in the top bar opens a
+modal (name, description); a session-scoped `createCollection` server action and db query; toasts
+and a refresh so the sidebar, cards and stats show the new collection. Outcome in the History below.
 
 ---
 
@@ -1829,3 +1813,5 @@ Environment notes that outlive any one feature:
   lint green; checked in the browser on the develop database (test collection
   "PW Test Collection 1795139541637" left there). Found: the dashboard scrolls sideways at
   375px because of an item list section, not the top bar — left for its own fix.
+- 2026-11-20 — Create Collection merged into `main` (`bdc4205`, fast-forward); branch
+  `feature/create-collection` deleted. Feature completed.
