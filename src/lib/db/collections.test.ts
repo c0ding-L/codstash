@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import {
   aggregateCollectionTypes,
+  createCollection,
   getFavoriteCollections,
   getItemTypes,
   getRecentCollections,
@@ -12,7 +13,7 @@ import { prisma } from "@/lib/prisma";
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
-    collection: { findMany: vi.fn() },
+    collection: { findMany: vi.fn(), create: vi.fn() },
     item: { groupBy: vi.fn() },
     itemType: { findMany: vi.fn() },
     user: { findUnique: vi.fn() },
@@ -126,5 +127,21 @@ describe("aggregateCollectionTypes", () => {
     );
 
     expect(types.map(({ slug }) => slug)).toEqual(["link"]);
+  });
+});
+
+describe("createCollection", () => {
+  const createRow = asMock(prisma.collection.create);
+
+  it("creates the collection for the user and returns an empty card", async () => {
+    const row = { id: "col_1", name: "React", description: null, isFavorite: false, updatedAt: new Date(1) };
+    createRow.mockResolvedValue(row);
+
+    await expect(createCollection(USER, { name: "React" })).resolves.toEqual({ ...row, itemCount: 0, types: [] });
+    expect(createRow).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { name: "React", description: null, user: { connect: { id: USER } } },
+      }),
+    );
   });
 });

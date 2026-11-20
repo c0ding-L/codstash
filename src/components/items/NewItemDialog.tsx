@@ -54,7 +54,7 @@ export function NewItemDialog() {
   return (
     // Kept open while saving, so a create in flight cannot be dismissed half done.
     <Dialog open={open} onOpenChange={(next) => (saving ? undefined : setOpen(next))}>
-      <DialogTrigger render={<Button size="lg" className="ml-auto" />}>
+      <DialogTrigger render={<Button size="lg" />}>
         <Plus aria-hidden />
         New Item
       </DialogTrigger>

@@ -229,3 +229,21 @@ export async function getRecentCollections(
     types: aggregateCollectionTypes(typeCounts.get(collection.id) ?? [], typeById),
   }));
 }
+
+export interface CollectionCreate {
+  name: string;
+  description?: string | null;
+}
+
+/** Creates an empty collection owned by `userId`, shaped like a dashboard card. */
+export async function createCollection(
+  userId: string,
+  { name, description }: CollectionCreate,
+): Promise<RecentCollection> {
+  const created = await prisma.collection.create({
+    data: { name, description: description ?? null, user: { connect: { id: userId } } },
+    select: { id: true, name: true, description: true, isFavorite: true, updatedAt: true },
+  });
+
+  return { ...created, itemCount: 0, types: [] };
+}

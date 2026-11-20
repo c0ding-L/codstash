@@ -1,16 +1,38 @@
-# Current Feature
+# Current Feature: Create Collection
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- A "New Collection" button in the dashboard top bar (`TopBar.tsx`), next to "New Item".
+- It opens a modal with **Name** (required) and **Description** (optional).
+- Saving creates a collection owned by the signed-in user only (`userId` from the session,
+  never from the client).
+- A toast on success ("Collection created.") and on failure (the server's error message).
+- After save everything shows the new collection without a manual reload: the sidebar's
+  collection list, the dashboard's recent collections and the stats counts.
+- Unit tests for the new server action and db function.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- **Follow the item create pattern**: `NewItemDialog` calls the `createItem` server action
+  (`src/actions/items.ts`), which validates with zod, checks `auth()`, calls a query in
+  `src/lib/db/items.ts`, and returns `{ success, data, error, field? }`. The dialog toasts via
+  `sonner` and calls `router.refresh()` so server components re-fetch.
+- New pieces:
+  - `createCollection(userId, { name, description })` in `src/lib/db/collections.ts`.
+  - `createCollection` server action in a new `src/actions/collections.ts` (zod: name trimmed,
+    required, capped; description optional, blank → null, capped — same style as the item caps).
+  - `NewCollectionDialog` client component in `src/components/collections/` (or `dashboard/`),
+    reusing `ui/dialog`, `Input`, `Button`; field errors marked via `field` like the item form.
+- Reads stay in server components via `lib/db` functions. Items use **server actions for
+  mutations** and API routes only for client-side reads (`/api/items/[id]`). The create needs no
+  client-side read, so no new API route is planned — the server action + `router.refresh()`
+  covers it. (Add a route only if a client-side fetch turns out to be needed.)
+- `isFavorite` stays at its default (false); no favorite toggle in the modal.
+- Out of scope: edit, delete, collections page, adding items to a collection.
 
 ---
 
@@ -1798,3 +1820,12 @@ Environment notes that outlive any one feature:
   `refactor/type-tile-collections` deleted. Feature completed. Left for later from the split
   review: the profile page sections (item 7), the auth fetch helper (item 8), `ItemListForType`
   (item 9) and `ItemMarks` (item 10); plus the performance batch and the lost click on New Item.
+- 2026-11-20 — Create Collection: "New Collection" button in the top bar (icon only below `sm`)
+  opens a modal with Name (required, max 100) and Description (optional, max 2,000).
+  `createCollection` server action (`src/actions/collections.ts`) validates with zod and takes
+  the owner from the session; `createCollection` query in `src/lib/db/collections.ts`. Toasts on
+  success and failure, the field at fault marked, `router.refresh()` updates the sidebar, recent
+  collections and stats. No API route: the create needs no client-side read. 445 tests, build and
+  lint green; checked in the browser on the develop database (test collection
+  "PW Test Collection 1795139541637" left there). Found: the dashboard scrolls sideways at
+  375px because of an item list section, not the top bar — left for its own fix.

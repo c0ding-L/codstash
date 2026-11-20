@@ -1,12 +1,14 @@
 import { Search } from "lucide-react";
 
+import { NewCollectionDialog } from "@/components/collections/NewCollectionDialog";
 import { NewItemDialog } from "@/components/items/NewItemDialog";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
 /**
  * Dashboard top bar. Search is display only. The trigger collapses the sidebar
- * on desktop and opens the drawer on mobile; "New Item" opens the create dialog.
+ * on desktop and opens the drawer on mobile; "New Collection" and "New Item"
+ * open their create dialogs.
  */
 export function TopBar() {
   return (
@@ -26,6 +28,7 @@ export function TopBar() {
         />
       </div>
 
+      <NewCollectionDialog />
       <NewItemDialog />
     </header>
   );
