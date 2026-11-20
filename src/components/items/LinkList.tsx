@@ -1,6 +1,8 @@
 import { ArrowUpRight, Pin, Star } from "lucide-react";
 
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
+import { LinkCopyButton } from "@/components/items/LinkCopyButton";
+import { LinkLogo } from "@/components/items/LinkLogo";
 import { buttonVariants } from "@/components/ui/button";
 import type { DashboardItem } from "@/lib/db/items";
 import { parseLinkUrl } from "@/lib/link-url";
@@ -22,17 +24,12 @@ function LinkRow({ item }: { item: DashboardItem }) {
   const { domain, path } = parseLinkUrl(url);
 
   return (
-    <li className="relative flex items-center gap-4 px-4 py-3 transition-colors hover:bg-foreground/[0.03]">
+    <li className="group relative flex items-center gap-4 px-4 py-3 transition-colors hover:bg-foreground/[0.03]">
       <ItemDrawerTrigger item={item} />
 
       <div className="min-w-0 flex-1 sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] sm:items-center sm:gap-6">
         <div className="flex min-w-0 items-center gap-3">
-          <span
-            className="hidden size-9 shrink-0 items-center justify-center rounded-md bg-lime-400/10 font-mono text-sm font-semibold text-lime-400 uppercase sm:flex"
-            aria-hidden
-          >
-            {domain.charAt(0) || "?"}
-          </span>
+          <LinkLogo url={url} letter={domain.charAt(0) || "?"} />
           <div className="min-w-0">
             <p className="truncate font-mono text-xs text-lime-400 sm:text-sm sm:text-foreground">
               {domain || "No URL"}
@@ -60,7 +57,15 @@ function LinkRow({ item }: { item: DashboardItem }) {
       </div>
 
       {/* A fixed slot, so the columns line up on rows without a button. */}
-      <div className="flex w-18 shrink-0 justify-end">
+      <div className="flex w-27 shrink-0 items-center justify-end gap-2">
+        {url ? (
+          <LinkCopyButton
+            url={url}
+            title={item.title}
+            // Hidden until hover only with a mouse: a touch screen, even a wide one, never hovers.
+            className="pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:focus-visible:opacity-100"
+          />
+        ) : null}
         {/* Only a web address becomes a link: `url` is free text and could be `javascript:`. */}
         {isWebUrl(url) ? (
           <a

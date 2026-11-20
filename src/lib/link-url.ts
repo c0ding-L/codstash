@@ -30,3 +30,21 @@ function decodeForReading(text: string) {
     return text;
   }
 }
+
+/**
+ * The site's logo as DuckDuckGo serves it, for a web URL; null for anything else.
+ * Only the hostname goes out (no port, path or query), and DuckDuckGo answers 404
+ * when the site has no logo, so the caller can fall back to a letter.
+ */
+export function faviconUrl(url: string): string | null {
+  if (!isWebUrl(url)) return null;
+
+  let hostname: string;
+  try {
+    hostname = new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+  if (!hostname) return null;
+  return `https://icons.duckduckgo.com/ip3/${encodeURIComponent(hostname)}.ico`;
+}

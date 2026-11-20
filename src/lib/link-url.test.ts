@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseLinkUrl } from "@/lib/link-url";
+import { faviconUrl, parseLinkUrl } from "@/lib/link-url";
 
 describe("parseLinkUrl", () => {
   it("splits a web URL into its domain and path", () => {
@@ -39,5 +39,24 @@ describe("parseLinkUrl", () => {
 
   it("returns a string that is not a URL whole, as the domain", () => {
     expect(parseLinkUrl("not a url")).toEqual({ domain: "not a url", path: "" });
+  });
+});
+
+describe("faviconUrl", () => {
+  it("asks DuckDuckGo for the hostname only, without www., port, path or query", () => {
+    expect(faviconUrl("https://www.GitHub.com:8443/en/actions?tab=1#top")).toBe(
+      "https://icons.duckduckgo.com/ip3/github.com.ico",
+    );
+  });
+
+  it("keeps subdomains other than www.", () => {
+    expect(faviconUrl("https://docs.docker.com/reference/")).toBe("https://icons.duckduckgo.com/ip3/docs.docker.com.ico");
+  });
+
+  it("is null for anything that is not a web URL", () => {
+    expect(faviconUrl("mailto:team@example.com")).toBeNull();
+    expect(faviconUrl("javascript:alert(1)")).toBeNull();
+    expect(faviconUrl("not a url")).toBeNull();
+    expect(faviconUrl("")).toBeNull();
   });
 });
