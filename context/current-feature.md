@@ -1,86 +1,22 @@
-# Current Feature: Collection Actions
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- `/collections/[id]` header has three buttons: **Edit**, **Delete** and **Favorite**.
-- **Edit** opens a modal to change the collection's metadata (name, description), pre-filled;
-  saving updates the collection, toasts, and refreshes the page, sidebar and cards.
-- **Delete** asks for confirmation first. Deleting removes the collection only — its items are
-  kept and simply no longer belong to it. After deleting from the detail page, go to `/collections`.
-- **Favorite** is a button/icon only (star). No toggle logic, no server action yet.
-- `CollectionCard` (on `/collections` and the dashboard) gets a 3-dots (`⋯`) button that opens a
-  dropdown with **Edit**, **Delete** and **Favorite**. Edit and Delete open the same modal and
-  confirmation as the detail page; Favorite is a placeholder.
-- Clicking anywhere else on the card still goes to the collection page; opening the menu or
-  picking an item does not navigate.
-- Server actions `updateCollection` and `deleteCollection`, session-scoped (a user can only touch
-  their own collections), with unit tests.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Schema needs no change: `ItemCollection` has `onDelete: Cascade` on both relations, so deleting
-  a `Collection` removes only its join rows; `Item` rows stay. A test should pin that the delete
-  touches the collection, not items.
-- Reuse the patterns already in the repo: `NewCollectionDialog` (modal + validation, can share
-  fields with the edit modal), `ItemDeleteDialog` (`alert-dialog` confirmation), the
-  `createCollection` action/db query shape, and `ui/dropdown-menu`.
-- The card is a full-card `Link` overlay (`absolute inset-0 z-10`). The `⋯` trigger must sit above
-  it (higher z-index) and stop the click from reaching the link. `CollectionCard` is currently a
-  server component, so the menu goes in a small client leaf rather than turning the card client.
-- The card has no 3-dots icon today; add it (lucide `MoreHorizontal`) in the top-right, next to
-  the existing favorite star.
-- Validation should match `createCollection` (same name/description limits).
-- After update/delete, `revalidatePath`/`router.refresh()` so sidebar collections, stats and
-  cards reflect the change. Deleting the collection you're viewing must not leave you on a 404.
+<!-- Additional context, constraints, or details from spec -->
 
-### Implementation decisions (after advisor review)
+---
 
-- **Dialogs outside the menu.** `ui/dropdown-menu` wraps **Base UI** (`@base-ui/react/menu`), so
-  items select with `onClick`. Never render Edit/Delete dialogs inside `DropdownMenuContent` (they
-  unmount when the menu closes). The card's client leaf holds `editOpen` / `deleteOpen` state and
-  renders both dialogs as siblings of the `DropdownMenu`; menu items only set that state.
-- **Controlled, shared dialogs.** `EditCollectionDialog` and `DeleteCollectionDialog` take
-  `open`, `onOpenChange` and `collection`, so the detail-page header buttons and the card menu
-  drive the same components.
-- **Card stacking, not stopPropagation.** The overlay `<Link>` is a sibling of `CardContent`, not
-  an ancestor, so clicks on the trigger cannot bubble into it. The `⋯` trigger gets `relative z-20`
-  (above the link's `z-10`) and stays outside the `<Link>`; no nested interactive elements.
-- **Deleting from the detail page goes through `redirect`.** `[id]/layout.tsx` calls `notFound()`,
-  so a refresh of the deleted page would flash a 404. Following the Next docs ("Redirect after a
-  mutation"), `deleteCollection(id, { redirectToList: true })` calls
-  `revalidatePath("/", "layout")` then `redirect("/collections")` inside the action (outside its
-  try/catch). Edit and card deletes refresh on the client with `router.refresh()`, like the rest of
-  the repo; the actions themselves do not revalidate.
-- **Shared validation and form.** `createCollectionSchema` became `collectionSchema`, used by
-  create and update, with an `invalidInput` helper. The fields moved into `CollectionForm`, used by
-  `NewCollectionDialog` and `EditCollectionDialog`.
-- **Ownership scoping.** Prisma `update` / `delete` with `where: { id, userId }`; P2025 (missing or
-  another user's) → "This collection no longer exists.", like `deleteItem`. Results use the same
-  `{ success, data, error, field? }` shape as `createCollection`.
-- **Tests.** For both actions: unauthenticated, invalid input, someone else's id → not-found,
-  success, generic failure; redirect only with `redirectToList` and never on failure. The db test
-  asserts no item or join-row delete is called. Items surviving rests on the FKs: the only
-  `REFERENCES "Collection"` left is `ItemCollection`'s cascade (the init migration's
-  `Item.collectionId` FK was dropped in `item_collections`).
-- **Prefill data.** `CollectionSummary` (from `getCollection`) has `id`, `name` and `description`
-  but not `isFavorite`; add `isFavorite` to its select so the detail page's star shows the state.
-  `RecentCollection` already has it.
-- **Favorite.** Show the current state (filled star when `isFavorite`) on the button and in the
-  menu item, with no handler and no toast or "coming soon" message.
-- **Known quirk.** A delete from the detail page shows no "Collection deleted." toast: the action
-  redirects, so it never returns to the client. A delete from a card does show it.
-- **Verification.** `npm test` via `cmd.exe`, then build and lint. Browser check with the
-  Playwright script (the MCP didn't connect): `⋯` opens the menu without navigating, the card body
-  still navigates, Edit opened from the menu then cancelled leaves the page clickable, and delete
-  from the detail page lands on `/collections`. Override `DATABASE_URL` if writes are tested
-  against `next start`.
-
-- Out of scope: favorite toggling (the `isFavorite` field exists but stays untouched), bulk
-  actions, removing single items from a collection.
+Previous feature (completed) — Collection Actions: Edit, Delete and a placeholder Favorite on
+the collection page header and in a `⋯` menu on every collection card; deleting keeps the items.
+Outcome in the History below.
 
 ---
 
@@ -1924,3 +1860,20 @@ Environment notes that outlive any one feature:
   card and sidebar links, drawer, 404 status). Nothing written to the database.
 - 2026-11-20 — Collection Pages merged into `main` (`355174d`, fast-forward); branch
   `feature/collection-pages` deleted. Feature completed.
+- 2026-11-21 — Collection Actions: `/collections/[id]` header gets Favorite (placeholder star
+  showing `isFavorite`), Edit and Delete (`CollectionHeaderActions`); every `CollectionCard` gets a
+  `⋯` menu (`CollectionCardMenu`, a client leaf at `z-20` over the card's `z-10` link overlay, its
+  dialogs rendered beside the Base UI menu, not in its popup). Shared controlled
+  `EditCollectionDialog` / `DeleteCollectionDialog`; the name/description fields moved into
+  `CollectionForm`, now also used by `NewCollectionDialog`. New actions `updateCollection` /
+  `deleteCollection` and db queries (`update`/`delete` on `{ id, userId }`, P2025 → "no longer
+  exists"), sharing create's `collectionSchema`; `getCollection` now selects `isFavorite`.
+  Deleting removes only the collection: the only FK to `Collection` that cascades is
+  `ItemCollection`'s. A delete from the detail page passes `redirectToList`, so the action
+  revalidates the layout and redirects to `/collections` (no 404 flash, but no toast either);
+  card deletes and edits use `router.refresh()`. 482 tests, build and lint green; checked in the
+  browser with a Playwright script on the dev server (develop DB): menu opens without navigating,
+  cancel leaves the page clickable, edit saves, card body navigates, both delete paths; the two
+  test collections were deleted.
+- 2026-11-21 — Collection Actions merged into `main` (`b00a7b4`, fast-forward); branch
+  `feature/collection-actions` deleted. Feature completed.
