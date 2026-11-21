@@ -5,7 +5,6 @@ import { connection } from "next/server";
 import { auth } from "@/auth";
 import { CollectionHeaderActions } from "@/components/collections/CollectionHeaderActions";
 import { ItemCard } from "@/components/items/ItemCard";
-import { ItemDrawerProvider } from "@/components/items/ItemDrawerProvider";
 import { getCollection } from "@/lib/db/collections";
 import { getItemsByCollection } from "@/lib/db/items";
 
@@ -55,15 +54,13 @@ export default async function CollectionPage({ params }: CollectionPageProps) {
       </div>
 
       {items.length > 0 ? (
-        <ItemDrawerProvider>
-          <ul className="grid gap-4 md:grid-cols-2">
-            {items.map((item) => (
-              <li key={item.id}>
-                <ItemCard item={item} now={now} />
-              </li>
-            ))}
-          </ul>
-        </ItemDrawerProvider>
+        <ul className="grid gap-4 md:grid-cols-2">
+          {items.map((item) => (
+            <li key={item.id}>
+              <ItemCard item={item} now={now} />
+            </li>
+          ))}
+        </ul>
       ) : (
         <p className="text-sm text-muted-foreground">No items in this collection yet.</p>
       )}

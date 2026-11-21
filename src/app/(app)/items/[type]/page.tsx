@@ -7,7 +7,6 @@ import { CommandList } from "@/components/items/CommandList";
 import { FileList } from "@/components/items/FileList";
 import { ImageCard } from "@/components/items/ImageCard";
 import { ItemCard } from "@/components/items/ItemCard";
-import { ItemDrawerProvider } from "@/components/items/ItemDrawerProvider";
 import { LinkList } from "@/components/items/LinkList";
 import { PromptList } from "@/components/items/PromptList";
 import { SnippetList } from "@/components/items/SnippetList";
@@ -60,7 +59,7 @@ export default async function ItemsPage({ params }: ItemsPageProps) {
       </div>
 
       {items.length > 0 ? (
-        <ItemDrawerProvider>
+        <>
           {slug === "command" ? (
             <CommandList items={items} texts={commandTexts} now={now} />
           ) : slug === "file" ? (
@@ -88,7 +87,7 @@ export default async function ItemsPage({ params }: ItemsPageProps) {
               ))}
             </ul>
           )}
-        </ItemDrawerProvider>
+        </>
       ) : (
         <p className="text-sm text-muted-foreground">No {label.toLowerCase()} yet.</p>
       )}

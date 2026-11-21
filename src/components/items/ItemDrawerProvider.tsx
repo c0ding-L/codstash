@@ -1,6 +1,7 @@
 "use client";
 
 import type { Dialog } from "@base-ui/react/dialog";
+import { usePathname } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
 import { ItemDetails, type ItemDetailState } from "@/components/items/ItemDetails";
@@ -19,11 +20,21 @@ export function useOpenItemDrawer() {
 }
 
 /**
- * Holds the drawer and its state for the server-rendered items beneath it. The
+ * Holds the drawer and its state for every signed-in page. It sits in the app
+ * layout, so the command palette in the top bar can open an item too. The
  * clicked card's data shows at once, and only the rest waits for the fetch.
  */
 export function ItemDrawerProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  // The layout outlives a navigation, so the drawer closes itself when the page
+  // changes, e.g. after following a collection link inside it. Adjusted while
+  // rendering rather than in an effect, so the old page never shows it open.
+  const pathname = usePathname();
+  const [shownOn, setShownOn] = useState(pathname);
+  if (pathname !== shownOn) {
+    setShownOn(pathname);
+    setOpen(false);
+  }
   const [card, setCard] = useState<DashboardItem | null>(null);
   const [detail, setDetail] = useState<ItemDetailState>({ status: "loading" });
   // Bumped on every open, so the details remount and never reopen in edit mode.

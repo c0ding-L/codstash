@@ -14,6 +14,7 @@ import {
   getPromptPreviews,
   getSnippetPreviews,
   getRecentItems,
+  getSearchItems,
   isFileKeyInUse,
   updateItem,
 } from "@/lib/db/items";
@@ -60,6 +61,7 @@ describe("account isolation", () => {
   it.each([
     ["getPinnedItems", () => getPinnedItems(USER), { userId: USER, isPinned: true }],
     ["getRecentItems", () => getRecentItems(USER), { userId: USER }],
+    ["getSearchItems", () => getSearchItems(USER), { userId: USER }],
     ["getItemsByType", () => getItemsByType(USER, "snippet"), { userId: USER, type: { slug: "snippet" } }],
     [
       "getItemsByCollection",
@@ -84,6 +86,47 @@ describe("account isolation", () => {
     await read();
 
     expect(count).toHaveBeenCalledWith({ where });
+  });
+});
+
+describe("getSearchItems", () => {
+  it("reads the newest first, up to the ceiling", async () => {
+    await getSearchItems(USER);
+
+    expect(findMany.mock.calls[0]![0]).toMatchObject({ orderBy: { updatedAt: "desc" }, take: MAX_ITEM_LIMIT });
+  });
+
+  it("returns the whole content and a clipped preview, the tags, and the collections flattened", async () => {
+    const content = "# Heading\n\n" + "word ".repeat(100) + "needle";
+    findMany.mockResolvedValue([
+      {
+        id: "a",
+        content,
+        language: null,
+        type: { slug: "prompt", name: "Prompt", color: "amber" },
+        collections: [{ collection: { id: "col_1", name: "AI" } }],
+        tags: [{ tag: { name: "llm" } }, { tag: { name: "review" } }],
+      },
+    ]);
+
+    const [item] = await getSearchItems(USER);
+
+    expect(item!.content).toBe(content);
+    expect(item!.preview.startsWith("Heading word")).toBe(true);
+    expect(item!.preview.length).toBeLessThanOrEqual(151);
+    expect(item!.tags).toEqual(["llm", "review"]);
+    expect(item!.collections).toEqual([{ id: "col_1", name: "AI" }]);
+  });
+
+  it("gives an empty preview to an item without content", async () => {
+    findMany.mockResolvedValue([
+      { id: "b", content: null, language: null, type: { slug: "link", name: "Link", color: "lime" }, collections: [], tags: [] },
+    ]);
+
+    const [item] = await getSearchItems(USER);
+
+    expect(item!.preview).toBe("");
+    expect(item!.tags).toEqual([]);
   });
 });
 

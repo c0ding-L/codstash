@@ -2,6 +2,7 @@ import { clipCommand } from "@/lib/command-text";
 import { clampLimit, MAX_ITEM_LIMIT } from "@/lib/db/limits";
 import { prisma } from "@/lib/prisma";
 import { countWords, estimateTokens, markdownToPlainText, promptExcerpt } from "@/lib/prompt-text";
+import { searchPreview } from "@/lib/search-text";
 import { snippetPreview } from "@/lib/snippet-text";
 import type { ItemTypeSlug } from "@/types/item-type";
 
@@ -150,6 +151,44 @@ export async function getItemsByCollection(
   ]);
 
   return { items: items.map(toDashboardItem), totalCount };
+}
+
+/**
+ * An item as the command palette lists it: the drawer's card, a one-line preview
+ * to show, and the rest of what the drawer shows, so the search covers it all.
+ */
+export interface SearchItem extends DashboardItem {
+  preview: string;
+  /** The whole content, not clipped: a match deep inside it must still be found. */
+  content: string | null;
+  language: string | null;
+  tags: string[];
+}
+
+/** `SearchItem` after a JSON round trip: the date arrives as a string. */
+export type SearchItemJson = Omit<SearchItem, "updatedAt"> & { updatedAt: string };
+
+/** The user's items for the command palette, most recently updated first, up to the ceiling. */
+export async function getSearchItems(userId: string): Promise<SearchItem[]> {
+  const items = await prisma.item.findMany({
+    where: { userId },
+    orderBy: { updatedAt: "desc" },
+    take: MAX_ITEM_LIMIT,
+    select: {
+      ...dashboardItemSelect,
+      content: true,
+      language: true,
+      tags: { select: { tag: { select: { name: true } } }, orderBy: { tag: { name: "asc" } } },
+    },
+  });
+
+  return items.map(({ content, language, tags, ...item }) => ({
+    ...toDashboardItem(item),
+    preview: searchPreview(content, item.type.slug),
+    content,
+    language,
+    tags: tags.map(({ tag }) => tag.name),
+  }));
 }
 
 /**

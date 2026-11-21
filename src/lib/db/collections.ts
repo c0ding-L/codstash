@@ -193,6 +193,13 @@ export async function getCollections(userId: string): Promise<RecentCollection[]
   return getRecentCollections(userId, MAX_COLLECTION_LIMIT);
 }
 
+/** A collection as the command palette lists it. */
+export interface SearchCollection {
+  id: string;
+  name: string;
+  itemCount: number;
+}
+
 export interface CollectionSummary {
   id: string;
   name: string;

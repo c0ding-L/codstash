@@ -6,7 +6,6 @@ import { PinnedItems } from "@/components/dashboard/PinnedItems";
 import { RecentCollections } from "@/components/dashboard/RecentCollections";
 import { RecentItems } from "@/components/dashboard/RecentItems";
 import { StatsCards } from "@/components/dashboard/StatsCards";
-import { ItemDrawerProvider } from "@/components/items/ItemDrawerProvider";
 
 export const metadata: Metadata = {
   title: "Dashboard · Codstash",
@@ -29,12 +28,10 @@ export default async function DashboardPage() {
       <StatsCards userId={session.user.id} />
       <RecentCollections userId={session.user.id} />
 
-      <ItemDrawerProvider>
-        <div className="grid gap-8 xl:grid-cols-2">
-          <PinnedItems userId={session.user.id} />
-          <RecentItems userId={session.user.id} />
-        </div>
-      </ItemDrawerProvider>
+      <div className="grid gap-8 xl:grid-cols-2">
+        <PinnedItems userId={session.user.id} />
+        <RecentItems userId={session.user.id} />
+      </div>
     </div>
   );
 }
