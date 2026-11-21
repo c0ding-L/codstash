@@ -1,58 +1,22 @@
-# Current Feature: Global Search / Command Palette
+# Current Feature
 
 ## Status
 
-Complete
+Not Started
 
 ## Goals
 
-- Cmd+K (Mac) / Ctrl+K (Windows) opens a global command palette from any signed-in page
-- Clicking the TopBar search input opens the palette; its placeholder shows a ⌘K hint
-- Fuzzy, client-side search across all of the user's items and collections (no server round-trip per keystroke)
-- Results grouped into an Items section and a Collections section
-- Items show their type icon; collections show their item count
-- Arrow keys move through results, Enter selects
-- Selecting an item opens its drawer; selecting a collection navigates to `/collections/[id]`
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Spec: `context/features/global-search-spec.md`.
-- Use the shadcn Command component (`cmdk`). Neither `command.tsx` nor `cmdk` is installed yet.
-- Searchable data is pre-fetched once on app load: items (id, title, type, content preview),
-  collections (id, name, itemCount). Reuse the existing `src/lib/db` queries where they fit;
-  `getCollections` already returns `itemCount`. There is no "all items" query yet.
-- The TopBar is a server component in `(app)/layout.tsx`, and the layout must not wait on data
-  (`loading.tsx` sits below it), so the palette data has to load on the client or behind its own
-  boundary.
-- `ItemDrawerProvider` lives per page (dashboard, items/[type], collections/[id]), not in the
-  layout, so the palette in the TopBar cannot call `useOpenItemDrawer` today. How an item opens
-  from the palette needs deciding at `start`.
-- Unit tests cover any new db query / route handler logic, not components.
+<!-- Additional context, constraints, or details from spec -->
 
-### Decisions (at start)
+---
 
-- **Drawer moved to the layout** (author's choice): one `ItemDrawerProvider` in `(app)/layout.tsx`
-  wraps the TopBar and the page; the three page-level wrappers are gone. It closes itself when the
-  pathname changes, since the layout survives navigation.
-- `GET /api/search` returns `{ items, collections }`: `getSearchItems` (new — `DashboardItem` plus a
-  150-char display `preview` from `searchPreview` in `src/lib/search-text.ts`, and the whole content,
-  language and tags) and `getCollections` trimmed to id, name, itemCount.
-- **Search covers everything** (author's call, after testing): title, type, description, full
-  content, URL, file name, language, tags and collection names. The author checks a match by
-  opening the item, not by the row's excerpt. Fields are normalised once per load, not per keystroke. Fetched when the shell mounts and again each time
-  the palette opens.
-- Search covers the 100 most recent items and up to 50 collections (`MAX_ITEM_LIMIT`,
-  `MAX_COLLECTION_LIMIT`).
-- cmdk's default scoring was too loose (letters scattered across title and content matched
-  "dark", "mail"), so `searchScore` in `src/lib/search-match.ts` replaces it. Every search word must
-  match; only the title matches loosely (letters within one word, or a chain of word starts like
-  "gendoc"); other fields match as exact substrings. Accents and case ignored. Each entry's `value`
-  is its id, so it never counts towards a match.
-- The TopBar search is now a button styled as an input, so focus returning to it on close does not
-  reopen the palette.
-- `command.tsx` / `input-group.tsx` were written from the base-nova registry source by hand: the
-  shadcn CLI kept prompting to overwrite existing files, and the raw registry lists a stray `cn` npm
-  package (removed). The sr-only title was moved inside `DialogContent`.
+Previous feature (completed) — Global Search: a Cmd+K / Ctrl+K command palette, also opened from
+the top-bar search field, searching every field of the user's items and their collections in the
+browser; items open in the drawer, now one for the whole layout. Outcome in the History below.
 
 ---
 
@@ -1919,3 +1883,25 @@ Environment notes that outlive any one feature:
   test collections were deleted.
 - 2026-11-21 — Collection Actions merged into `main` (`b00a7b4`, fast-forward); branch
   `feature/collection-actions` deleted. Feature completed.
+- 2026-11-21 — Global Search / Command Palette: Cmd+K / Ctrl+K (or the top-bar search field, now a
+  button with a ⌘K hint) opens `CommandPalette`, a shadcn `CommandDialog` with Items (type icon,
+  one-line preview, type name) and Collections (item count) groups and keyboard navigation.
+  `GET /api/search` serves `getSearchItems` (new: the card, a 150-char display preview from
+  `searchPreview`, the whole content, language and tags) and `getCollections` trimmed to id, name,
+  item count; fetched when the shell mounts and again on each open. Search covers every field the
+  drawer shows (author's call): `searchScore` (`src/lib/search-match.ts`) replaces cmdk's scoring,
+  which matched letters scattered across title and content ("dark", "mail" hit the Dockerfile).
+  Every word must match; only the title matches loosely (within one word, or a chain of word
+  starts like "gendoc"); other fields need exact substrings; case and accents ignored (`\p{M}`, so
+  `^` and backticks stay); fields normalised once per load. The item drawer moved into
+  `(app)/layout.tsx` (author's choice), so the palette opens items on any page; it closes itself on
+  navigation; the three page-level providers were removed. `command.tsx` / `input-group.tsx`
+  written by hand from the base-nova registry (the CLI kept prompting, and the raw registry pulls a
+  stray `cn` package, removed); `cmdk` added. 503 tests, build and lint green; checked in the
+  browser with a Playwright script on the dev server: shortcut and click open, fuzzy and
+  deep-content matches, item drawer, collection navigation, drawer closes on navigation, palette
+  over an open drawer and the New Item dialog, `/profile`. Read-only, nothing written to the
+  database. Open question, not decided: search still uses `MAX_ITEM_LIMIT` (100 most recent items)
+  and `MAX_COLLECTION_LIMIT` (50); older items are silently unsearchable past that.
+- 2026-11-21 — Global Search merged into `main` (`282a902`, fast-forward); branch
+  `feature/global-search` deleted. Feature completed.
