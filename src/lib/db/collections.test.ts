@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import {
   aggregateCollectionTypes,
   createCollection,
+  deleteCollection,
   getCollection,
   getCollections,
   getCollectionOptions,
@@ -11,6 +12,7 @@ import {
   getItemTypes,
   getRecentCollections,
   getSidebarRecentCollections,
+  updateCollection,
 } from "@/lib/db/collections";
 import { MAX_COLLECTION_LIMIT } from "@/lib/db/limits";
 import { prisma } from "@/lib/prisma";
@@ -18,7 +20,16 @@ import { prisma } from "@/lib/prisma";
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     $queryRaw: vi.fn(),
-    collection: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), count: vi.fn() },
+    collection: {
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      create: vi.fn(),
+      count: vi.fn(),
+      update: vi.fn(),
+      delete: vi.fn(),
+    },
+    item: { delete: vi.fn(), deleteMany: vi.fn() },
+    itemCollection: { deleteMany: vi.fn() },
     itemType: { findMany: vi.fn() },
     user: { findUnique: vi.fn() },
   },
@@ -135,11 +146,43 @@ describe("getCollection", () => {
     expect(findCollection.mock.calls[0]![0].where).toEqual({ id: "col_other", userId: USER });
   });
 
-  it("returns the collection's name and description", async () => {
-    const row = { id: "col_1", name: "DevOps", description: "Infra notes" };
+  it("returns the collection's name, description and favorite flag", async () => {
+    const row = { id: "col_1", name: "DevOps", description: "Infra notes", isFavorite: true };
     findCollection.mockResolvedValue(row);
 
     expect(await getCollection(USER, "col_1")).toEqual(row);
+  });
+});
+
+describe("updateCollection", () => {
+  const update = asMock(prisma.collection.update);
+
+  it("updates only the owner's collection and stores a missing description as null", async () => {
+    const row = { id: "col_1", name: "Ops", description: null, isFavorite: false };
+    update.mockResolvedValue(row);
+
+    expect(await updateCollection(USER, "col_1", { name: "Ops" })).toEqual(row);
+    expect(update).toHaveBeenCalledWith({
+      where: { id: "col_1", userId: USER },
+      data: { name: "Ops", description: null },
+      select: { id: true, name: true, description: true, isFavorite: true },
+    });
+  });
+});
+
+describe("deleteCollection", () => {
+  const remove = asMock(prisma.collection.delete);
+
+  it("deletes only the owner's collection and leaves its items alone", async () => {
+    remove.mockResolvedValue({ id: "col_1" });
+
+    await deleteCollection(USER, "col_1");
+
+    expect(remove).toHaveBeenCalledWith({ where: { id: "col_1", userId: USER }, select: { id: true } });
+    // The links go by cascade; nothing here touches items or their join rows.
+    expect(prisma.item.delete).not.toHaveBeenCalled();
+    expect(prisma.item.deleteMany).not.toHaveBeenCalled();
+    expect(prisma.itemCollection.deleteMany).not.toHaveBeenCalled();
   });
 });
 

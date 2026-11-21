@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 
 import { auth } from "@/auth";
+import { CollectionHeaderActions } from "@/components/collections/CollectionHeaderActions";
 import { ItemCard } from "@/components/items/ItemCard";
 import { ItemDrawerProvider } from "@/components/items/ItemDrawerProvider";
 import { getCollection } from "@/lib/db/collections";
@@ -43,11 +44,14 @@ export default async function CollectionPage({ params }: CollectionPageProps) {
             <p className="text-sm text-muted-foreground">{collection.description}</p>
           ) : null}
         </div>
-        {items.length > 0 ? (
-          <span className="shrink-0 text-sm text-muted-foreground">
-            {items.length} of {totalCount}
-          </span>
-        ) : null}
+        <div className="flex shrink-0 items-center gap-3">
+          {items.length > 0 ? (
+            <span className="text-sm text-muted-foreground">
+              {items.length} of {totalCount}
+            </span>
+          ) : null}
+          <CollectionHeaderActions collection={collection} />
+        </div>
       </div>
 
       {items.length > 0 ? (

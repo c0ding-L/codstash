@@ -197,7 +197,10 @@ export interface CollectionSummary {
   id: string;
   name: string;
   description: string | null;
+  isFavorite: boolean;
 }
+
+const COLLECTION_SUMMARY_SELECT = { id: true, name: true, description: true, isFavorite: true } as const;
 
 /**
  * One collection, or null when it does not exist or is another user's. Cached per
@@ -207,7 +210,7 @@ export const getCollection = cache(
   async (userId: string, id: string): Promise<CollectionSummary | null> =>
     prisma.collection.findFirst({
       where: { id, userId },
-      select: { id: true, name: true, description: true },
+      select: COLLECTION_SUMMARY_SELECT,
     }),
 );
 
@@ -227,6 +230,30 @@ export async function createCollection(
   });
 
   return { ...created, itemCount: 0, types: [] };
+}
+
+/**
+ * Renames or re-describes one of the user's collections. Throws Prisma's P2025 when it
+ * does not exist or is another user's.
+ */
+export async function updateCollection(
+  userId: string,
+  id: string,
+  { name, description }: CollectionCreate,
+): Promise<CollectionSummary> {
+  return prisma.collection.update({
+    where: { id, userId },
+    data: { name, description: description ?? null },
+    select: COLLECTION_SUMMARY_SELECT,
+  });
+}
+
+/**
+ * Deletes one of the user's collections. Only its `ItemCollection` links go with it
+ * (cascade); the items themselves stay. Throws P2025 when it is not the user's.
+ */
+export async function deleteCollection(userId: string, id: string): Promise<void> {
+  await prisma.collection.delete({ where: { id, userId }, select: { id: true } });
 }
 
 export interface CollectionOption {
