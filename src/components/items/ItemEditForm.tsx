@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useId, useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -10,8 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { useRefreshAfterRemoval } from "@/hooks/use-refresh-after-removal";
 import type { DashboardItem, ItemDetailJson } from "@/lib/db/items";
 import { hasContentField, hasLanguageField, hasUrlField } from "@/lib/item-type-ui";
+import { collectionIdFromPath } from "@/lib/pagination";
 import { toTags } from "@/lib/tags";
 import type { ItemTypeSlug } from "@/types/item-type";
 
@@ -31,7 +33,8 @@ interface ItemEditFormProps {
 }
 
 export function ItemEditForm({ card, detail, slug, onCancel, onSaved, children }: ItemEditFormProps) {
-  const router = useRouter();
+  const pathname = usePathname();
+  const refreshAfterRemoval = useRefreshAfterRemoval();
   const id = useId();
   const [saving, startSaving] = useTransition();
   const { setError, messageFor, clearFor, fieldProps } = useFieldErrors<UpdateItemField>(id);
@@ -73,7 +76,11 @@ export function ItemEditForm({ card, detail, slug, onCancel, onSaved, children }
 
       toast.success("Changes saved.");
       onSaved(result.data);
-      router.refresh();
+      // Taken out of the collection this page lists, the item leaves the listing.
+      const listed = collectionIdFromPath(pathname);
+      const leftListing =
+        listed !== null && !result.data.card.collections.some((collection) => collection.id === listed);
+      refreshAfterRemoval(leftListing ? card.id : null);
     });
   }
 

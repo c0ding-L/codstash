@@ -3,13 +3,16 @@ import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 
 import { auth } from "@/auth";
+import { Pagination } from "@/components/Pagination";
 import { CollectionHeaderActions } from "@/components/collections/CollectionHeaderActions";
 import { ItemCard } from "@/components/items/ItemCard";
 import { getCollection } from "@/lib/db/collections";
 import { getItemsByCollection } from "@/lib/db/items";
+import { ITEMS_PER_PAGE, pageCount, pageOffset, parsePageParam } from "@/lib/pagination";
 
 interface CollectionPageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
 export async function generateMetadata({ params }: CollectionPageProps): Promise<Metadata> {
@@ -19,7 +22,7 @@ export async function generateMetadata({ params }: CollectionPageProps): Promise
   return collection ? { title: `${collection.name} · Codstash` } : {};
 }
 
-export default async function CollectionPage({ params }: CollectionPageProps) {
+export default async function CollectionPage({ params, searchParams }: CollectionPageProps) {
   // Rendered per request, like every other page.
   await connection();
 
@@ -31,7 +34,14 @@ export default async function CollectionPage({ params }: CollectionPageProps) {
   const collection = await getCollection(session.user.id, id);
   if (!collection) notFound();
 
-  const { items, totalCount } = await getItemsByCollection(session.user.id, collection.id);
+  // A page that is not a number, or past the last one, does not exist.
+  const page = parsePageParam((await searchParams).page);
+  if (page === null) notFound();
+
+  const { items, totalCount } = await getItemsByCollection(session.user.id, collection.id, page);
+  const pages = pageCount(totalCount, ITEMS_PER_PAGE);
+  if (page > pages) notFound();
+  const first = pageOffset(page, ITEMS_PER_PAGE) + 1;
   const now = new Date().toISOString();
 
   return (
@@ -46,7 +56,7 @@ export default async function CollectionPage({ params }: CollectionPageProps) {
         <div className="flex shrink-0 items-center gap-3">
           {items.length > 0 ? (
             <span className="text-sm text-muted-foreground">
-              {items.length} of {totalCount}
+              {first}–{first + items.length - 1} of {totalCount}
             </span>
           ) : null}
           <CollectionHeaderActions collection={collection} />
@@ -64,6 +74,13 @@ export default async function CollectionPage({ params }: CollectionPageProps) {
       ) : (
         <p className="text-sm text-muted-foreground">No items in this collection yet.</p>
       )}
+
+      <Pagination
+        basePath={`/collections/${encodeURIComponent(collection.id)}`}
+        page={page}
+        pageCount={pages}
+        rowIds={items.map((item) => item.id)}
+      />
     </div>
   );
 }

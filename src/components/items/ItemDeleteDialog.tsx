@@ -1,7 +1,6 @@
 "use client";
 
 import { TriangleAlert } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "sonner";
 
@@ -17,6 +16,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { useRefreshAfterRemoval } from "@/hooks/use-refresh-after-removal";
 import type { DashboardItem } from "@/lib/db/items";
 
 interface ItemDeleteDialogProps {
@@ -28,7 +28,7 @@ interface ItemDeleteDialogProps {
 
 /** Asks before deleting the item. On failure it stays open, so the user can retry or cancel. */
 export function ItemDeleteDialog({ card, open, onOpenChange, onDeleted }: ItemDeleteDialogProps) {
-  const router = useRouter();
+  const refreshAfterRemoval = useRefreshAfterRemoval();
   const [pending, startDeleting] = useTransition();
 
   function handleDelete() {
@@ -42,7 +42,7 @@ export function ItemDeleteDialog({ card, open, onOpenChange, onDeleted }: ItemDe
       toast.success("Item deleted.");
       onOpenChange(false);
       onDeleted(card.id);
-      router.refresh();
+      refreshAfterRemoval(card.id);
     });
   }
 

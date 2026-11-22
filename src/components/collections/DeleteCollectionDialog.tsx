@@ -1,7 +1,6 @@
 "use client";
 
 import { TriangleAlert } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "sonner";
 
@@ -17,6 +16,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { useRefreshAfterRemoval } from "@/hooks/use-refresh-after-removal";
 
 interface DeleteCollectionDialogProps {
   collection: { id: string; name: string };
@@ -33,7 +33,7 @@ export function DeleteCollectionDialog({
   onOpenChange,
   redirectToList = false,
 }: DeleteCollectionDialogProps) {
-  const router = useRouter();
+  const refreshAfterRemoval = useRefreshAfterRemoval();
   const [pending, startDeleting] = useTransition();
 
   function handleDelete() {
@@ -47,7 +47,7 @@ export function DeleteCollectionDialog({
 
       toast.success("Collection deleted.");
       onOpenChange(false);
-      router.refresh();
+      refreshAfterRemoval(collection.id);
     });
   }
 

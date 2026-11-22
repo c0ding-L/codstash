@@ -3,6 +3,7 @@ import { cache } from "react";
 import { Prisma } from "@/generated/prisma/client";
 
 import { clampLimit, MAX_COLLECTION_LIMIT } from "@/lib/db/limits";
+import { COLLECTIONS_PER_PAGE, DASHBOARD_COLLECTIONS_LIMIT, pageOffset } from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
 
 /** The seeded demo account, which the profile page refuses to delete. */
@@ -156,18 +157,14 @@ export interface RecentCollection {
   types: CollectionType[];
 }
 
-/** The spec asks for six cards; the seed has five, and nothing is padded. */
-const RECENT_LIMIT = 6;
-
-export async function getRecentCollections(
-  userId: string,
-  limit: number = RECENT_LIMIT,
-): Promise<RecentCollection[]> {
+/** The user's collections as cards, most recently updated first, from `skip` on. */
+async function loadCollectionCards(userId: string, skip: number, take: number): Promise<RecentCollection[]> {
   const [collections, typeById] = await Promise.all([
     prisma.collection.findMany({
       where: { userId },
-      orderBy: { updatedAt: "desc" },
-      take: clampLimit(limit, MAX_COLLECTION_LIMIT),
+      orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+      skip,
+      take,
       include: { _count: { select: { items: true } } },
     }),
     loadTypeLookup(userId),
@@ -188,9 +185,30 @@ export async function getRecentCollections(
   }));
 }
 
+/** The dashboard's cards; the seed has five, and nothing is padded. */
+export async function getRecentCollections(
+  userId: string,
+  limit: number = DASHBOARD_COLLECTIONS_LIMIT,
+): Promise<RecentCollection[]> {
+  return loadCollectionCards(userId, 0, clampLimit(limit, MAX_COLLECTION_LIMIT));
+}
+
 /** Every collection the user owns, most recently updated first, up to the ceiling. */
 export async function getCollections(userId: string): Promise<RecentCollection[]> {
   return getRecentCollections(userId, MAX_COLLECTION_LIMIT);
+}
+
+/** One page of the user's collections for `/collections`, plus the total so the page can count its pages. */
+export async function getCollectionsPage(
+  userId: string,
+  page: number = 1,
+): Promise<{ collections: RecentCollection[]; totalCount: number }> {
+  const [collections, totalCount] = await Promise.all([
+    loadCollectionCards(userId, pageOffset(page, COLLECTIONS_PER_PAGE), COLLECTIONS_PER_PAGE),
+    prisma.collection.count({ where: { userId } }),
+  ]);
+
+  return { collections, totalCount };
 }
 
 /** A collection as the command palette lists it. */

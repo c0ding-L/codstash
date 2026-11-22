@@ -19,6 +19,7 @@ import {
   updateItem,
 } from "@/lib/db/items";
 import { MAX_ITEM_LIMIT } from "@/lib/db/limits";
+import { DASHBOARD_RECENT_ITEMS_LIMIT, ITEMS_PER_PAGE } from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
 
 vi.mock("@/lib/prisma", () => ({
@@ -131,13 +132,28 @@ describe("getSearchItems", () => {
 });
 
 describe("getItemsByCollection", () => {
-  it("reads the newest first, up to the ceiling, and reports the full total", async () => {
+  it("reads the first page, newest first, and reports the full total", async () => {
     count.mockResolvedValue(250);
 
     const { totalCount } = await getItemsByCollection(USER, "col_1");
 
     expect(totalCount).toBe(250);
-    expect(findMany.mock.calls[0]![0]).toMatchObject({ orderBy: { updatedAt: "desc" }, take: MAX_ITEM_LIMIT });
+    expect(findMany.mock.calls[0]![0]).toMatchObject({
+      orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+      skip: 0,
+      take: ITEMS_PER_PAGE,
+    });
+  });
+
+  it("reads only the rows of the page asked for", async () => {
+    await getItemsByCollection(USER, "col_1", 3);
+
+    expect(findMany.mock.calls[0]![0]).toMatchObject({ skip: 2 * ITEMS_PER_PAGE, take: ITEMS_PER_PAGE });
+  });
+
+  it("rejects page 0 before querying", async () => {
+    await expect(getItemsByCollection(USER, "col_1", 0)).rejects.toThrow(RangeError);
+    expect(findMany).not.toHaveBeenCalled();
   });
 
   it("flattens the collections of each item", async () => {
@@ -150,13 +166,28 @@ describe("getItemsByCollection", () => {
 });
 
 describe("getItemsByType", () => {
-  it("reads the newest first, up to the ceiling, and reports the full total", async () => {
+  it("reads the first page, newest first, and reports the full total", async () => {
     count.mockResolvedValue(250);
 
     const { totalCount } = await getItemsByType(USER, "link");
 
     expect(totalCount).toBe(250);
-    expect(findMany.mock.calls[0]![0]).toMatchObject({ orderBy: { updatedAt: "desc" }, take: MAX_ITEM_LIMIT });
+    expect(findMany.mock.calls[0]![0]).toMatchObject({
+      orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+      skip: 0,
+      take: ITEMS_PER_PAGE,
+    });
+  });
+
+  it("reads only the rows of the page asked for", async () => {
+    await getItemsByType(USER, "link", 3);
+
+    expect(findMany.mock.calls[0]![0]).toMatchObject({ skip: 2 * ITEMS_PER_PAGE, take: ITEMS_PER_PAGE });
+  });
+
+  it("rejects page 0 before querying", async () => {
+    await expect(getItemsByType(USER, "link", 0)).rejects.toThrow(RangeError);
+    expect(findMany).not.toHaveBeenCalled();
   });
 
   it("flattens the collections, and is empty for an item in none", async () => {
@@ -186,6 +217,12 @@ describe("getItemsByType", () => {
 });
 
 describe("getRecentItems", () => {
+  it("reads the dashboard's count by default", async () => {
+    await getRecentItems(USER);
+
+    expect(findMany.mock.calls[0]![0].take).toBe(DASHBOARD_RECENT_ITEMS_LIMIT);
+  });
+
   it("clamps a limit above the ceiling", async () => {
     await getRecentItems(USER, MAX_ITEM_LIMIT + 1);
 

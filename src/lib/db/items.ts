@@ -1,5 +1,6 @@
 import { clipCommand } from "@/lib/command-text";
 import { clampLimit, MAX_ITEM_LIMIT } from "@/lib/db/limits";
+import { DASHBOARD_RECENT_ITEMS_LIMIT, ITEMS_PER_PAGE, pageOffset } from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
 import { countWords, estimateTokens, markdownToPlainText, promptExcerpt } from "@/lib/prompt-text";
 import { searchPreview } from "@/lib/search-text";
@@ -81,16 +82,13 @@ export async function getPinnedItems(userId: string): Promise<DashboardItem[]> {
   return items.map(toDashboardItem);
 }
 
-/** Matches the count the section has always shown. */
-const RECENT_ITEM_LIMIT = 10;
-
 /**
  * The most recently updated items, plus how many the user has in total — the
  * section header reads "10 of 18".
  */
 export async function getRecentItems(
   userId: string,
-  limit: number = RECENT_ITEM_LIMIT,
+  limit: number = DASHBOARD_RECENT_ITEMS_LIMIT,
 ): Promise<{ items: DashboardItem[]; totalCount: number }> {
   const [items, totalCount] = await Promise.all([
     prisma.item.findMany({
@@ -106,21 +104,23 @@ export async function getRecentItems(
 }
 
 /**
- * The user's items of one type, most recently updated first, plus the total so
- * the page can say when the ceiling cut the list short. Filters on the slug, so
- * a custom type reusing a system slug lists with it, as in the profile counts.
+ * One page of the user's items of one type, most recently updated first, plus
+ * the total so the page can count its pages. Filters on the slug, so a custom
+ * type reusing a system slug lists with it, as in the profile counts.
  */
 export async function getItemsByType(
   userId: string,
   slug: ItemTypeSlug,
+  page: number = 1,
 ): Promise<{ items: DashboardItem[]; totalCount: number }> {
   const where = { userId, type: { slug } };
 
   const [items, totalCount] = await Promise.all([
     prisma.item.findMany({
       where,
-      orderBy: { updatedAt: "desc" },
-      take: MAX_ITEM_LIMIT,
+      orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+      skip: pageOffset(page, ITEMS_PER_PAGE),
+      take: ITEMS_PER_PAGE,
       select: dashboardItemSelect,
     }),
     prisma.item.count({ where }),
@@ -130,21 +130,23 @@ export async function getItemsByType(
 }
 
 /**
- * The user's items in one collection, most recently updated first, plus the total
- * so the page can say when the ceiling cut the list short. The caller checks the
+ * One page of the user's items in one collection, most recently updated first,
+ * plus the total so the page can count its pages. The caller checks the
  * collection is the user's; `userId` keeps another user's items out regardless.
  */
 export async function getItemsByCollection(
   userId: string,
   collectionId: string,
+  page: number = 1,
 ): Promise<{ items: DashboardItem[]; totalCount: number }> {
   const where = { userId, collections: { some: { collectionId } } };
 
   const [items, totalCount] = await Promise.all([
     prisma.item.findMany({
       where,
-      orderBy: { updatedAt: "desc" },
-      take: MAX_ITEM_LIMIT,
+      orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+      skip: pageOffset(page, ITEMS_PER_PAGE),
+      take: ITEMS_PER_PAGE,
       select: dashboardItemSelect,
     }),
     prisma.item.count({ where }),

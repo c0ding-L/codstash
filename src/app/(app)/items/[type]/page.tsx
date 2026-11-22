@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 
 import { auth } from "@/auth";
+import { Pagination } from "@/components/Pagination";
 import { CommandList } from "@/components/items/CommandList";
 import { FileList } from "@/components/items/FileList";
 import { ImageCard } from "@/components/items/ImageCard";
@@ -13,9 +14,11 @@ import { SnippetList } from "@/components/items/SnippetList";
 import { TypeIconTile } from "@/components/items/TypeIconTile";
 import { getCommandTexts, getItemsByType, getPromptPreviews, getSnippetPreviews } from "@/lib/db/items";
 import { itemTypeFromSegment, itemTypeHref, typeColors, typePluralNames } from "@/lib/item-type-ui";
+import { ITEMS_PER_PAGE, pageCount, pageOffset, parsePageParam } from "@/lib/pagination";
 
 interface ItemsPageProps {
   params: Promise<{ type: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
 export async function generateMetadata({ params }: ItemsPageProps): Promise<Metadata> {
@@ -23,7 +26,7 @@ export async function generateMetadata({ params }: ItemsPageProps): Promise<Meta
   return slug ? { title: `${typePluralNames[slug]} · Codstash` } : {};
 }
 
-export default async function ItemsPage({ params }: ItemsPageProps) {
+export default async function ItemsPage({ params, searchParams }: ItemsPageProps) {
   // Rendered per request, like every other page.
   await connection();
 
@@ -35,7 +38,15 @@ export default async function ItemsPage({ params }: ItemsPageProps) {
   const session = await auth();
   if (!session?.user?.id) redirect(`/sign-in?callbackUrl=${itemTypeHref(slug)}`);
 
-  const { items, totalCount } = await getItemsByType(session.user.id, slug);
+  // A page that is not a number, or past the last one, does not exist.
+  const page = parsePageParam((await searchParams).page);
+  if (page === null) notFound();
+
+  const { items, totalCount } = await getItemsByType(session.user.id, slug, page);
+  const pages = pageCount(totalCount, ITEMS_PER_PAGE);
+  if (page > pages) notFound();
+  const first = pageOffset(page, ITEMS_PER_PAGE) + 1;
+
   const ids = items.map((item) => item.id);
   const commandTexts = slug === "command" ? await getCommandTexts(session.user.id, ids) : {};
   const promptPreviews = slug === "prompt" ? await getPromptPreviews(session.user.id, ids) : {};
@@ -53,7 +64,7 @@ export default async function ItemsPage({ params }: ItemsPageProps) {
         </h1>
         {items.length > 0 ? (
           <span className="text-sm text-muted-foreground">
-            {items.length} of {totalCount}
+            {first}–{first + items.length - 1} of {totalCount}
           </span>
         ) : null}
       </div>
@@ -91,6 +102,8 @@ export default async function ItemsPage({ params }: ItemsPageProps) {
       ) : (
         <p className="text-sm text-muted-foreground">No {label.toLowerCase()} yet.</p>
       )}
+
+      <Pagination basePath={itemTypeHref(slug)} page={page} pageCount={pages} rowIds={ids} />
     </div>
   );
 }

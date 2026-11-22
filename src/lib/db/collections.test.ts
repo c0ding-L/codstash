@@ -6,6 +6,7 @@ import {
   deleteCollection,
   getCollection,
   getCollections,
+  getCollectionsPage,
   getCollectionOptions,
   ownsCollections,
   getFavoriteCollections,
@@ -15,6 +16,7 @@ import {
   updateCollection,
 } from "@/lib/db/collections";
 import { MAX_COLLECTION_LIMIT } from "@/lib/db/limits";
+import { COLLECTIONS_PER_PAGE, DASHBOARD_COLLECTIONS_LIMIT } from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
 
 vi.mock("@/lib/prisma", () => ({
@@ -76,6 +78,7 @@ describe("account isolation", () => {
     ["getFavoriteCollections", () => getFavoriteCollections(USER), { userId: USER, isFavorite: true }],
     ["getSidebarRecentCollections", () => getSidebarRecentCollections(USER), { userId: USER }],
     ["getRecentCollections", () => getRecentCollections(USER), { userId: USER }],
+    ["getCollectionsPage", () => getCollectionsPage(USER), { userId: USER }],
   ])("%s reads only that user's collections and their items", async (_name, read, where) => {
     await read();
 
@@ -114,6 +117,12 @@ describe("getRecentCollections", () => {
     expect(groupItems).not.toHaveBeenCalled();
   });
 
+  it("reads the dashboard's count by default", async () => {
+    await getRecentCollections(USER);
+
+    expect(findCollections.mock.calls[0]![0]).toMatchObject({ skip: 0, take: DASHBOARD_COLLECTIONS_LIMIT });
+  });
+
   it("clamps a limit above the ceiling", async () => {
     findCollections.mockResolvedValue([]);
 
@@ -129,10 +138,45 @@ describe("getCollections", () => {
 
     expect(findCollections.mock.calls[0]![0]).toMatchObject({
       where: { userId: USER },
-      orderBy: { updatedAt: "desc" },
+      orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
       take: MAX_COLLECTION_LIMIT,
     });
     expect(collections.map((collection) => collection.id)).toEqual(["col_1"]);
+  });
+});
+
+describe("getCollectionsPage", () => {
+  const countCollections = asMock(prisma.collection.count);
+
+  beforeEach(() => {
+    countCollections.mockResolvedValue(20);
+  });
+
+  it("reads the first page, newest first, and counts only that user's collections", async () => {
+    const { collections, totalCount } = await getCollectionsPage(USER);
+
+    expect(findCollections.mock.calls[0]![0]).toMatchObject({
+      orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+      skip: 0,
+      take: COLLECTIONS_PER_PAGE,
+    });
+    expect(countCollections).toHaveBeenCalledWith({ where: { userId: USER } });
+    expect(totalCount).toBe(20);
+    expect(collections.map((collection) => collection.id)).toEqual(["col_1"]);
+  });
+
+  it("reads only the rows of the page asked for", async () => {
+    await getCollectionsPage(USER, 3);
+
+    expect(findCollections.mock.calls[0]![0]).toMatchObject({
+      skip: 2 * COLLECTIONS_PER_PAGE,
+      take: COLLECTIONS_PER_PAGE,
+    });
+  });
+
+  it("rejects page 0 before querying", async () => {
+    await expect(getCollectionsPage(USER, 0)).rejects.toThrow(RangeError);
+    expect(findCollections).not.toHaveBeenCalled();
   });
 });
 
