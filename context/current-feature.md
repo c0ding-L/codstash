@@ -1,22 +1,21 @@
-# Current Feature: Lower Pro monthly price to $7
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- The homepage pricing section shows Pro at **$7/month** on the monthly toggle (was $8).
-- The yearly toggle shows **$63/year** with "$5.25/month"; the "Save 25%" badge stays.
-- `context/project-overview.md` pricing table reads `$7/mo or $63/yr` for Pro.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Only two places hold the price: `src/components/home/PricingPlans.tsx:90` (`"$8"`) and
-  `context/project-overview.md:225`. No Stripe price IDs exist in the code yet, so this is a
-  display/spec change only.
-- Decision: yearly drops from $72 to **$63/yr ($5.25/month)** so the "Save 25%" badge stays
-  correct ($84 × 0.75 = $63).
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — Lower Pro price: Pro costs $7/month or $63/year on the homepage
+and in the spec. Outcome in the History below.
 
 ---
 
@@ -2149,3 +2148,7 @@ Environment notes that outlive any one feature:
   `/sign-in`). Checked with Playwright at 1280px and 375px mobile, plus centring at 640px;
   625 tests, build and lint green. Merged into `main` (`b530de0`, fast-forward); branch
   `feature/auth-pages-nav` deleted (never pushed). Feature completed.
+- 2026-11-22 — Lower Pro price: homepage pricing shows $7/month and $63/year ($5.25/month on
+  the yearly toggle, "Save 25%" still correct); `project-overview.md` pricing table matches.
+  Display/spec change only. 625 tests, build and lint green. Merged into `main` (`1402126`,
+  fast-forward); branch `feature/lower-pro-price` deleted (never pushed). Feature completed.
