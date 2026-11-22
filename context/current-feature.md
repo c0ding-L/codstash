@@ -1,35 +1,21 @@
-# Current Feature: Homepage Nav on Auth Pages
+# Current Feature
 
 ## Status
 
-In Progress — branch `feature/auth-pages-nav`
+Not Started
 
 ## Goals
 
-- `/sign-in` and `/register` show the same top nav as the homepage (`HomeNav`: logo, Features,
-  Pricing, Sign In, Get Started).
-- The nav's Features / Pricing links work from the auth pages: they go to `/#features` and
-  `/#pricing` instead of in-page `#` anchors that do nothing there.
-- The logo still leads back to `/`.
-- The auth card stays centered and is never hidden under the fixed nav, on desktop and phone
-  widths.
-- The homepage nav looks and behaves exactly as before.
-- Added during review: Features / Pricing are centred on the nav bar (homepage and auth pages).
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- `HomeNav` (`src/components/home/HomeNav.tsx`) is a client component, `fixed` at the top,
-  transparent until the page scrolls. Reuse it rather than copying it.
-- The auth pages render through `AuthCard` (`src/components/auth/AuthCard.tsx`), a
-  `min-h-svh` centered `<main>`. `AuthCard` is also used by forgot-password, reset-password
-  and verify-email — this feature only asks for sign-in and register, so add the nav in those
-  two pages (or behind an opt-in prop), not in `AuthCard` for everyone.
-- The auth pages barely scroll, so the nav will usually sit in its transparent state; check
-  that it still reads well over the auth page background.
-- Open question for start: on `/sign-in` keep both Sign In and Get Started buttons, or hide
-  the button for the page you are already on? Default: keep the nav identical.
-- Component change only: no server actions or utilities change, so no new unit tests. Verify
-  in the browser, then `npm test`, `npm run build`, `npm run lint`.
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — Homepage nav on auth pages: `/sign-in` and `/register` show the
+homepage top nav. Outcome in the History below.
 
 ---
 
@@ -2149,3 +2135,11 @@ Environment notes that outlive any one feature:
   author updates `EMAIL_FROM` in `.env` and on Vercel. Favicon not changed. Checked with
   Playwright on 7 routes; 625 tests, build and lint green. Merged into `main` (`709f5a1`,
   fast-forward); branch `feature/rebrand-cortex` deleted. Feature completed.
+- 2026-11-22 — Homepage nav on auth pages: `AuthCard` takes an opt-in `withNav` prop (adds
+  `HomeNav` and `pt-20` so the card clears the fixed bar), used by `/sign-in` and `/register`
+  only; forgot / reset password and verify-email unchanged. `HomeNav` Features / Pricing now
+  link to `/#features` / `/#pricing` with `<Link>` (lint rejects `<a>` to `/`) and are centred on
+  the bar (absolute, `left-1/2`). Nav kept identical on every page (Sign In still shows on
+  `/sign-in`). Checked with Playwright at 1280px and 375px mobile, plus centring at 640px;
+  625 tests, build and lint green. Merged into `main` (`b530de0`, fast-forward); branch
+  `feature/auth-pages-nav` deleted (never pushed). Feature completed.
