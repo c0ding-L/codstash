@@ -1,0 +1,86 @@
+import type { Monaco } from "@monaco-editor/react";
+
+type ThemeData = Parameters<Monaco["editor"]["defineTheme"]>[1];
+
+/**
+ * Monaco ships `vs-dark` itself; these two are defined from the editors' usual palettes.
+ * Token names follow Monaco's Monarch tokenizers (`keyword`, `string`, `type.identifier`, ...).
+ */
+export const CUSTOM_MONACO_THEMES: Record<"monokai" | "github-dark", ThemeData> = {
+  monokai: {
+    base: "vs-dark",
+    inherit: true,
+    rules: [
+      { token: "", foreground: "F8F8F2" },
+      { token: "comment", foreground: "75715E", fontStyle: "italic" },
+      { token: "string", foreground: "E6DB74" },
+      { token: "number", foreground: "AE81FF" },
+      { token: "regexp", foreground: "E6DB74" },
+      { token: "keyword", foreground: "F92672" },
+      { token: "operator", foreground: "F92672" },
+      { token: "delimiter", foreground: "F8F8F2" },
+      { token: "type", foreground: "66D9EF", fontStyle: "italic" },
+      { token: "type.identifier", foreground: "A6E22E" },
+      { token: "identifier", foreground: "F8F8F2" },
+      { token: "variable", foreground: "FD971F" },
+      { token: "variable.predefined", foreground: "66D9EF" },
+      { token: "constant", foreground: "AE81FF" },
+      { token: "tag", foreground: "F92672" },
+      { token: "attribute.name", foreground: "A6E22E" },
+      { token: "attribute.value", foreground: "E6DB74" },
+      { token: "key", foreground: "F92672" },
+      { token: "string.key.json", foreground: "F92672" },
+      { token: "string.value.json", foreground: "E6DB74" },
+    ],
+    colors: {
+      "editor.background": "#272822",
+      "editor.foreground": "#F8F8F2",
+      "editorGutter.background": "#272822",
+      "editor.lineHighlightBackground": "#3E3D32",
+      "editor.selectionBackground": "#49483E",
+      "editorCursor.foreground": "#F8F8F0",
+      "editorWhitespace.foreground": "#464741",
+      "editorLineNumber.foreground": "#90908A",
+      "editorLineNumber.activeForeground": "#F8F8F2",
+      "editorIndentGuide.background1": "#464741",
+    },
+  },
+  "github-dark": {
+    base: "vs-dark",
+    inherit: true,
+    rules: [
+      { token: "", foreground: "E6EDF3" },
+      { token: "comment", foreground: "8B949E", fontStyle: "italic" },
+      { token: "string", foreground: "A5D6FF" },
+      { token: "number", foreground: "79C0FF" },
+      { token: "regexp", foreground: "7EE787" },
+      { token: "keyword", foreground: "FF7B72" },
+      { token: "operator", foreground: "FF7B72" },
+      { token: "delimiter", foreground: "E6EDF3" },
+      { token: "type", foreground: "FFA657" },
+      { token: "type.identifier", foreground: "FFA657" },
+      { token: "identifier", foreground: "E6EDF3" },
+      { token: "variable", foreground: "FFA657" },
+      { token: "variable.predefined", foreground: "79C0FF" },
+      { token: "constant", foreground: "79C0FF" },
+      { token: "tag", foreground: "7EE787" },
+      { token: "attribute.name", foreground: "79C0FF" },
+      { token: "attribute.value", foreground: "A5D6FF" },
+      { token: "key", foreground: "7EE787" },
+      { token: "string.key.json", foreground: "7EE787" },
+      { token: "string.value.json", foreground: "A5D6FF" },
+    ],
+    colors: {
+      "editor.background": "#0D1117",
+      "editor.foreground": "#E6EDF3",
+      "editorGutter.background": "#0D1117",
+      "editor.lineHighlightBackground": "#6E76811A",
+      "editor.selectionBackground": "#264F78",
+      "editorCursor.foreground": "#E6EDF3",
+      "editorWhitespace.foreground": "#484F58",
+      "editorLineNumber.foreground": "#6E7681",
+      "editorLineNumber.activeForeground": "#E6EDF3",
+      "editorIndentGuide.background1": "#21262D",
+    },
+  },
+};

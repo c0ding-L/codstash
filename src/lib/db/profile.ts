@@ -1,4 +1,5 @@
 import { getItemTypes } from "@/lib/db/collections";
+import { parseEditorPreferences, type EditorPreferences } from "@/lib/editor-preferences";
 import { prisma } from "@/lib/prisma";
 import { toColorToken, toItemTypeSlug } from "@/lib/item-type-ui";
 import type { ColorToken, ItemTypeSlug } from "@/types/item-type";
@@ -23,6 +24,12 @@ export async function getProfile(userId: string): Promise<Profile | null> {
 
   const { password, ...rest } = user;
   return { ...rest, hasPassword: password !== null };
+}
+
+/** The defaults for a user with nothing saved, or whose row is gone. */
+export async function getEditorPreferences(userId: string): Promise<EditorPreferences> {
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { editorPreferences: true } });
+  return parseEditorPreferences(user?.editorPreferences);
 }
 
 /** The order the spec lists them in. */

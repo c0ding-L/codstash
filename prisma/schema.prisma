@@ -27,6 +27,8 @@ model User {
   password          String?
   // Sessions signed in before this are ended by the `jwt` callback.
   passwordChangedAt DateTime?
+  // Monaco settings from /settings; null or missing keys fall back to the defaults.
+  editorPreferences Json?
 
   isPro                Boolean @default(false)
   stripeCustomerId     String?

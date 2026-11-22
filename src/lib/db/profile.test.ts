@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
-import { getProfile, getProfileStats } from "@/lib/db/profile";
+import { DEFAULT_EDITOR_PREFERENCES } from "@/lib/editor-preferences";
+import { getEditorPreferences, getProfile, getProfileStats } from "@/lib/db/profile";
 import { prisma } from "@/lib/prisma";
 
 vi.mock("@/lib/prisma", () => ({
@@ -109,5 +110,32 @@ describe("getProfileStats", () => {
 
     expect(totalItems).toBe(4);
     expect(byType.every(({ count }) => count === 0)).toBe(true);
+  });
+});
+
+describe("getEditorPreferences", () => {
+  it("reads only that user's preferences column", async () => {
+    findUser.mockResolvedValue({ editorPreferences: null });
+
+    await getEditorPreferences(USER);
+
+    expect(findUser.mock.calls[0]![0]).toEqual({ where: { id: USER }, select: { editorPreferences: true } });
+  });
+
+  it("returns the defaults when nothing is saved or the row is gone", async () => {
+    findUser.mockResolvedValueOnce({ editorPreferences: null }).mockResolvedValueOnce(null);
+
+    expect(await getEditorPreferences(USER)).toEqual(DEFAULT_EDITOR_PREFERENCES);
+    expect(await getEditorPreferences(USER)).toEqual(DEFAULT_EDITOR_PREFERENCES);
+  });
+
+  it("merges what is saved over the defaults", async () => {
+    findUser.mockResolvedValue({ editorPreferences: { fontSize: 16, theme: "github-dark" } });
+
+    expect(await getEditorPreferences(USER)).toEqual({
+      ...DEFAULT_EDITOR_PREFERENCES,
+      fontSize: 16,
+      theme: "github-dark",
+    });
   });
 });

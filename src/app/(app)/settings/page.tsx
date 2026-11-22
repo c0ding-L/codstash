@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
+import { Suspense } from "react";
 
 import { auth } from "@/auth";
 import { ChangePasswordDialog } from "@/components/profile/ChangePasswordDialog";
 import { DeleteAccountDialog } from "@/components/profile/DeleteAccountDialog";
+import { EditorPreferencesForm } from "@/components/settings/EditorPreferencesForm";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DEMO_USER_EMAIL } from "@/lib/db/collections";
 import { getProfile } from "@/lib/db/profile";
 
@@ -24,13 +27,28 @@ export default async function SettingsPage() {
   if (!profile) redirect("/sign-in?callbackUrl=/settings");
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Settings</h1>
-        <p className="text-sm text-muted-foreground">Manage your password and your account.</p>
+        <p className="text-sm text-muted-foreground">Manage your editor, your password and your account.</p>
       </div>
 
-      <section className="flex max-w-2xl flex-col gap-4">
+      <section className="flex flex-col gap-4">
+        <h2 className="text-lg font-semibold">Editor</h2>
+        <Card>
+          <CardHeader>
+            <CardTitle>Code editor</CardTitle>
+            <CardDescription>Applies to every code editor and viewer. Changes save automatically.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+              <EditorPreferencesForm />
+            </Suspense>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="flex flex-col gap-4">
         <h2 className="text-lg font-semibold">Account</h2>
         <Card>
           <CardHeader>
