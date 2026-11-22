@@ -14,6 +14,12 @@ Not Started
 
 ---
 
+Previous feature (completed) — Editor Preferences Settings: an Editor card on `/settings` (font
+size, tab size, theme, word wrap, minimap) saves each change on its own to `User.editorPreferences`,
+and every Monaco editor follows it. Outcome in the History below.
+
+---
+
 Previous feature (completed) — Settings Page: a protected `/settings` page, opened from the
 sidebar user dropdown, now holds the Password and Delete account cards moved off `/profile`.
 Outcome in the History below.
@@ -1949,3 +1955,22 @@ Environment notes that outlive any one feature:
   (redirect when signed out, menu entry, page content, profile, footer). Read-only.
 - 2026-11-22 — Settings Page merged into `main` (`174f6d1`, fast-forward); branch
   `feature/settings-page` deleted. Feature completed.
+- 2026-11-22 — Editor Preferences Settings: nullable JSON column `User.editorPreferences`
+  (migration `20261122010400_user_editor_preferences`, applied to develop with `migrate dev`;
+  Prisma 7 needed a separate `prisma generate`). `src/lib/editor-preferences.ts` holds the
+  options (font 12/13/14/15/16/18/20, default 13; tab 2/4/8, default 2; themes `vs-dark`,
+  `monokai`, `github-dark`), defaults, zod schema and `parseEditorPreferences`, which falls back
+  field by field. `updateEditorPreferences` server action (validate, auth, write the full set).
+  The `(app)` layout starts `loadEditorPreferences()` (`src/lib/load-editor-preferences.ts`)
+  without awaiting and hands the promise to `EditorPreferencesProvider`; `useEditorPreferences`
+  reads the user's latest change or `use(promise)`, so `CodeEditor` suspends its Monaco pane
+  behind its own boundary. Auto-save is optimistic with a `sonner` toast; only the latest failed
+  save rolls back. `auth()` stays outside the loader's `try`, as catching it swallowed Next's
+  dynamic-usage signal at build. `CodeEditor` derives line height from font size and sets
+  `detectIndentation: false` so the tab size applies; Monokai and GitHub Dark are defined in
+  `src/lib/monaco-themes.ts`, stock `vs-dark` replaces `codstash-dark` (author's call). Added
+  shadcn `select` / `switch` (base-ui); `shadcn add` had wired them to an unrelated npm package
+  `cn`, reverted. Settings column centered at the author's request. 588 tests, build and lint
+  green; checked in the browser by the author.
+- 2026-11-22 — Editor Preferences Settings merged into `main` (`8e65bc9`, fast-forward); branch
+  `feature/editor-preferences-settings` deleted. Feature completed.
