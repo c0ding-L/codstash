@@ -28,7 +28,8 @@ export default async function DashboardPage() {
       <StatsCards userId={session.user.id} />
       <RecentCollections userId={session.user.id} />
 
-      <div className="grid gap-8 xl:grid-cols-2">
+      {/* grid-cols-1 (minmax(0, 1fr)) lets long descriptions truncate instead of widening the page on mobile. */}
+      <div className="grid grid-cols-1 gap-8 xl:grid-cols-2">
         <PinnedItems userId={session.user.id} />
         <RecentItems userId={session.user.id} />
       </div>

@@ -54,9 +54,10 @@ export function NewItemDialog() {
   return (
     // Kept open while saving, so a create in flight cannot be dismissed half done.
     <Dialog open={open} onOpenChange={(next) => (saving ? undefined : setOpen(next))}>
-      <DialogTrigger render={<Button size="lg" />}>
+      <DialogTrigger render={<Button size="lg" aria-label="New Item" />}>
         <Plus aria-hidden />
-        New Item
+        {/* Icon only on narrow screens, like "New Collection". */}
+        <span className="hidden sm:inline">New Item</span>
       </DialogTrigger>
       {/* Capped to the viewport and scrollable: a long snippet would push "Create item" off screen. */}
       <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg" showCloseButton={!saving}>
