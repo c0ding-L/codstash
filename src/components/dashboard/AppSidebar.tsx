@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock, Code2, Folders, Settings, Star } from "lucide-react";
+import { Clock, Code2, Folders, Star } from "lucide-react";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
@@ -112,12 +112,6 @@ async function AppSidebarBody() {
 
       <SidebarFooter>
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Settings">
-              <Settings aria-hidden />
-              <span>Settings</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
           <SidebarMenuItem>
             <UserMenu
               name={user.name ?? null}

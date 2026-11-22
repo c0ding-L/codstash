@@ -6,10 +6,7 @@ import { connection } from "next/server";
 import { auth } from "@/auth";
 import { UserAvatar } from "@/components/auth/UserAvatar";
 import { TypeIconTile } from "@/components/items/TypeIconTile";
-import { ChangePasswordDialog } from "@/components/profile/ChangePasswordDialog";
-import { DeleteAccountDialog } from "@/components/profile/DeleteAccountDialog";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DEMO_USER_EMAIL } from "@/lib/db/collections";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getProfile, getProfileStats } from "@/lib/db/profile";
 import { typePluralNames } from "@/lib/item-type-ui";
 
@@ -39,7 +36,7 @@ export default async function ProfilePage() {
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Profile</h1>
-        <p className="text-sm text-muted-foreground">Your account, your usage, and account settings.</p>
+        <p className="text-sm text-muted-foreground">Your account and your usage.</p>
       </div>
 
       <Card>
@@ -60,78 +57,40 @@ export default async function ProfilePage() {
         </CardContent>
       </Card>
 
-      {/* Side by side on wide screens, so the page uses the width it has. */}
-      <div className="grid items-start gap-8 xl:grid-cols-2">
-        <section className="flex flex-col gap-4">
-          <h2 className="text-lg font-semibold">Usage</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {totals.map(({ label, value, icon: Icon }) => (
-              <Card key={label}>
-                <CardContent className="flex flex-col gap-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                      {label}
-                    </span>
-                    <Icon className="size-4 text-muted-foreground" aria-hidden />
-                  </div>
-                  <span className="text-3xl font-semibold tabular-nums">{value}</span>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <Card>
-            <CardHeader>
-              <CardTitle>By type</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="grid gap-2 sm:grid-cols-2">
-                {stats.byType.map(({ slug, color, count }) => (
-                  <li key={slug} className="flex items-center gap-3 rounded-lg px-2 py-1.5">
-                    <TypeIconTile slug={slug} color={color} className="size-8 rounded-md" iconClassName="size-4" mutedFallback />
-                    <span className="flex-1">{typePluralNames[slug]}</span>
-                    <span className="font-medium tabular-nums">{count}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        </section>
-
-        <section className="flex flex-col gap-4">
-          <h2 className="text-lg font-semibold">Account</h2>
-          <Card>
-            <CardHeader>
-              <CardTitle>Password</CardTitle>
-              <CardDescription>
-                {profile.hasPassword
-                  ? "Change the password you use to sign in with your email."
-                  : "You sign in with GitHub, so there is no password to change."}
-              </CardDescription>
-            </CardHeader>
-            {profile.hasPassword ? (
-              <CardContent>
-                <ChangePasswordDialog />
+      <section className="flex flex-col gap-4">
+        <h2 className="text-lg font-semibold">Usage</h2>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {totals.map(({ label, value, icon: Icon }) => (
+            <Card key={label}>
+              <CardContent className="flex flex-col gap-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                    {label}
+                  </span>
+                  <Icon className="size-4 text-muted-foreground" aria-hidden />
+                </div>
+                <span className="text-3xl font-semibold tabular-nums">{value}</span>
               </CardContent>
-            ) : null}
-          </Card>
-
-          <Card className="ring-destructive/40">
-            <CardHeader>
-              <CardTitle>Delete account</CardTitle>
-              <CardDescription>
-                Permanently deletes your account, your items, collections and tags. This cannot be undone.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <DeleteAccountDialog
-                email={profile.email}
-                isDemo={profile.email === DEMO_USER_EMAIL}
-                hasPassword={profile.hasPassword}
-              />
-            </CardContent>
-          </Card>
-        </section>
-      </div>
+            </Card>
+          ))}
+        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>By type</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="grid gap-2 sm:grid-cols-2">
+              {stats.byType.map(({ slug, color, count }) => (
+                <li key={slug} className="flex items-center gap-3 rounded-lg px-2 py-1.5">
+                  <TypeIconTile slug={slug} color={color} className="size-8 rounded-md" iconClassName="size-4" mutedFallback />
+                  <span className="flex-1">{typePluralNames[slug]}</span>
+                  <span className="font-medium tabular-nums">{count}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      </section>
     </div>
   );
 }

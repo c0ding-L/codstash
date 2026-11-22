@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronsUpDown, LogOut, UserRound } from "lucide-react";
+import { ChevronsUpDown, LogOut, Settings, UserRound } from "lucide-react";
 
 import { signOutAction } from "@/actions/auth";
 import { UserAvatar } from "@/components/auth/UserAvatar";
@@ -22,7 +22,7 @@ interface UserMenuProps {
 
 /**
  * Sidebar footer. The avatar links to the profile; the name opens the menu
- * that holds Profile and Sign out.
+ * that holds Profile, Settings and Sign out.
  */
 export function UserMenu({ name, email, image }: Readonly<UserMenuProps>) {
   const label = name ?? email ?? "Account";
@@ -55,6 +55,10 @@ export function UserMenu({ name, email, image }: Readonly<UserMenuProps>) {
           <DropdownMenuItem render={<Link href="/profile" />}>
             <UserRound aria-hidden />
             Profile
+          </DropdownMenuItem>
+          <DropdownMenuItem render={<Link href="/settings" />}>
+            <Settings aria-hidden />
+            Settings
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => signOutAction()}>
