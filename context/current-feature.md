@@ -1,30 +1,21 @@
 # Current Feature
 
-# Fix: Top bar overflow on small screens
-
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- On narrow screens the dashboard top bar fits its width: the Favorites star, "New Collection"
-  and "New Item" stay visible instead of running off the right edge.
-- The search field shrinks and truncates its placeholder instead of holding its full text width.
-- "New Item" shows only its icon below `sm`, like "New Collection" (with an `aria-label`).
-- On mobile the sidebar drawer keeps its normal width (75% of the screen) on `/dashboard`.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Cause: the search `<button>` in `CommandPalette.tsx` is a flex item without `min-w-0`, so it
-  never shrinks below the min-content width of its placeholder; "New Item" always shows its label.
-- Drawer cause: below `xl` the dashboard's Pinned / Recent items grid (`grid xl:grid-cols-2`)
-  had no explicit column, so its implicit `auto` column grew to a truncated description's
-  `nowrap` width (~930px). Mobile browsers then zoomed the page out to fit it, and the drawer
-  (`w-3/4`) became ~718px. `grid-cols-1` (`minmax(0, 1fr)`) fixes it.
-- `buttonVariants` already includes `shrink-0`, so the star needs no change.
-- Check at 320, 375, 768 and 1024 px (sidebar docked from 768): `header.scrollWidth <=
-  header.clientWidth` and the "New Item" button's right edge stays inside the viewport.
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous fix (completed) — Mobile overflow: the dashboard top bar and content fit narrow
+screens, so the sidebar drawer keeps its normal width. Outcome in the History below.
 
 ---
 
@@ -2104,3 +2095,10 @@ Environment notes that outlive any one feature:
   625 tests, build and lint green; checked with Playwright at 1440px and 390px.
 - 2026-11-22 — Homepage merged into `main` (`480984e`, fast-forward); branch
   `feature/homepage` deleted. Feature completed.
+- 2026-11-22 — Mobile overflow fix: the top bar search button gets `min-w-0` (it never shrank
+  below its placeholder's width) and "New Item" is icon-only below `sm`, like "New Collection".
+  The dashboard's pinned / recent grid gets `grid-cols-1`: its implicit `auto` column grew to a
+  truncated description's `nowrap` width (~930px), mobile browsers zoomed the page out to fit it,
+  and the `w-3/4` sidebar drawer became ~718px. Checked with Playwright in mobile emulation at
+  375×668 (11 routes) and at 320/768/1024px; 625 tests, build and lint green. Merged into `main`
+  (`e816961`, fast-forward); branch `fix/topbar-mobile-overflow` deleted. Fix completed.
