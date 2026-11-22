@@ -2,52 +2,20 @@
 
 ## Status
 
-In Progress — Fix: UI review findings (branch `fix/ui-review`)
+Not Started
 
 ## Goals
 
-From the ui-reviewer pass on the homepage and dashboard pages (demo user, 375 / 768 / 1280px).
-
-- Homepage header (Features, Pricing) and footer links are at least 24px tall (now 18–20px).
-- The hero "See Features" outline button has a visible border.
-- The Pro pricing card CTA reads "Get Pro", since `/` is shown to signed-out visitors
-  (`PricingPlans` is only used on `/`).
-- On touch screens the snippet Copy button no longer covers the first lines of code
-  (`SnippetList.tsx`). Command / Prompt / Link lists put Copy in-flow, so they are fine.
-- The top-bar search placeholder reads "Search…" below `sm`, instead of truncating.
-- Favorites content starts at the same left edge as the other pages (drop `mx-auto`).
-- The sidebar PRO badge goes from `text-[10px]` to the smallest readable size.
-- Keyboard focus is visible on content (cards, star, "…" menus, favorites rows), checked in the
-  browser; fix only where a ring is missing.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-Triaged out, with evidence:
-- Favorites "small target": the 1×1 hidden native input behind the Sort select — not a bug.
-- Homepage sections "invisible": scroll-reveal; after scrolling, 0 elements remain hidden.
-- Muted text contrast: `--muted-foreground` (oklch 0.708) is ~6:1 on `--card` and the tinted
-  cards — passes. App text is already `text-xs` (12px); `text-[10px]/[11px]` exist only in the
-  decorative homepage `DashboardPreview` mockup (left as is) and the PRO badge.
-- Hero demo labels are already `text-sm`.
+<!-- Additional context, constraints, or details from spec -->
 
-Decisions: no social proof, no mobile nav menu, hero second line stays grey.
+---
 
-### Homepage copy refresh (same branch, chosen by the author)
-
-- Hero: "Save It Once. Find It Forever." (second line grey, kept on one line); subtitle
-  "Stop digging through bash history and old chats. Keep every snippet, prompt, command and link
-  in one place, and find any of them in seconds."
-- Hero demo labels "Your knowledge today..." / "...with CodStash" removed.
-- Features: "One home for everything you know" / "From a one-line command to a full design doc,
-  everything is stored, tagged and searchable the same way."
-- AI: "Smart by default" / "Drop in a snippet. AI tags it, summarizes it and helps you understand
-  it later." (matches the listed AI features)
-- Pricing: "Pricing that scales with you" / "Start on the free plan, upgrade for files, images
-  and AI." (matches the Pro plan list)
-- Final CTA: "Never Lose a Snippet Again" / "Set up in a minute, find anything in seconds."
-- Page metadata left as is (product description, not hero copy).
-
-Rename to "Cortex" is a separate, later feature; the project keeps the codstash name.
+Previous fix (completed) — UI review: homepage and app pages fixed after a ui-reviewer pass,
+plus a homepage copy refresh. Outcome in the History below.
 
 ---
 
@@ -2139,3 +2107,11 @@ Environment notes that outlive any one feature:
   and the `w-3/4` sidebar drawer became ~718px. Checked with Playwright in mobile emulation at
   375×668 (11 routes) and at 320/768/1024px; 625 tests, build and lint green. Merged into `main`
   (`e816961`, fast-forward); branch `fix/topbar-mobile-overflow` deleted. Fix completed.
+- 2026-11-22 — UI review fixes (ui-reviewer on screenshots, demo user, 375/768/1280px):
+  homepage header/footer links get a 24px+ hit area, "See Features" a visible border, the Pro CTA
+  reads "Get Pro"; snippet code starts below the Copy button on touch screens; the top-bar search
+  reads "Search…" below `sm`; favorites aligns with the other pages; PRO badge 10px → 11px.
+  Triaged out: hidden Select input (not a target), scroll-reveal sections (capture artifact),
+  muted text contrast (~6:1, passes). Homepage copy refresh: "Save It Once. Find It Forever."
+  hero, new section headings / subtitles, hero demo labels removed. Checked with Playwright;
+  625 tests, build and lint green. Merged into `main` (`ef1fffa`, fast-forward). Fix completed.
