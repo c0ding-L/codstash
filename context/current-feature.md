@@ -14,6 +14,12 @@ Not Started
 
 ---
 
+Previous feature (completed) — Pagination: `/items/[type]` and `/collections/[id]` list 21 items
+per page, `/collections` 9 collections, with prev / numbered pages / next under each listing; each
+page reads only its rows. Outcome in the History below.
+
+---
+
 Previous feature (completed) — Global Search: a Cmd+K / Ctrl+K command palette, also opened from
 the top-bar search field, searching every field of the user's items and their collections in the
 browser; items open in the drawer, now one for the whole layout. Outcome in the History below.
@@ -1905,3 +1911,23 @@ Environment notes that outlive any one feature:
   and `MAX_COLLECTION_LIMIT` (50); older items are silently unsearchable past that.
 - 2026-11-21 — Global Search merged into `main` (`282a902`, fast-forward); branch
   `feature/global-search` deleted. Feature completed.
+- 2026-11-22 — Pagination: `/items/[type]` and `/collections/[id]` show `ITEMS_PER_PAGE` (21)
+  items per page, `/collections` `COLLECTIONS_PER_PAGE` (9, not the spec's 21: the cards are large,
+  author's call). Constants, with `DASHBOARD_COLLECTIONS_LIMIT` (6) and
+  `DASHBOARD_RECENT_ITEMS_LIMIT` (10) replacing the local dashboard limits, live in
+  `src/lib/pagination.ts` with `parsePageParam`, `pageCount`, `pageOffset`, `pageLinks`.
+  `getItemsByType` / `getItemsByCollection` take a page (`skip`/`take`), new `getCollectionsPage`
+  for `/collections`; `getCollections` keeps its 50-row read for the search palette. Paged reads
+  order by `updatedAt` then `id` so rows never repeat between pages. `Pagination` (server
+  component, plain `<Link>`s): prev / numbered pages with ellipses / next, inert greyed ends,
+  hidden for one page; headers read "22–42 of 63". An invalid or out-of-range `?page=` renders the
+  not-found page as a soft 404 (HTTP 200 + `noindex`: `loading.tsx` streams first and layouts get
+  no `searchParams`); author accepted it, the routes sit behind the sign-in proxy. Removing the
+  only row of the last page (delete, or editing an item out of the collection shown) steps back a
+  page via `useRefreshAfterRemoval` / `pageAfterRemoval`, reading `data-*` attributes on the
+  nav, instead of refreshing onto a 404. 554 tests, build and lint green; checked in the browser
+  with a Playwright script on the dev server (develop DB), page sizes lowered temporarily: page
+  links, disabled ends, counts, 404s, delete and edit-out step-back; the two temporary items were
+  removed from the database.
+- 2026-11-22 — Pagination merged into `main` (`0ce4254`, fast-forward); branch
+  `feature/pagination` deleted. Feature completed.
