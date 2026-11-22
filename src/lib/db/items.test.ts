@@ -18,6 +18,7 @@ import {
   getSearchItems,
   isFileKeyInUse,
   setItemFavorite,
+  setItemPinned,
   updateItem,
 } from "@/lib/db/items";
 import { MAX_ITEM_LIMIT } from "@/lib/db/limits";
@@ -136,14 +137,14 @@ describe("getSearchItems", () => {
 });
 
 describe("getItemsByCollection", () => {
-  it("reads the first page, newest first, and reports the full total", async () => {
+  it("reads the first page, pinned then favorites then newest, and reports the full total", async () => {
     count.mockResolvedValue(250);
 
     const { totalCount } = await getItemsByCollection(USER, "col_1");
 
     expect(totalCount).toBe(250);
     expect(findMany.mock.calls[0]![0]).toMatchObject({
-      orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+      orderBy: [{ isPinned: "desc" }, { isFavorite: "desc" }, { updatedAt: "desc" }, { id: "asc" }],
       skip: 0,
       take: ITEMS_PER_PAGE,
     });
@@ -170,14 +171,14 @@ describe("getItemsByCollection", () => {
 });
 
 describe("getItemsByType", () => {
-  it("reads the first page, newest first, and reports the full total", async () => {
+  it("reads the first page, pinned then favorites then newest, and reports the full total", async () => {
     count.mockResolvedValue(250);
 
     const { totalCount } = await getItemsByType(USER, "link");
 
     expect(totalCount).toBe(250);
     expect(findMany.mock.calls[0]![0]).toMatchObject({
-      orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+      orderBy: [{ isPinned: "desc" }, { isFavorite: "desc" }, { updatedAt: "desc" }, { id: "asc" }],
       skip: 0,
       take: ITEMS_PER_PAGE,
     });
@@ -718,5 +719,28 @@ describe("setItemFavorite", () => {
     executeRaw.mockResolvedValue(0);
 
     await expect(setItemFavorite(USER, "item_1", false)).resolves.toBe(false);
+  });
+});
+
+describe("setItemPinned", () => {
+  const executeRaw = prisma.$executeRaw as unknown as Mock;
+
+  it("sets the flag on the user's own item only, leaving updatedAt alone", async () => {
+    executeRaw.mockResolvedValue(1);
+
+    await expect(setItemPinned(USER, "item_1", true)).resolves.toBe(true);
+
+    const [strings, ...values] = executeRaw.mock.calls[0];
+    const sql = (strings as TemplateStringsArray).join("?");
+    expect(sql).toMatch(/UPDATE "Item" SET "isPinned" = \?/);
+    expect(sql).toMatch(/"userId" = \?/);
+    expect(sql).not.toMatch(/updatedAt/);
+    expect(values).toEqual([true, "item_1", USER]);
+  });
+
+  it("is false when no row matched", async () => {
+    executeRaw.mockResolvedValue(0);
+
+    await expect(setItemPinned(USER, "item_1", false)).resolves.toBe(false);
   });
 });

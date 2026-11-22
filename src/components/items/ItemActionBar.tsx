@@ -5,6 +5,7 @@ import { Copy, Pencil, Pin, Star, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useFavoriteToggle } from "@/hooks/use-favorite-toggle";
+import { usePinToggle } from "@/hooks/use-pin-toggle";
 import { copyToClipboard } from "@/lib/clipboard";
 import type { DashboardItem, ItemDetailJson } from "@/lib/db/items";
 import { cn } from "@/lib/utils";
@@ -51,15 +52,18 @@ interface ItemActionBarProps {
   onDelete: (() => void) | null;
   /** Updates the drawer's copy of the card, which the page refresh does not reach. */
   onFavoriteChanged: (isFavorite: boolean) => void;
+  /** Like `onFavoriteChanged`, for the pin. */
+  onPinnedChanged: (isPinned: boolean) => void;
 }
 
 /**
- * Pin does not work yet. Favorite and Pin stay at full opacity while disabled,
- * because they still report the item's current state.
+ * Favorite and Pin stay at full opacity while their action is pending, because
+ * they still report the item's current state.
  */
-export function ItemActionBar({ card, detail, onEdit, onDelete, onFavoriteChanged }: ItemActionBarProps) {
+export function ItemActionBar({ card, detail, onEdit, onDelete, onFavoriteChanged, onPinnedChanged }: ItemActionBarProps) {
   const copyText = detail ? detail.content || detail.url : null;
   const favorite = useFavoriteToggle("item", card.id, card.isFavorite, onFavoriteChanged);
+  const pin = usePinToggle(card.id, card.isPinned, onPinnedChanged);
 
   return (
     <div className="flex items-center gap-1 border-y border-border px-4 py-2">
@@ -75,12 +79,13 @@ export function ItemActionBar({ card, detail, onEdit, onDelete, onFavoriteChange
       </IconAction>
       <IconAction
         label="Pin"
-        hint={card.isPinned ? "Pinned. Changing it is not available yet." : "Pinning is not available yet."}
-        disabled
-        aria-pressed={card.isPinned}
-        className={cn(card.isPinned && "disabled:opacity-100")}
+        hint={pin.isPinned ? "Unpin" : "Pin to top"}
+        disabled={pin.pending}
+        aria-pressed={pin.isPinned}
+        onClick={pin.toggle}
+        className="disabled:opacity-100"
       >
-        <Pin className={cn(card.isPinned && "fill-current")} aria-hidden />
+        <Pin className={cn(pin.isPinned && "fill-current")} aria-hidden />
       </IconAction>
       <IconAction
         label="Copy"

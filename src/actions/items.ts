@@ -12,6 +12,7 @@ import {
   deleteItem as deleteItemQuery,
   isFileKeyInUse,
   setItemFavorite as setItemFavoriteQuery,
+  setItemPinned as setItemPinnedQuery,
   updateItem as updateItemQuery,
   type DashboardItem,
   type ItemDetailJson,
@@ -325,4 +326,29 @@ export async function setItemFavorite(itemId: string, isFavorite: boolean): Prom
   // The layout too: the sidebar, stats and top bar count favorites.
   revalidatePath("/", "layout");
   return { success: true, data: { isFavorite }, error: null };
+}
+
+export type SetPinnedResult =
+  | { success: true; data: { isPinned: boolean }; error: null }
+  | { success: false; data: null; error: string };
+
+/** Like `setItemFavorite`: takes the state to set, not a flip. */
+export async function setItemPinned(itemId: string, isPinned: boolean): Promise<SetPinnedResult> {
+  if (typeof isPinned !== "boolean") return { success: false, data: null, error: "Invalid pin value." };
+
+  try {
+    const session = await auth();
+    if (!session?.user?.id) return { success: false, data: null, error: "You are not signed in." };
+
+    // The query filters on the owner, so another user's item is not found either.
+    const found = await setItemPinnedQuery(session.user.id, itemId, isPinned);
+    if (!found) return { success: false, data: null, error: "This item no longer exists." };
+  } catch (error) {
+    console.error("[items] setItemPinned failed:", error);
+    return { success: false, data: null, error: "Could not update the pin. Try again." };
+  }
+
+  // The layout too: the dashboard's Pinned section and every list's order change.
+  revalidatePath("/", "layout");
+  return { success: true, data: { isPinned }, error: null };
 }

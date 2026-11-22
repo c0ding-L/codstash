@@ -1,3 +1,4 @@
+import type { Prisma } from "@/generated/prisma/client";
 import { clipCommand } from "@/lib/command-text";
 import { clampLimit, MAX_ITEM_LIMIT } from "@/lib/db/limits";
 import { DASHBOARD_RECENT_ITEMS_LIMIT, ITEMS_PER_PAGE, pageOffset } from "@/lib/pagination";
@@ -119,7 +120,18 @@ export async function getRecentItems(
 }
 
 /**
- * One page of the user's items of one type, most recently updated first, plus
+ * Pinned items first, favorites first within each group (so pinned + favorite leads),
+ * then most recently updated, with the id as a stable tiebreaker.
+ */
+const pinnedFirstOrder = [
+  { isPinned: "desc" },
+  { isFavorite: "desc" },
+  { updatedAt: "desc" },
+  { id: "asc" },
+] satisfies Prisma.ItemOrderByWithRelationInput[];
+
+/**
+ * One page of the user's items of one type, pinned first, then favorites, then most recently updated, plus
  * the total so the page can count its pages. Filters on the slug, so a custom
  * type reusing a system slug lists with it, as in the profile counts.
  */
@@ -133,7 +145,7 @@ export async function getItemsByType(
   const [items, totalCount] = await Promise.all([
     prisma.item.findMany({
       where,
-      orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+      orderBy: pinnedFirstOrder,
       skip: pageOffset(page, ITEMS_PER_PAGE),
       take: ITEMS_PER_PAGE,
       select: dashboardItemSelect,
@@ -145,7 +157,7 @@ export async function getItemsByType(
 }
 
 /**
- * One page of the user's items in one collection, most recently updated first,
+ * One page of the user's items in one collection, pinned first, then favorites, then most recently updated,
  * plus the total so the page can count its pages. The caller checks the
  * collection is the user's; `userId` keeps another user's items out regardless.
  */
@@ -159,7 +171,7 @@ export async function getItemsByCollection(
   const [items, totalCount] = await Promise.all([
     prisma.item.findMany({
       where,
-      orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+      orderBy: pinnedFirstOrder,
       skip: pageOffset(page, ITEMS_PER_PAGE),
       take: ITEMS_PER_PAGE,
       select: dashboardItemSelect,
@@ -533,6 +545,14 @@ export async function getItemFileKeys(userId: string): Promise<string[]> {
 export async function setItemFavorite(userId: string, id: string, isFavorite: boolean): Promise<boolean> {
   const updated = await prisma.$executeRaw`
     UPDATE "Item" SET "isFavorite" = ${isFavorite} WHERE "id" = ${id} AND "userId" = ${userId}
+  `;
+  return updated > 0;
+}
+
+/** Like `setItemFavorite`: raw SQL so `@updatedAt` is not bumped and the item keeps its place in recent lists. */
+export async function setItemPinned(userId: string, id: string, isPinned: boolean): Promise<boolean> {
+  const updated = await prisma.$executeRaw`
+    UPDATE "Item" SET "isPinned" = ${isPinned} WHERE "id" = ${id} AND "userId" = ${userId}
   `;
   return updated > 0;
 }

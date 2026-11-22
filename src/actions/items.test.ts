@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import { revalidatePath } from "next/cache";
 
-import { createItem, deleteItem, setItemFavorite, updateItem } from "@/actions/items";
+import { createItem, deleteItem, setItemFavorite, setItemPinned, updateItem } from "@/actions/items";
 import { auth } from "@/auth";
 import { ownsCollections } from "@/lib/db/collections";
 import {
@@ -10,6 +10,7 @@ import {
   deleteItem as deleteItemQuery,
   isFileKeyInUse,
   setItemFavorite as setItemFavoriteQuery,
+  setItemPinned as setItemPinnedQuery,
   updateItem as updateItemQuery,
 } from "@/lib/db/items";
 import { deleteObjectsQuietly, headObject } from "@/lib/r2";
@@ -21,6 +22,7 @@ vi.mock("@/lib/db/items", () => ({
   deleteItem: vi.fn(),
   isFileKeyInUse: vi.fn(),
   setItemFavorite: vi.fn(),
+  setItemPinned: vi.fn(),
 }));
 vi.mock("@/lib/db/collections", () => ({ ownsCollections: vi.fn() }));
 vi.mock("@/lib/r2", () => ({ headObject: vi.fn(), deleteObjectsQuietly: vi.fn() }));
@@ -35,6 +37,7 @@ const deleteObjects = deleteObjectsQuietly as unknown as Mock;
 const keyInUse = isFileKeyInUse as unknown as Mock;
 const owns = ownsCollections as unknown as Mock;
 const favoriteQuery = setItemFavoriteQuery as unknown as Mock;
+const pinQuery = setItemPinnedQuery as unknown as Mock;
 const revalidate = revalidatePath as unknown as Mock;
 
 const USER_ID = "user_1";
@@ -562,5 +565,60 @@ describe("setItemFavorite", () => {
     const result = await setItemFavorite("item_1", true);
 
     expect(result).toEqual({ success: false, data: null, error: "Could not update the favorite. Try again." });
+  });
+});
+
+describe("setItemPinned", () => {
+  beforeEach(() => {
+    pinQuery.mockResolvedValue(true);
+  });
+
+  it("refuses when not signed in", async () => {
+    session.mockResolvedValue(null);
+
+    const result = await setItemPinned("item_1", true);
+
+    expect(result).toEqual({ success: false, data: null, error: "You are not signed in." });
+    expect(pinQuery).not.toHaveBeenCalled();
+    expect(revalidate).not.toHaveBeenCalled();
+  });
+
+  it("refuses a value that is not a boolean", async () => {
+    const result = await setItemPinned("item_1", "yes" as unknown as boolean);
+
+    expect(result).toEqual({ success: false, data: null, error: "Invalid pin value." });
+    expect(pinQuery).not.toHaveBeenCalled();
+  });
+
+  it("pins the item as the signed-in user and refreshes the layout", async () => {
+    const result = await setItemPinned("item_1", true);
+
+    expect(result).toEqual({ success: true, data: { isPinned: true }, error: null });
+    expect(pinQuery).toHaveBeenCalledWith(USER_ID, "item_1", true);
+    expect(revalidate).toHaveBeenCalledWith("/", "layout");
+  });
+
+  it("unpins the item", async () => {
+    const result = await setItemPinned("item_1", false);
+
+    expect(result).toEqual({ success: true, data: { isPinned: false }, error: null });
+    expect(pinQuery).toHaveBeenCalledWith(USER_ID, "item_1", false);
+  });
+
+  it("reports an item that is missing or another user's as gone", async () => {
+    pinQuery.mockResolvedValue(false);
+
+    const result = await setItemPinned("item_1", true);
+
+    expect(result).toEqual({ success: false, data: null, error: "This item no longer exists." });
+    expect(revalidate).not.toHaveBeenCalled();
+  });
+
+  it("hides an unexpected database error behind a generic message", async () => {
+    pinQuery.mockRejectedValue(new Error("connection lost"));
+
+    const result = await setItemPinned("item_1", true);
+
+    expect(result).toEqual({ success: false, data: null, error: "Could not update the pin. Try again." });
   });
 });

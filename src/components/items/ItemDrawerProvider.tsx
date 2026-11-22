@@ -96,6 +96,11 @@ export function ItemDrawerProvider({ children }: { children: React.ReactNode }) 
     setCard((current) => (current?.id === itemId ? { ...current, isFavorite } : current));
   }, []);
 
+  const handlePinnedChanged = useCallback((itemId: string, isPinned: boolean) => {
+    if (itemId !== currentId.current) return;
+    setCard((current) => (current?.id === itemId ? { ...current, isPinned } : current));
+  }, []);
+
   // A delete that finishes after another item opened leaves the drawer alone.
   const handleDeleted = useCallback((itemId: string) => {
     if (itemId !== currentId.current) return;
@@ -117,6 +122,7 @@ export function ItemDrawerProvider({ children }: { children: React.ReactNode }) 
               onSaved={handleSaved}
               onDeleted={handleDeleted}
               onFavoriteChanged={handleFavoriteChanged}
+              onPinnedChanged={handlePinnedChanged}
             />
           ) : null}
         </SheetContent>
