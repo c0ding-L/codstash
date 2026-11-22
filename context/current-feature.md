@@ -2,37 +2,20 @@
 
 ## Status
 
-In Progress — Feature: Rebrand to Cortex (branch `feature/rebrand-cortex`)
+Not Started
 
 ## Goals
 
-Every name a visitor or user sees reads "Cortex" instead of "CodStash" / "Codstash".
-
-- Tab titles: root `layout.tsx` ("Cortex") and every page title suffix `· Codstash` → `· Cortex`
-  (collections list + detail, dashboard, favorites, items, profile, settings).
-- Homepage: metadata title "Cortex — Developer Knowledge Hub", footer "© {year} Cortex".
-- Logos: `HomeLogo` (homepage nav + footer) and the `AppSidebar` header. The sidebar mark uses
-  the homepage's `Layers` icon instead of `Code2`, so both logos match.
-- Sign-in card: "Sign in to Cortex".
-- Dashboard subtitle: "Your developer memory: snippets, prompts, notes and more." (was "…in one
-  dev-first stash", a play on the old name).
-- Emails: brand line, preview text and body copy in `VerificationEmail`, `PasswordResetEmail`,
-  `AccountExistsEmail`; subjects in `src/lib/email.tsx`.
-- `.env.example`: `EMAIL_FROM="Cortex <onboarding@resend.dev>"`.
-- Decorative terminal label in `CommandList` `~/codstash/commands` → `~/cortex/commands`.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-The project itself keeps the codstash name. Out of scope, unchanged:
-- Repo, package name, Neon project / DB, Vercel project.
-- Demo account `demo@codstash.io` (seed + `DEMO_USER_EMAIL`): it is a login identity; renaming
-  it would break sign-in and the seed. Test fixtures `@codstash.test` too.
-- Internal Redis rate-limit prefix `codstash:ratelimit:` (renaming resets live counters).
-- `README.md` and `context/` docs (they describe the project, which keeps its name).
+<!-- Additional context, constraints, or details from spec -->
 
-The author updates `EMAIL_FROM` in their own `.env` and on Vercel (not committed by Claude).
-No server action or utility logic changes, so no new unit tests; existing tests must pass.
-Verify in the browser: homepage, sign-in, dashboard (sidebar + tab titles).
+---
+
+Previous feature (completed) — Rebrand to Cortex: every name users see reads "Cortex"; the
+project itself keeps the codstash name. Outcome in the History below.
 
 ---
 
@@ -2137,3 +2120,13 @@ Environment notes that outlive any one feature:
   muted text contrast (~6:1, passes). Homepage copy refresh: "Save It Once. Find It Forever."
   hero, new section headings / subtitles, hero demo labels removed. Checked with Playwright;
   625 tests, build and lint green. Merged into `main` (`ef1fffa`, fast-forward). Fix completed.
+- 2026-11-22 — UI review branch `fix/ui-review` deleted after the merge.
+- 2026-11-22 — Rebrand to Cortex: tab titles (`· Cortex`), homepage metadata and footer, the
+  homepage and sidebar logos (sidebar now uses the homepage `Layers` icon instead of `Code2`),
+  sign-in card, dashboard subtitle ("Your developer memory: snippets, prompts, notes and more."),
+  and the three emails (body, preview, subject). Unchanged on purpose: repo, package, Neon / Vercel
+  projects, demo account `demo@codstash.io`, test fixtures, Redis rate-limit prefix, README and
+  `context/` docs. `.env.example` (`EMAIL_FROM="Cortex <…>"`) is gitignored, so only local; the
+  author updates `EMAIL_FROM` in `.env` and on Vercel. Favicon not changed. Checked with
+  Playwright on 7 routes; 625 tests, build and lint green. Merged into `main` (`709f5a1`,
+  fast-forward); branch `feature/rebrand-cortex` deleted. Feature completed.
