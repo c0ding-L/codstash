@@ -14,6 +14,12 @@ Not Started
 
 ---
 
+Previous feature (completed) — Pinned Items: the drawer's Pin button pins and unpins items, and
+the type and collection pages list pinned items first (pinned + favorite on top).
+Outcome in the History below.
+
+---
+
 Previous feature (completed) — Favorites Sorting: a "Sort by" dropdown on `/favorites` orders
 the items and collections by date, name or type in the browser.
 Outcome in the History below.
@@ -2042,3 +2048,19 @@ Environment notes that outlive any one feature:
   top bar, unchanged.
 - 2026-11-22 — Favorites Sorting merged into `main` (`18b08eb`, fast-forward); branch
   `feature/favorites-sorting` deleted. Feature completed.
+- 2026-11-22 — Pinned Items: action `setItemPinned(id, isPinned)` in `src/actions/items.ts`
+  (named like `setItemFavorite`, not the spec's `toggleItemPin`: it takes the state to set),
+  owner-scoped, `revalidatePath("/", "layout")`. Query `setItemPinned` in `src/lib/db/items.ts`
+  uses a raw `UPDATE` so `@updatedAt` is not bumped. New hook `src/hooks/use-pin-toggle.ts`
+  (`useOptimistic` + transition, success and error toasts) drives the drawer's `ItemActionBar`
+  Pin button; `ItemDrawerProvider` syncs its card via `onPinnedChanged`. `getItemsByType` and
+  `getItemsByCollection` order by `isPinned`, then `isFavorite` (at the author's request, so
+  pinned + favorite leads; unpinned favorites also rise above the rest), then `updatedAt`, `id`.
+  Dashboard Recent unchanged (it has its own Pinned section); card pin icons stay static. 625
+  tests, build and lint green; checked in the browser with a Playwright script on the dev server:
+  instant toggle, toast, list reorder, dashboard Pinned section, `updatedAt` unchanged.
+- 2026-11-22 — Fix found while testing: the New Item dialog had no max height, so a long snippet
+  pushed "Create item" off screen. `DialogContent` now gets `max-h-[calc(100dvh-2rem)]
+  overflow-y-auto`; checked at 800px with a 60-line snippet (`d4f7e14`).
+- 2026-11-22 — Pinned Items merged into `main` (`0b759ca`, fast-forward); branch
+  `feature/pinned-items` deleted. Feature completed.
