@@ -247,3 +247,17 @@
     scrollbar-color: #ffffff66 transparent;
   }
 }
+
+/* Homepage hero: the arrow between the chaos box and the dashboard preview. */
+@keyframes arrow-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 oklch(1 0 0 / 0.12); }
+  50% { box-shadow: 0 0 0 10px oklch(1 0 0 / 0); }
+}
+@layer components {
+  .arrow-pulse {
+    animation: arrow-pulse 2s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .arrow-pulse { animation: none; }
+  }
+}

@@ -2,15 +2,37 @@
 
 ## Status
 
-Not Started
+In Progress (branch `feature/homepage`) — Homepage (landing page). Spec: `@context/features/homepage-mockup-spec.md`.
+Visual reference: the author's prototype at https://g7w8joraes.zite.so.
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- `/` shows a public landing page to everyone; the `redirect("/dashboard")` in
+  `src/app/page.tsx` is removed. Sign-in still lands on `/dashboard`.
+- The page matches the author's prototype, using the app's palette, Geist, type colours and
+  lucide icons.
+- Sections: nav, hero, features, AI, pricing (monthly / yearly toggle), closing CTA, footer.
+- Server component page; only the interactive parts are client components. No DB access.
+- Responsive to mobile, keyboard focus visible, `prefers-reduced-motion` respected.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+Built to match the author's own prototype (https://g7w8joraes.zite.so), which follows the
+spec closely. An earlier "settle" design (text fragments sorting into a list, no gradient, no
+cards) was built first and dropped as too plain.
+
+- Hero: centred headline, "Developer Knowledge" in grey (`text-neutral-500`; the prototype's
+  gradient was judged too "AI"), chaos box (8 icons drifting
+  with `requestAnimationFrame`, bouncing, repelled by the mouse; brand marks as inline SVGs),
+  pulsing arrow (rotates down on mobile), static dashboard preview with tinted type cards.
+- Features: 6 cards; Collections & Instant Search uses a neutral accent.
+- AI: Pro badge + checklist, hand-highlighted `useDebounce.ts` with AI-generated tags.
+- Pricing: monthly / yearly toggle ("Save 25%"), Free vs Pro with "Most Popular".
+- CTA box, footer. Sections fade in on scroll (`Reveal`); navbar turns opaque on scroll.
+- Reduced motion: icons still, no arrow pulse, no fade-ins.
+- Logo: the prototype's Layers icon (homepage only; the app sidebar keeps Code2).
+- Images are Pro: Free lists no image uploads, Pro lists "File & image uploads"
+  (`project-overview.md` and the spec corrected to match `proTypeSlugs`).
 
 ---
 
@@ -2064,3 +2086,11 @@ Environment notes that outlive any one feature:
   overflow-y-auto`; checked at 800px with a 60-line snippet (`d4f7e14`).
 - 2026-11-22 — Pinned Items merged into `main` (`0b759ca`, fast-forward); branch
   `feature/pinned-items` deleted. Feature completed.
+- 2026-11-22 — Started Homepage on branch `feature/homepage`. The ChatGPT mockup was rejected
+  as "AI-looking"; the design plan above replaces the spec's floating logos, arrow, gradient
+  headline and card grid. `/` now renders the landing page (the redirect to `/dashboard` is
+  gone); components in `src/components/home/`. Pricing follows the app, not the overview:
+  images are a Pro type (`proTypeSlugs`), so Free lists no image uploads.
+- 2026-11-22 — First version judged too plain; rebuilt to match the author's prototype
+  (chaos box, dashboard preview, feature cards, code sample, pricing cards). `HeroSettle` and
+  `ItemTypesSection` removed; `ChaosBox`, `DashboardPreview`, `BrandIcons`, `Reveal` added.
