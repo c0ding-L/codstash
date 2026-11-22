@@ -1,44 +1,22 @@
-# Current Feature: Favorite Toggle
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- **Item drawer:** the Favorite button in `ItemActionBar` is enabled and toggles the item's
-  `isFavorite`; the star fills / empties right away, and the hint reads "Add to favorites" /
-  "Remove from favorites".
-- **Collection page:** the Favorite button in `CollectionHeaderActions` toggles the collection's
-  `isFavorite`, with the same filled / empty star.
-- **Cards:** item cards and collection cards get a star button that toggles favorite without
-  opening the drawer or following the card's link. On collection cards this wires up the
-  placeholder Favorite entry in `CollectionCardMenu`.
-- New server actions `setItemFavorite(itemId, isFavorite)` and
-  `setCollectionFavorite(collectionId, isFavorite)`: auth-checked, scoped to the signed-in
-  user's own rows (not found → error), set the flag to the given value (not a blind flip, so a
-  repeated click cannot desync) and revalidate the layout, so pages, sidebar and stats follow.
-- Favoriting does not bump `updatedAt` (raw `UPDATE`), so it does not count as an edit or
-  reorder the recent lists.
-- Unit tests for both actions (unauthenticated, not owned / missing, toggles on, toggles off).
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- `isFavorite` already exists on `Item` and `Collection` (indexed with `userId`), so no schema
-  change or migration.
-- Current placeholders: `ItemActionBar` Favorite is `disabled` with "not available yet" hints;
-  `CollectionHeaderActions` Favorite has no handler; `CollectionCardMenu` Favorite item is a
-  placeholder. Pin stays as it is — out of scope.
-- Cards render a full-card `ItemDrawerTrigger` / link overlay, so the star button must sit above
-  it (`relative z-20`, as `CollectionCardMenu`'s trigger does) and not trigger the card.
-- Show the new state optimistically and roll back with an error toast if the action fails.
-- Coverage as built: the toggle star is on `ItemCard` (collection pages, `/items/notes`),
-  `ImageCard` (`/items/images`) and `CollectionCard` (`/collections`, dashboard). The list views
-  on `/items/snippets|prompts|commands|files|links`, the dashboard `ItemRow`s and `/favorites`
-  rows keep their read-only star; there, favorite is toggled from the drawer. A toggle on those
-  list rows is out of scope for this feature.
-- Follow existing action patterns in `src/actions/items.ts` / `collections.ts` (result objects,
-  `revalidatePath`).
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — Favorite Toggle: a star toggles favorites from the item drawer,
+the collection page header, item / image cards and collection cards (plus the card menu entry).
+Outcome in the History below.
 
 ---
 
@@ -2026,3 +2004,21 @@ Environment notes that outlive any one feature:
   favorites). Read-only.
 - 2026-11-22 — Favorites Page merged into `main` (`15f0bcc`, fast-forward); branch
   `feature/favorites-page` deleted. Feature completed.
+- 2026-11-22 — Favorite Toggle: new actions `setItemFavorite` / `setCollectionFavorite`
+  (`src/actions/items.ts`, `collections.ts`) take the value to set, not a flip; auth-checked,
+  owner-scoped ("no longer exists" when no row matches), `revalidatePath("/", "layout")` so the
+  sidebar, stats and `/favorites` follow. Queries `setItemFavorite` / `setCollectionFavorite` in
+  `src/lib/db` use a raw `UPDATE` so `@updatedAt` is not bumped (favoriting is not an edit). Shared
+  hook `src/hooks/use-favorite-toggle.ts` (`useOptimistic` + transition, error toast on failure)
+  drives `src/components/favorites/FavoriteButton.tsx` (on `ItemCard`, `ImageCard` thumbnail
+  corner, `CollectionCard`, `CollectionHeaderActions`), the `CollectionCardMenu` entry ("Add to /
+  Remove from favorites") and the drawer's `ItemActionBar` button; `ItemDrawerProvider` keeps
+  its card in sync via `onFavoriteChanged` with the `currentId` guard. Card stars sit at `z-20`
+  over the card overlay. List-view rows (snippets, prompts, commands, files, links, dashboard
+  `ItemRow`, `/favorites`) keep a read-only star: out of scope at the author's call. 608 tests,
+  build and lint green; checked in the browser with a Playwright script on the dev server:
+  card / image / collection / header / menu / drawer toggles, persistence after reload,
+  `updatedAt` unchanged, sidebar and `/favorites` follow, unfavoriting from the drawer on
+  `/favorites` removes the row. Pin still not wired.
+- 2026-11-22 — Favorite Toggle merged into `main` (`6298a13`, fast-forward); branch
+  `feature/favorite-toggle` deleted. Feature completed.
