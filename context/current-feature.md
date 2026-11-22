@@ -1,33 +1,22 @@
-# Current Feature: Favorites Sorting
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- `/favorites` gets a sort control that reorders the lists on the client, with no refetch and no
-  URL change.
-- Three sort options: **Name** (A–Z), **Date** (most recently updated first — the current
-  order and the default) and **Type** (grouped by item type name, then by name).
-- The sort applies to both the Items and Collections sections. Collections sort by name, by
-  `updatedAt`, and by their most used type (`primaryTypeOf`), with empty collections last.
-- Sorting is a pure utility in `src/lib` with unit tests (name, date, type, ties, empty
-  collections), so the comparison logic is covered without component tests.
-- Rows, drawer and links keep working as today; empty states unchanged.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Today the page is a server component: `getFavoriteItems` / `getFavoriteCollectionCards` return
-  rows ordered `updatedAt` desc (`id` tie-break). The sort control and the sorted lists become
-  a small client leaf that receives the fetched rows as props; the page itself stays a dynamic
-  server page.
-- Date means `updatedAt` (no `favoritedAt` column), matching what the rows already show.
-- Name compares case-insensitively (`localeCompare` with `sensitivity: "base"`), ties by date
-  desc then `id`, so the order is stable.
-- Assumed: one control for the whole page (not one per section), ascending/descending toggle not
-  included, choice not persisted across reloads. Change any of these before starting if wanted.
-- The subtitle "most recently updated first" must follow the selected sort or be reworded.
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — Favorites Sorting: a "Sort by" dropdown on `/favorites` orders
+the items and collections by date, name or type in the browser.
+Outcome in the History below.
 
 ---
 
@@ -2039,3 +2028,17 @@ Environment notes that outlive any one feature:
   `/favorites` removes the row. Pin still not wired.
 - 2026-11-22 — Favorite Toggle merged into `main` (`6298a13`, fast-forward); branch
   `feature/favorite-toggle` deleted. Feature completed.
+- 2026-11-22 — Favorites Sorting: pure helpers `sortFavoriteItems` / `sortFavoriteCollections`
+  in `src/lib/favorites-sort.ts` (9 tests): Date is `updatedAt` desc (default, the query order),
+  Name is case-insensitive with numeric collation, Type groups by type name then name; a
+  collection's type is its most used one, empty collections last; ties break on date then `id`.
+  New client leaf `src/components/favorites/FavoritesView.tsx` holds the sort state and both
+  sections; the page stays a dynamic server page and passes the fetched rows in. The control
+  started as a segmented button group and became the shadcn `Select` (size `sm`, monospace) at
+  the author's request. Subtitle shortened to "Starred items and collections." since the order
+  now varies. Not persisted, one control for both sections, no direction toggle. 617 tests,
+  build and lint green; checked in the browser with a Playwright script on the dev server: each
+  option reorders both sections, drawer still opens after a re-sort. 390px overflow is still the
+  top bar, unchanged.
+- 2026-11-22 — Favorites Sorting merged into `main` (`18b08eb`, fast-forward); branch
+  `feature/favorites-sorting` deleted. Feature completed.
