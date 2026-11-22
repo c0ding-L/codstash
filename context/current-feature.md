@@ -1,16 +1,22 @@
-# Current Feature
+# Current Feature: Lower Pro monthly price to $7
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- The homepage pricing section shows Pro at **$7/month** on the monthly toggle (was $8).
+- The yearly toggle shows **$63/year** with "$5.25/month"; the "Save 25%" badge stays.
+- `context/project-overview.md` pricing table reads `$7/mo or $63/yr` for Pro.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Only two places hold the price: `src/components/home/PricingPlans.tsx:90` (`"$8"`) and
+  `context/project-overview.md:225`. No Stripe price IDs exist in the code yet, so this is a
+  display/spec change only.
+- Decision: yearly drops from $72 to **$63/yr ($5.25/month)** so the "Save 25%" badge stays
+  correct ($84 × 0.75 = $63).
 
 ---
 

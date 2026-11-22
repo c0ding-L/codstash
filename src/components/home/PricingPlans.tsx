@@ -87,9 +87,9 @@ export function PricingPlans() {
           </span>
           <h3 className="font-medium">Pro</h3>
           <p className="mt-4 flex items-baseline gap-1">
-            <span className="text-4xl font-semibold tracking-tight">{billing === "monthly" ? "$8" : "$72"}</span>
+            <span className="text-4xl font-semibold tracking-tight">{billing === "monthly" ? "$7" : "$63"}</span>
             <span className="text-muted-foreground">/{billing === "monthly" ? "month" : "year"}</span>
-            {billing === "yearly" ? <span className="ml-2 text-sm text-muted-foreground">$6/month</span> : null}
+            {billing === "yearly" ? <span className="ml-2 text-sm text-muted-foreground">$5.25/month</span> : null}
           </p>
           <ul className="mt-8 flex-1 space-y-3 text-sm">
             {proFeatures.map((feature) => (
