@@ -2,15 +2,36 @@
 
 ## Status
 
-Not Started
+In Progress — Fix: UI review findings (branch `fix/ui-review`)
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+From the ui-reviewer pass on the homepage and dashboard pages (demo user, 375 / 768 / 1280px).
+
+- Homepage header (Features, Pricing) and footer links are at least 24px tall (now 18–20px).
+- The hero "See Features" outline button has a visible border.
+- The Pro pricing card CTA reads "Get Pro", since `/` is shown to signed-out visitors
+  (`PricingPlans` is only used on `/`).
+- On touch screens the snippet Copy button no longer covers the first lines of code
+  (`SnippetList.tsx`). Command / Prompt / Link lists put Copy in-flow, so they are fine.
+- The top-bar search placeholder reads "Search…" below `sm`, instead of truncating.
+- Favorites content starts at the same left edge as the other pages (drop `mx-auto`).
+- The sidebar PRO badge goes from `text-[10px]` to the smallest readable size.
+- Keyboard focus is visible on content (cards, star, "…" menus, favorites rows), checked in the
+  browser; fix only where a ring is missing.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+Triaged out, with evidence:
+- Favorites "small target": the 1×1 hidden native input behind the Sort select — not a bug.
+- Homepage sections "invisible": scroll-reveal; after scrolling, 0 elements remain hidden.
+- Muted text contrast: `--muted-foreground` (oklch 0.708) is ~6:1 on `--card` and the tinted
+  cards — passes. App text is already `text-xs` (12px); `text-[10px]/[11px]` exist only in the
+  decorative homepage `DashboardPreview` mockup (left as is) and the PRO badge.
+- Hero demo labels are already `text-sm`.
+
+Open decisions (asked): social proof on the homepage, mobile nav to Features/Pricing,
+hero "Developer Knowledge" grey.
 
 ---
 

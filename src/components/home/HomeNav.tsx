@@ -30,10 +30,10 @@ export function HomeNav() {
         <HomeLogo />
 
         <div className="hidden items-center gap-5 text-sm text-muted-foreground sm:flex">
-          <a href="#features" className="hover:text-foreground">
+          <a href="#features" className="py-2 hover:text-foreground">
             Features
           </a>
-          <a href="#pricing" className="hover:text-foreground">
+          <a href="#pricing" className="py-2 hover:text-foreground">
             Pricing
           </a>
         </div>

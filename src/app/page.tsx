@@ -49,7 +49,7 @@ export default async function Home() {
                   Get Started Free
                   <ArrowRight aria-hidden />
                 </Link>
-                <a href="#features" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "h-10 px-8")}>
+                <a href="#features" className={cn(buttonVariants({ variant: "outline", size: "lg" }), "h-10 border-foreground/25 px-8 dark:border-foreground/25")}>
                   See Features
                 </a>
               </div>
@@ -138,14 +138,14 @@ export default async function Home() {
             <div className="flex gap-16 text-sm">
               <div>
                 <h3 className="font-medium">Product</h3>
-                <ul className="mt-3 space-y-2 text-muted-foreground">
+                <ul className="mt-2 space-y-0.5 text-muted-foreground">
                   <li>
-                    <a href="#features" className="hover:text-foreground">
+                    <a href="#features" className="inline-block py-1 hover:text-foreground">
                       Features
                     </a>
                   </li>
                   <li>
-                    <a href="#pricing" className="hover:text-foreground">
+                    <a href="#pricing" className="inline-block py-1 hover:text-foreground">
                       Pricing
                     </a>
                   </li>
@@ -153,14 +153,14 @@ export default async function Home() {
               </div>
               <div>
                 <h3 className="font-medium">Account</h3>
-                <ul className="mt-3 space-y-2 text-muted-foreground">
+                <ul className="mt-2 space-y-0.5 text-muted-foreground">
                   <li>
-                    <Link href="/sign-in" className="hover:text-foreground">
+                    <Link href="/sign-in" className="inline-block py-1 hover:text-foreground">
                       Sign In
                     </Link>
                   </li>
                   <li>
-                    <Link href="/register" className="hover:text-foreground">
+                    <Link href="/register" className="inline-block py-1 hover:text-foreground">
                       Get Started
                     </Link>
                   </li>

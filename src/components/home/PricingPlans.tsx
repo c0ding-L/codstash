@@ -100,7 +100,7 @@ export function PricingPlans() {
             ))}
           </ul>
           <Link href="/register" className={cn(buttonVariants({ size: "lg" }), "mt-8 h-9")}>
-            Upgrade to Pro
+            Get Pro
           </Link>
         </div>
       </div>

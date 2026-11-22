@@ -91,7 +91,7 @@ function SnippetRow({
         </p>
       </div>
 
-      <div className="relative min-w-0 overflow-hidden bg-background px-4 py-4">
+      <div className="relative min-w-0 overflow-hidden bg-background px-4 py-4 pointer-coarse:pt-13">
         {html ? (
           // Shiki's HTML: the code is escaped by Shiki, and is the owner's own snippet.
           <div className="snippet-code" dangerouslySetInnerHTML={{ __html: html }} />

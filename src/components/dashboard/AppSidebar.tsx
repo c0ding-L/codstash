@@ -155,7 +155,7 @@ function SidebarTypesGroup({ itemTypes }: { itemTypes: ItemTypeRow[] }) {
                   {proTypeSlugs.has(slug) ? (
                     <Badge
                       variant="secondary"
-                      className="ml-auto h-4 px-1.5 text-[10px] font-semibold tracking-wide text-muted-foreground group-data-[collapsible=icon]:hidden"
+                      className="ml-auto h-4 px-1.5 text-[11px] font-semibold tracking-wide text-muted-foreground group-data-[collapsible=icon]:hidden"
                     >
                       PRO
                     </Badge>
