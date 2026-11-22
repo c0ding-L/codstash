@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 
 import { auth } from "@/auth";
-import { FavoriteCollectionRow, FavoriteItemRow, FavoritesSection } from "@/components/favorites/FavoritesList";
+import { FavoritesView } from "@/components/favorites/FavoritesView";
 import { getFavoriteCollectionCards } from "@/lib/db/collections";
 import { getFavoriteItems } from "@/lib/db/items";
 
@@ -33,7 +33,7 @@ export default async function FavoritesPage() {
           <Star className="size-5 fill-amber-400 text-amber-400" aria-hidden />
           Favorites
         </h1>
-        <p className="text-sm text-muted-foreground">Starred items and collections, most recently updated first.</p>
+        <p className="text-sm text-muted-foreground">Starred items and collections.</p>
       </div>
 
       {items.length === 0 && collections.length === 0 ? (
@@ -41,31 +41,7 @@ export default async function FavoritesPage() {
           No favorites yet. Star an item or a collection to see it here.
         </p>
       ) : (
-        <>
-          <FavoritesSection title="Items" count={items.length}>
-            {items.length > 0 ? (
-              <ul className="flex flex-col">
-                {items.map((item) => (
-                  <FavoriteItemRow key={item.id} item={item} now={now} />
-                ))}
-              </ul>
-            ) : (
-              <p className="px-2 py-1.5 font-mono text-xs text-muted-foreground">No favorite items.</p>
-            )}
-          </FavoritesSection>
-
-          <FavoritesSection title="Collections" count={collections.length}>
-            {collections.length > 0 ? (
-              <ul className="flex flex-col">
-                {collections.map((collection) => (
-                  <FavoriteCollectionRow key={collection.id} collection={collection} now={now} />
-                ))}
-              </ul>
-            ) : (
-              <p className="px-2 py-1.5 font-mono text-xs text-muted-foreground">No favorite collections.</p>
-            )}
-          </FavoritesSection>
-        </>
+        <FavoritesView items={items} collections={collections} now={now} />
       )}
     </div>
   );

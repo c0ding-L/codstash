@@ -1,16 +1,33 @@
-# Current Feature
+# Current Feature: Favorites Sorting
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- `/favorites` gets a sort control that reorders the lists on the client, with no refetch and no
+  URL change.
+- Three sort options: **Name** (A–Z), **Date** (most recently updated first — the current
+  order and the default) and **Type** (grouped by item type name, then by name).
+- The sort applies to both the Items and Collections sections. Collections sort by name, by
+  `updatedAt`, and by their most used type (`primaryTypeOf`), with empty collections last.
+- Sorting is a pure utility in `src/lib` with unit tests (name, date, type, ties, empty
+  collections), so the comparison logic is covered without component tests.
+- Rows, drawer and links keep working as today; empty states unchanged.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Today the page is a server component: `getFavoriteItems` / `getFavoriteCollectionCards` return
+  rows ordered `updatedAt` desc (`id` tie-break). The sort control and the sorted lists become
+  a small client leaf that receives the fetched rows as props; the page itself stays a dynamic
+  server page.
+- Date means `updatedAt` (no `favoritedAt` column), matching what the rows already show.
+- Name compares case-insensitively (`localeCompare` with `sensitivity: "base"`), ties by date
+  desc then `id`, so the order is stable.
+- Assumed: one control for the whole page (not one per section), ascending/descending toggle not
+  included, choice not persisted across reloads. Change any of these before starting if wanted.
+- The subtitle "most recently updated first" must follow the selected sort or be reworded.
 
 ---
 
