@@ -8,7 +8,7 @@ import { RecentItems } from "@/components/dashboard/RecentItems";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 
 export const metadata: Metadata = {
-  title: "Dashboard · Codstash",
+  title: "Dashboard · Cortex",
 };
 
 export default async function DashboardPage() {
@@ -21,7 +21,7 @@ export default async function DashboardPage() {
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">Dashboard</h1>
         <p className="text-sm text-muted-foreground">
-          Your snippets, prompts, notes and more in one dev-first stash.
+          Your developer memory: snippets, prompts, notes and more.
         </p>
       </div>
 

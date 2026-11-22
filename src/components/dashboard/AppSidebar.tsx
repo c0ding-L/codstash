@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock, Code2, Folders, Star } from "lucide-react";
+import { Clock, Folders, Layers, Star } from "lucide-react";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
@@ -54,10 +54,10 @@ export function AppSidebar() {
           className="flex items-center gap-2 overflow-hidden rounded-md p-1"
         >
           <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Code2 className="size-4" aria-hidden />
+            <Layers className="size-4" aria-hidden />
           </span>
           <span className="truncate font-semibold group-data-[collapsible=icon]:hidden">
-            CodStash
+            Cortex
           </span>
         </Link>
       </SidebarHeader>

@@ -13,7 +13,7 @@ import { DEMO_USER_EMAIL } from "@/lib/db/collections";
 import { getProfile } from "@/lib/db/profile";
 
 export const metadata: Metadata = {
-  title: "Settings · Codstash",
+  title: "Settings · Cortex",
 };
 
 export default async function SettingsPage() {

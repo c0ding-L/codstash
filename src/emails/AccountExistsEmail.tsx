@@ -25,12 +25,12 @@ export function AccountExistsEmail({ name, signInUrl, resetUrl }: Readonly<Accou
   return (
     <Html lang="en">
       <Head />
-      <Preview>You already have a CodStash account</Preview>
+      <Preview>You already have a Cortex account</Preview>
       <Body style={styles.body}>
         <Container style={styles.card}>
           <Section>
             <span style={styles.logo}>{"</>"}</span>
-            <Text style={{ ...styles.brand, marginTop: "10px" }}>CodStash</Text>
+            <Text style={{ ...styles.brand, marginTop: "10px" }}>Cortex</Text>
           </Section>
 
           <Heading as="h1" style={styles.heading}>
@@ -38,7 +38,7 @@ export function AccountExistsEmail({ name, signInUrl, resetUrl }: Readonly<Accou
           </Heading>
           <Text style={styles.text}>{name ? `Hi ${name},` : "Hi,"}</Text>
           <Text style={styles.text}>
-            Someone tried to create a CodStash account with this email address, but it already
+            Someone tried to create a Cortex account with this email address, but it already
             has one.{" "}
             {resetUrl
               ? "Sign in with your password, or reset it if you have forgotten it."

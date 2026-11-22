@@ -16,7 +16,7 @@ import { colorClasses, surfaceClasses, typeColors, typeIcons } from "@/lib/item-
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "CodStash — Developer Knowledge Hub",
+  title: "Cortex — Developer Knowledge Hub",
   description:
     "Keep your snippets, prompts, commands, notes, files, images and links in one searchable place.",
 };
@@ -168,7 +168,7 @@ export default async function Home() {
               </div>
             </div>
           </div>
-          <p className="mt-12 text-xs text-muted-foreground">© {year} CodStash. All rights reserved.</p>
+          <p className="mt-12 text-xs text-muted-foreground">© {year} Cortex. All rights reserved.</p>
         </div>
       </footer>
     </>

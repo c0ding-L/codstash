@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: CollectionPageProps): Promise
   const session = await auth();
   if (!session?.user?.id) return {};
   const collection = await getCollection(session.user.id, (await params).id);
-  return collection ? { title: `${collection.name} · Codstash` } : {};
+  return collection ? { title: `${collection.name} · Cortex` } : {};
 }
 
 export default async function CollectionPage({ params, searchParams }: CollectionPageProps) {

@@ -23,7 +23,7 @@ interface ItemsPageProps {
 
 export async function generateMetadata({ params }: ItemsPageProps): Promise<Metadata> {
   const slug = itemTypeFromSegment((await params).type);
-  return slug ? { title: `${typePluralNames[slug]} · Codstash` } : {};
+  return slug ? { title: `${typePluralNames[slug]} · Cortex` } : {};
 }
 
 export default async function ItemsPage({ params, searchParams }: ItemsPageProps) {

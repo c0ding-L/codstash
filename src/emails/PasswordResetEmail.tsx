@@ -23,12 +23,12 @@ export function PasswordResetEmail({ name, url }: Readonly<PasswordResetEmailPro
   return (
     <Html lang="en">
       <Head />
-      <Preview>Reset your CodStash password</Preview>
+      <Preview>Reset your Cortex password</Preview>
       <Body style={styles.body}>
         <Container style={styles.card}>
           <Section>
             <span style={styles.logo}>{"</>"}</span>
-            <Text style={{ ...styles.brand, marginTop: "10px" }}>CodStash</Text>
+            <Text style={{ ...styles.brand, marginTop: "10px" }}>Cortex</Text>
           </Section>
 
           <Heading as="h1" style={styles.heading}>
@@ -36,7 +36,7 @@ export function PasswordResetEmail({ name, url }: Readonly<PasswordResetEmailPro
           </Heading>
           <Text style={styles.text}>{name ? `Hi ${name},` : "Hi,"}</Text>
           <Text style={styles.text}>
-            Someone asked to reset the password for your CodStash account. Choose a new one with
+            Someone asked to reset the password for your Cortex account. Choose a new one with
             the button below.
           </Text>
 

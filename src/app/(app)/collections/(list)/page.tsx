@@ -9,7 +9,7 @@ import { getCollectionsPage } from "@/lib/db/collections";
 import { COLLECTIONS_PER_PAGE, pageCount, pageOffset, parsePageParam } from "@/lib/pagination";
 
 export const metadata: Metadata = {
-  title: "Collections · Codstash",
+  title: "Collections · Cortex",
 };
 
 interface CollectionsPageProps {

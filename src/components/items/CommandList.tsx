@@ -31,7 +31,7 @@ export function CommandList({ items, texts, now }: CommandListProps) {
           <span className="size-2.5 rounded-full bg-muted-foreground/30" />
           <span className="size-2.5 rounded-full bg-muted-foreground/30" />
         </span>
-        <span className="font-mono text-xs text-muted-foreground">~/codstash/commands</span>
+        <span className="font-mono text-xs text-muted-foreground">~/cortex/commands</span>
       </div>
 
       <ul className="divide-y divide-border">

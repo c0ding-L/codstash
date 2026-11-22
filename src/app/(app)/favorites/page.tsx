@@ -9,7 +9,7 @@ import { getFavoriteCollectionCards } from "@/lib/db/collections";
 import { getFavoriteItems } from "@/lib/db/items";
 
 export const metadata: Metadata = {
-  title: "Favorites · Codstash",
+  title: "Favorites · Cortex",
 };
 
 export default async function FavoritesPage() {

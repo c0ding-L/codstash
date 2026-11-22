@@ -23,12 +23,12 @@ export function VerificationEmail({ name, url }: Readonly<VerificationEmailProps
   return (
     <Html lang="en">
       <Head />
-      <Preview>Confirm your email to activate your CodStash account</Preview>
+      <Preview>Confirm your email to activate your Cortex account</Preview>
       <Body style={styles.body}>
         <Container style={styles.card}>
           <Section>
             <span style={styles.logo}>{"</>"}</span>
-            <Text style={{ ...styles.brand, marginTop: "10px" }}>CodStash</Text>
+            <Text style={{ ...styles.brand, marginTop: "10px" }}>Cortex</Text>
           </Section>
 
           <Heading as="h1" style={styles.heading}>
@@ -56,7 +56,7 @@ export function VerificationEmail({ name, url }: Readonly<VerificationEmailProps
 
           <Hr style={styles.hr} />
           <Text style={styles.footer}>
-            If you did not create a CodStash account, you can safely ignore this email.
+            If you did not create a Cortex account, you can safely ignore this email.
           </Text>
         </Container>
       </Body>

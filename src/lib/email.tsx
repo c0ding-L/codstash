@@ -46,7 +46,7 @@ async function sendEmail({ to, subject, email }: { to: string; subject: string; 
 export function sendVerificationEmail({ to, name, url }: LinkEmailParams) {
   return sendEmail({
     to,
-    subject: "Verify your CodStash email",
+    subject: "Verify your Cortex email",
     email: <VerificationEmail name={name} url={url} />,
   });
 }
@@ -54,7 +54,7 @@ export function sendVerificationEmail({ to, name, url }: LinkEmailParams) {
 export function sendPasswordResetEmail({ to, name, url }: LinkEmailParams) {
   return sendEmail({
     to,
-    subject: "Reset your CodStash password",
+    subject: "Reset your Cortex password",
     email: <PasswordResetEmail name={name} url={url} />,
   });
 }
@@ -72,7 +72,7 @@ export function sendAccountExistsEmail({
 }) {
   return sendEmail({
     to,
-    subject: "You already have a CodStash account",
+    subject: "You already have a Cortex account",
     email: <AccountExistsEmail name={name} signInUrl={signInUrl} resetUrl={resetUrl} />,
   });
 }

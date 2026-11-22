@@ -11,7 +11,7 @@ import { getProfile, getProfileStats } from "@/lib/db/profile";
 import { typePluralNames } from "@/lib/item-type-ui";
 
 export const metadata: Metadata = {
-  title: "Profile · Codstash",
+  title: "Profile · Cortex",
 };
 
 const memberSince = new Intl.DateTimeFormat("en-US", { dateStyle: "long", timeZone: "UTC" });

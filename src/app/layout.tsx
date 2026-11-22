@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Codstash",
+  title: "Cortex",
 };
 
 // Dark mode is the only theme for now; tells the browser to render native

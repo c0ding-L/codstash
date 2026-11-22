@@ -8,7 +8,7 @@ export function HomeLogo() {
       <span className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
         <Layers className="size-4" aria-hidden />
       </span>
-      CodStash
+      Cortex
     </Link>
   );
 }
