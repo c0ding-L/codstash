@@ -14,6 +14,12 @@ Not Started
 
 ---
 
+Previous feature (completed) — Settings Page: a protected `/settings` page, opened from the
+sidebar user dropdown, now holds the Password and Delete account cards moved off `/profile`.
+Outcome in the History below.
+
+---
+
 Previous feature (completed) — Pagination: `/items/[type]` and `/collections/[id]` list 21 items
 per page, `/collections` 9 collections, with prev / numbered pages / next under each listing; each
 page reads only its rows. Outcome in the History below.
@@ -1931,3 +1937,15 @@ Environment notes that outlive any one feature:
   removed from the database.
 - 2026-11-22 — Pagination merged into `main` (`0ce4254`, fast-forward); branch
   `feature/pagination` deleted. Feature completed.
+- 2026-11-22 — Settings Page: new `/settings` in the `(app)` group (with `loading.tsx` /
+  `error.tsx`), added to the proxy matcher, and redirecting to `/sign-in?callbackUrl=/settings`
+  when the session user has no row. It holds the Account section moved off `/profile`: Password
+  (`ChangePasswordDialog`, hidden for GitHub-only users) and Delete account
+  (`DeleteAccountDialog`, demo guard kept); it reuses `getProfile`, no new queries or actions.
+  The spec's "forgot password" was the *Change password* card; `/forgot-password` is unchanged.
+  `/profile` keeps the identity card and Usage, now full width. `UserMenu` gains a Settings
+  item; the unlinked placeholder Settings button in `AppSidebar`'s footer was removed (author's
+  call). 554 tests, build and lint green; checked in the browser with a Playwright script
+  (redirect when signed out, menu entry, page content, profile, footer). Read-only.
+- 2026-11-22 — Settings Page merged into `main` (`174f6d1`, fast-forward); branch
+  `feature/settings-page` deleted. Feature completed.
