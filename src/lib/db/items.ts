@@ -83,6 +83,21 @@ export async function getPinnedItems(userId: string): Promise<DashboardItem[]> {
 }
 
 /**
+ * Favorite items for `/favorites`, most recently updated first, up to the ceiling.
+ * There is no `favoritedAt`, so `updatedAt` stands in for when it was favorited.
+ */
+export async function getFavoriteItems(userId: string): Promise<DashboardItem[]> {
+  const items = await prisma.item.findMany({
+    where: { userId, isFavorite: true },
+    orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+    take: MAX_ITEM_LIMIT,
+    select: dashboardItemSelect,
+  });
+
+  return items.map(toDashboardItem);
+}
+
+/**
  * The most recently updated items, plus how many the user has in total — the
  * section header reads "10 of 18".
  */

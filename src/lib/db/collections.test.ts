@@ -7,6 +7,7 @@ import {
   getCollection,
   getCollections,
   getCollectionsPage,
+  getFavoriteCollectionCards,
   getCollectionOptions,
   ownsCollections,
   getFavoriteCollections,
@@ -79,6 +80,7 @@ describe("account isolation", () => {
     ["getSidebarRecentCollections", () => getSidebarRecentCollections(USER), { userId: USER }],
     ["getRecentCollections", () => getRecentCollections(USER), { userId: USER }],
     ["getCollectionsPage", () => getCollectionsPage(USER), { userId: USER }],
+    ["getFavoriteCollectionCards", () => getFavoriteCollectionCards(USER), { userId: USER, isFavorite: true }],
   ])("%s reads only that user's collections and their items", async (_name, read, where) => {
     await read();
 
@@ -129,6 +131,22 @@ describe("getRecentCollections", () => {
     await getRecentCollections(USER, MAX_COLLECTION_LIMIT + 1);
 
     expect(findCollections.mock.calls[0]![0].take).toBe(MAX_COLLECTION_LIMIT);
+  });
+});
+
+describe("getFavoriteCollectionCards", () => {
+  it("reads the favorite collections, newest first, up to the ceiling, with their counts", async () => {
+    groupItems.mockResolvedValue([{ collectionId: "col_1", typeId: "typ_link", count: BigInt(2) }]);
+
+    const [collection] = await getFavoriteCollectionCards(USER);
+
+    expect(findCollections.mock.calls[0]![0]).toMatchObject({
+      where: { userId: USER, isFavorite: true },
+      orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+      skip: 0,
+      take: MAX_COLLECTION_LIMIT,
+    });
+    expect(collection?.types.map(({ slug }) => slug)).toEqual(["link"]);
   });
 });
 

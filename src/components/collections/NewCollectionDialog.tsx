@@ -26,7 +26,7 @@ export function NewCollectionDialog() {
   return (
     // Kept open while saving, so a create in flight cannot be dismissed half done.
     <Dialog open={open} onOpenChange={(next) => (saving ? undefined : setOpen(next))}>
-      <DialogTrigger render={<Button size="lg" variant="outline" className="ml-auto" aria-label="New Collection" />}>
+      <DialogTrigger render={<Button size="lg" variant="outline" aria-label="New Collection" />}>
         <FolderPlus aria-hidden />
         {/* Icon only on narrow screens, so both buttons fit beside the search. */}
         <span className="hidden sm:inline">New Collection</span>

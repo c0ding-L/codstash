@@ -19,5 +19,5 @@ export const proxy = auth((req) => {
 // Only the signed-in pages run through the proxy, so `/api/auth/*` stays public
 // and sign-in can complete; `/sign-in` and `/register` are outside it too.
 export const config = {
-  matcher: ["/dashboard/:path*", "/profile/:path*", "/settings/:path*", "/items/:path*", "/collections/:path*"],
+  matcher: ["/dashboard/:path*", "/favorites/:path*", "/profile/:path*", "/settings/:path*", "/items/:path*", "/collections/:path*"],
 };

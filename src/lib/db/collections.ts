@@ -157,11 +157,19 @@ export interface RecentCollection {
   types: CollectionType[];
 }
 
-/** The user's collections as cards, most recently updated first, from `skip` on. */
-async function loadCollectionCards(userId: string, skip: number, take: number): Promise<RecentCollection[]> {
+/**
+ * The user's collections as cards, most recently updated first, from `skip` on.
+ * `where` narrows them; `userId` is set after it, so it cannot be overridden.
+ */
+async function loadCollectionCards(
+  userId: string,
+  skip: number,
+  take: number,
+  where: Prisma.CollectionWhereInput = {},
+): Promise<RecentCollection[]> {
   const [collections, typeById] = await Promise.all([
     prisma.collection.findMany({
-      where: { userId },
+      where: { ...where, userId },
       orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
       skip,
       take,
@@ -196,6 +204,14 @@ export async function getRecentCollections(
 /** Every collection the user owns, most recently updated first, up to the ceiling. */
 export async function getCollections(userId: string): Promise<RecentCollection[]> {
   return getRecentCollections(userId, MAX_COLLECTION_LIMIT);
+}
+
+/**
+ * Favorite collections for `/favorites`, most recently updated first, up to the
+ * ceiling. The sidebar's `getFavoriteCollections` sorts by name and drops the counts.
+ */
+export async function getFavoriteCollectionCards(userId: string): Promise<RecentCollection[]> {
+  return loadCollectionCards(userId, 0, MAX_COLLECTION_LIMIT, { isFavorite: true });
 }
 
 /** One page of the user's collections for `/collections`, plus the total so the page can count its pages. */

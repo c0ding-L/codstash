@@ -10,6 +10,7 @@ import {
   getItemFileKeys,
   getItemsByCollection,
   getItemsByType,
+  getFavoriteItems,
   getPinnedItems,
   getPromptPreviews,
   getSnippetPreviews,
@@ -61,6 +62,7 @@ beforeEach(() => {
 describe("account isolation", () => {
   it.each([
     ["getPinnedItems", () => getPinnedItems(USER), { userId: USER, isPinned: true }],
+    ["getFavoriteItems", () => getFavoriteItems(USER), { userId: USER, isFavorite: true }],
     ["getRecentItems", () => getRecentItems(USER), { userId: USER }],
     ["getSearchItems", () => getSearchItems(USER), { userId: USER }],
     ["getItemsByType", () => getItemsByType(USER, "snippet"), { userId: USER, type: { slug: "snippet" } }],
@@ -213,6 +215,17 @@ describe("getItemsByType", () => {
     await getItemsByType(USER, "link");
 
     expect(findMany.mock.calls[0]![0].select.collections).toMatchObject({ orderBy: { collection: { name: "asc" } } });
+  });
+});
+
+describe("getFavoriteItems", () => {
+  it("reads newest first with a stable tie-break, up to the ceiling", async () => {
+    await getFavoriteItems(USER);
+
+    expect(findMany.mock.calls[0]![0]).toMatchObject({
+      orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
+      take: MAX_ITEM_LIMIT,
+    });
   });
 });
 
