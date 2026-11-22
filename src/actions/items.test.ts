@@ -1,20 +1,30 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
-import { createItem, deleteItem, updateItem } from "@/actions/items";
+import { revalidatePath } from "next/cache";
+
+import { createItem, deleteItem, setItemFavorite, updateItem } from "@/actions/items";
 import { auth } from "@/auth";
 import { ownsCollections } from "@/lib/db/collections";
 import {
   createItem as createItemQuery,
   deleteItem as deleteItemQuery,
   isFileKeyInUse,
+  setItemFavorite as setItemFavoriteQuery,
   updateItem as updateItemQuery,
 } from "@/lib/db/items";
 import { deleteObjectsQuietly, headObject } from "@/lib/r2";
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
-vi.mock("@/lib/db/items", () => ({ createItem: vi.fn(), updateItem: vi.fn(), deleteItem: vi.fn(), isFileKeyInUse: vi.fn() }));
+vi.mock("@/lib/db/items", () => ({
+  createItem: vi.fn(),
+  updateItem: vi.fn(),
+  deleteItem: vi.fn(),
+  isFileKeyInUse: vi.fn(),
+  setItemFavorite: vi.fn(),
+}));
 vi.mock("@/lib/db/collections", () => ({ ownsCollections: vi.fn() }));
 vi.mock("@/lib/r2", () => ({ headObject: vi.fn(), deleteObjectsQuietly: vi.fn() }));
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const session = auth as unknown as Mock;
 const query = updateItemQuery as unknown as Mock;
@@ -24,6 +34,8 @@ const head = headObject as unknown as Mock;
 const deleteObjects = deleteObjectsQuietly as unknown as Mock;
 const keyInUse = isFileKeyInUse as unknown as Mock;
 const owns = ownsCollections as unknown as Mock;
+const favoriteQuery = setItemFavoriteQuery as unknown as Mock;
+const revalidate = revalidatePath as unknown as Mock;
 
 const USER_ID = "user_1";
 
@@ -494,5 +506,61 @@ describe("deleteItem", () => {
 
     expect(result).toEqual({ success: false, data: null, error: "Could not delete the item. Try again." });
     expect(console.error).toHaveBeenCalled();
+  });
+});
+
+describe("setItemFavorite", () => {
+  beforeEach(() => {
+    favoriteQuery.mockResolvedValue(true);
+  });
+
+  it("refuses when not signed in", async () => {
+    session.mockResolvedValue(null);
+
+    const result = await setItemFavorite("item_1", true);
+
+    expect(result).toEqual({ success: false, data: null, error: "You are not signed in." });
+    expect(favoriteQuery).not.toHaveBeenCalled();
+    expect(revalidate).not.toHaveBeenCalled();
+  });
+
+  it("refuses a value that is not a boolean", async () => {
+    const result = await setItemFavorite("item_1", "yes" as unknown as boolean);
+
+    expect(result).toEqual({ success: false, data: null, error: "Invalid favorite value." });
+    expect(favoriteQuery).not.toHaveBeenCalled();
+  });
+
+  it("favorites the item as the signed-in user and refreshes the layout", async () => {
+    const result = await setItemFavorite("item_1", true);
+
+    expect(result).toEqual({ success: true, data: { isFavorite: true }, error: null });
+    expect(favoriteQuery).toHaveBeenCalledWith(USER_ID, "item_1", true);
+    expect(revalidate).toHaveBeenCalledWith("/", "layout");
+  });
+
+  it("unfavorites the item", async () => {
+    const result = await setItemFavorite("item_1", false);
+
+    expect(result).toEqual({ success: true, data: { isFavorite: false }, error: null });
+    expect(favoriteQuery).toHaveBeenCalledWith(USER_ID, "item_1", false);
+  });
+
+  it("reports an item that is missing or another user's as gone", async () => {
+    favoriteQuery.mockResolvedValue(false);
+
+    const result = await setItemFavorite("item_1", true);
+
+    expect(result).toEqual({ success: false, data: null, error: "This item no longer exists." });
+    expect(revalidate).not.toHaveBeenCalled();
+  });
+
+  it("hides an unexpected database error behind a generic message", async () => {
+    favoriteQuery.mockRejectedValue(new Error("connection lost"));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const result = await setItemFavorite("item_1", true);
+
+    expect(result).toEqual({ success: false, data: null, error: "Could not update the favorite. Try again." });
   });
 });

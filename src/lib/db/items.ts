@@ -524,3 +524,15 @@ export async function getItemFileKeys(userId: string): Promise<string[]> {
   });
   return items.flatMap(({ fileUrl }) => (fileUrl ? [fileUrl] : []));
 }
+
+/**
+ * Sets one of the user's items as a favorite or not. False when it is missing or not
+ * theirs. Raw SQL, because Prisma's `update` would bump `@updatedAt`: favoriting is not
+ * an edit, and the recent lists sort by that column.
+ */
+export async function setItemFavorite(userId: string, id: string, isFavorite: boolean): Promise<boolean> {
+  const updated = await prisma.$executeRaw`
+    UPDATE "Item" SET "isFavorite" = ${isFavorite} WHERE "id" = ${id} AND "userId" = ${userId}
+  `;
+  return updated > 0;
+}

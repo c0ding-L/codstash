@@ -70,9 +70,10 @@ interface ItemDetailsProps {
   state: ItemDetailState;
   onSaved: (saved: SavedItem) => void;
   onDeleted: (itemId: string) => void;
+  onFavoriteChanged: (itemId: string, isFavorite: boolean) => void;
 }
 
-export function ItemDetails({ card, state, onSaved, onDeleted }: ItemDetailsProps) {
+export function ItemDetails({ card, state, onSaved, onDeleted, onFavoriteChanged }: ItemDetailsProps) {
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const slug = toItemTypeSlug(card.type.slug);
@@ -136,6 +137,7 @@ export function ItemDetails({ card, state, onSaved, onDeleted }: ItemDetailsProp
         detail={detail}
         onEdit={detail ? () => setEditing(true) : null}
         onDelete={detail ? () => setConfirmingDelete(true) : null}
+        onFavoriteChanged={(isFavorite) => onFavoriteChanged(card.id, isFavorite)}
       />
       <ItemDeleteDialog
         card={card}

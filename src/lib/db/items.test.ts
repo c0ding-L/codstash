@@ -17,6 +17,7 @@ import {
   getRecentItems,
   getSearchItems,
   isFileKeyInUse,
+  setItemFavorite,
   updateItem,
 } from "@/lib/db/items";
 import { MAX_ITEM_LIMIT } from "@/lib/db/limits";
@@ -25,6 +26,7 @@ import { prisma } from "@/lib/prisma";
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
+    $executeRaw: vi.fn(),
     item: {
       findMany: vi.fn(),
       findFirst: vi.fn(),
@@ -693,5 +695,28 @@ describe("getSnippetPreviews", () => {
       a: { code: "one\ntwo\nthree\nfour\nfive\nsix\nseven", lineCount: 8, language: "ts", tags: ["hooks", "react"] },
       b: { code: "", lineCount: 0, language: null, tags: [] },
     });
+  });
+});
+
+describe("setItemFavorite", () => {
+  const executeRaw = prisma.$executeRaw as unknown as Mock;
+
+  it("sets the flag on the user's own item only, leaving updatedAt alone", async () => {
+    executeRaw.mockResolvedValue(1);
+
+    await expect(setItemFavorite(USER, "item_1", true)).resolves.toBe(true);
+
+    const [strings, ...values] = executeRaw.mock.calls[0];
+    const sql = (strings as TemplateStringsArray).join("?");
+    expect(sql).toMatch(/UPDATE "Item" SET "isFavorite" = \?/);
+    expect(sql).toMatch(/"userId" = \?/);
+    expect(sql).not.toMatch(/updatedAt/);
+    expect(values).toEqual([true, "item_1", USER]);
+  });
+
+  it("is false when no row matched", async () => {
+    executeRaw.mockResolvedValue(0);
+
+    await expect(setItemFavorite(USER, "item_1", false)).resolves.toBe(false);
   });
 });

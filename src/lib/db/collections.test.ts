@@ -14,6 +14,7 @@ import {
   getItemTypes,
   getRecentCollections,
   getSidebarRecentCollections,
+  setCollectionFavorite,
   updateCollection,
 } from "@/lib/db/collections";
 import { MAX_COLLECTION_LIMIT } from "@/lib/db/limits";
@@ -23,6 +24,7 @@ import { prisma } from "@/lib/prisma";
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     $queryRaw: vi.fn(),
+    $executeRaw: vi.fn(),
     collection: {
       findMany: vi.fn(),
       findFirst: vi.fn(),
@@ -325,5 +327,28 @@ describe("ownsCollections", () => {
   it("does not query for no ids", async () => {
     await expect(ownsCollections(USER, [])).resolves.toBe(true);
     expect(countRows).not.toHaveBeenCalled();
+  });
+});
+
+describe("setCollectionFavorite", () => {
+  const executeRaw = asMock(prisma.$executeRaw);
+
+  it("sets the flag on the user's own collection only, leaving updatedAt alone", async () => {
+    executeRaw.mockResolvedValue(1);
+
+    await expect(setCollectionFavorite("user_a", "col_1", true)).resolves.toBe(true);
+
+    const [strings, ...values] = executeRaw.mock.calls[0];
+    const sql = (strings as TemplateStringsArray).join("?");
+    expect(sql).toMatch(/UPDATE "Collection" SET "isFavorite" = \?/);
+    expect(sql).toMatch(/"userId" = \?/);
+    expect(sql).not.toMatch(/updatedAt/);
+    expect(values).toEqual([true, "col_1", "user_a"]);
+  });
+
+  it("is false when no row matched", async () => {
+    executeRaw.mockResolvedValue(0);
+
+    await expect(setCollectionFavorite("user_a", "col_1", false)).resolves.toBe(false);
   });
 });

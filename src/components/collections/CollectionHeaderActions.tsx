@@ -1,13 +1,13 @@
 "use client";
 
-import { Pencil, Star, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { DeleteCollectionDialog } from "@/components/collections/DeleteCollectionDialog";
 import { EditCollectionDialog } from "@/components/collections/EditCollectionDialog";
+import { FavoriteButton } from "@/components/favorites/FavoriteButton";
 import { Button } from "@/components/ui/button";
 import type { CollectionSummary } from "@/lib/db/collections";
-import { cn } from "@/lib/utils";
 
 /** Edit, favorite and delete buttons in a collection page's header. */
 export function CollectionHeaderActions({ collection }: { collection: CollectionSummary }) {
@@ -16,10 +16,14 @@ export function CollectionHeaderActions({ collection }: { collection: Collection
 
   return (
     <div className="flex shrink-0 items-center gap-1">
-      {/* Placeholder: favoriting is not wired up yet. */}
-      <Button variant="ghost" size="icon" aria-label="Favorite">
-        <Star aria-hidden className={cn(collection.isFavorite && "fill-amber-400 text-amber-400")} />
-      </Button>
+      <FavoriteButton
+        kind="collection"
+        id={collection.id}
+        name={collection.name}
+        isFavorite={collection.isFavorite}
+        size="icon"
+        className="text-foreground"
+      />
       <Button variant="ghost" size="icon" aria-label="Edit collection" onClick={() => setEditOpen(true)}>
         <Pencil aria-hidden />
       </Button>

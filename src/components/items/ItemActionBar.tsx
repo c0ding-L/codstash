@@ -4,6 +4,7 @@ import { Copy, Pencil, Pin, Star, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useFavoriteToggle } from "@/hooks/use-favorite-toggle";
 import { copyToClipboard } from "@/lib/clipboard";
 import type { DashboardItem, ItemDetailJson } from "@/lib/db/items";
 import { cn } from "@/lib/utils";
@@ -48,25 +49,29 @@ interface ItemActionBarProps {
   onEdit: (() => void) | null;
   /** Null until the detail has loaded, like `onEdit`. */
   onDelete: (() => void) | null;
+  /** Updates the drawer's copy of the card, which the page refresh does not reach. */
+  onFavoriteChanged: (isFavorite: boolean) => void;
 }
 
 /**
- * Favorite and Pin do not work yet. Favorite and Pin stay at full
- * opacity while disabled, because they still report the item's current state.
+ * Pin does not work yet. Favorite and Pin stay at full opacity while disabled,
+ * because they still report the item's current state.
  */
-export function ItemActionBar({ card, detail, onEdit, onDelete }: ItemActionBarProps) {
+export function ItemActionBar({ card, detail, onEdit, onDelete, onFavoriteChanged }: ItemActionBarProps) {
   const copyText = detail ? detail.content || detail.url : null;
+  const favorite = useFavoriteToggle("item", card.id, card.isFavorite, onFavoriteChanged);
 
   return (
     <div className="flex items-center gap-1 border-y border-border px-4 py-2">
       <IconAction
         label="Favorite"
-        hint={card.isFavorite ? "Favorite. Changing it is not available yet." : "Favorites are not available yet."}
-        disabled
-        aria-pressed={card.isFavorite}
-        className={cn(card.isFavorite && "disabled:opacity-100")}
+        hint={favorite.isFavorite ? "Remove from favorites" : "Add to favorites"}
+        disabled={favorite.pending}
+        aria-pressed={favorite.isFavorite}
+        onClick={favorite.toggle}
+        className="disabled:opacity-100"
       >
-        <Star className={cn(card.isFavorite && "fill-amber-400 text-amber-400")} aria-hidden />
+        <Star className={cn(favorite.isFavorite && "fill-amber-400 text-amber-400")} aria-hidden />
       </IconAction>
       <IconAction
         label="Pin"

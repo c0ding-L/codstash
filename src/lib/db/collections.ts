@@ -319,3 +319,11 @@ export async function ownsCollections(userId: string, collectionIds: string[]): 
   const owned = await prisma.collection.count({ where: { userId, id: { in: ids } } });
   return owned === ids.length;
 }
+
+/** Like `setItemFavorite`, for a collection: raw SQL so `updatedAt` stays as it was. */
+export async function setCollectionFavorite(userId: string, id: string, isFavorite: boolean): Promise<boolean> {
+  const updated = await prisma.$executeRaw`
+    UPDATE "Collection" SET "isFavorite" = ${isFavorite} WHERE "id" = ${id} AND "userId" = ${userId}
+  `;
+  return updated > 0;
+}

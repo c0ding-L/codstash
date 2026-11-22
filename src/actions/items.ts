@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { auth } from "@/auth";
@@ -10,6 +11,7 @@ import {
   createItem as createItemQuery,
   deleteItem as deleteItemQuery,
   isFileKeyInUse,
+  setItemFavorite as setItemFavoriteQuery,
   updateItem as updateItemQuery,
   type DashboardItem,
   type ItemDetailJson,
@@ -298,4 +300,29 @@ export async function deleteItem(itemId: string): Promise<DeleteItemResult> {
     console.error("[items] deleteItem failed:", error);
     return { success: false, data: null, error: "Could not delete the item. Try again." };
   }
+}
+
+export type SetFavoriteResult =
+  | { success: true; data: { isFavorite: boolean }; error: null }
+  | { success: false; data: null; error: string };
+
+/** Takes the state to set, not a flip, so a repeated click cannot leave the row out of step. */
+export async function setItemFavorite(itemId: string, isFavorite: boolean): Promise<SetFavoriteResult> {
+  if (typeof isFavorite !== "boolean") return { success: false, data: null, error: "Invalid favorite value." };
+
+  try {
+    const session = await auth();
+    if (!session?.user?.id) return { success: false, data: null, error: "You are not signed in." };
+
+    // The query filters on the owner, so another user's item is not found either.
+    const found = await setItemFavoriteQuery(session.user.id, itemId, isFavorite);
+    if (!found) return { success: false, data: null, error: "This item no longer exists." };
+  } catch (error) {
+    console.error("[items] setItemFavorite failed:", error);
+    return { success: false, data: null, error: "Could not update the favorite. Try again." };
+  }
+
+  // The layout too: the sidebar, stats and top bar count favorites.
+  revalidatePath("/", "layout");
+  return { success: true, data: { isFavorite }, error: null };
 }

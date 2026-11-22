@@ -1,5 +1,6 @@
-import { Pin, Star } from "lucide-react";
+import { Pin } from "lucide-react";
 
+import { FavoriteButton } from "@/components/favorites/FavoriteButton";
 import { ImageCardBody } from "@/components/items/ImageCardBody";
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
 import { Card } from "@/components/ui/card";
@@ -20,6 +21,15 @@ export function ImageCard({ item, now }: ImageCardProps) {
   return (
     <Card className="relative h-full pt-0">
       <ItemDrawerTrigger item={item} />
+      {/* Over the thumbnail's corner, on a backdrop so it reads on any image. */}
+      <FavoriteButton
+        kind="item"
+        id={item.id}
+        name={item.title}
+        isFavorite={item.isFavorite}
+        size="icon-sm"
+        className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm hover:bg-background"
+      />
 
       <ImageCardBody
         src={src}
@@ -31,12 +41,6 @@ export function ImageCard({ item, now }: ImageCardProps) {
             <h2 className="truncate font-medium">{item.title}</h2>
             {item.isPinned ? (
               <Pin className="size-3 shrink-0 text-muted-foreground" aria-label="Pinned" />
-            ) : null}
-            {item.isFavorite ? (
-              <Star
-                className="size-3 shrink-0 fill-amber-400 text-amber-400"
-                aria-label="Favorite"
-              />
             ) : null}
           </>
         }

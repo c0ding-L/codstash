@@ -1,7 +1,8 @@
-import { Clock, Star } from "lucide-react";
+import { Clock } from "lucide-react";
 import Link from "next/link";
 
 import { CollectionCardMenu } from "@/components/collections/CollectionCardMenu";
+import { FavoriteButton } from "@/components/favorites/FavoriteButton";
 import { TypeIconTile } from "@/components/items/TypeIconTile";
 import { Card, CardContent } from "@/components/ui/card";
 import type { CollectionType, RecentCollection } from "@/lib/db/collections";
@@ -43,8 +44,15 @@ export function CollectionCard({ collection, now }: { collection: RecentCollecti
             iconClassName="size-4"
           />
           <div className="flex items-center gap-1">
-            {collection.isFavorite ? <Star className="size-4 fill-amber-400 text-amber-400" aria-label="Favorite" /> : null}
-            {/* A client leaf above the link overlay; the rest of the card stays a link. */}
+            <FavoriteButton
+              kind="collection"
+              id={collection.id}
+              name={collection.name}
+              isFavorite={collection.isFavorite}
+              size="icon-sm"
+              className="-mt-1"
+            />
+            {/* Client leaves above the link overlay; the rest of the card stays a link. */}
             {/* Only what the menu uses crosses to the client, not the types or dates. */}
             <CollectionCardMenu
               collection={{

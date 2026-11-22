@@ -8,6 +8,7 @@ import { auth } from "@/auth";
 import {
   createCollection as createCollectionQuery,
   deleteCollection as deleteCollectionQuery,
+  setCollectionFavorite as setCollectionFavoriteQuery,
   updateCollection as updateCollectionQuery,
   type CollectionSummary,
   type RecentCollection,
@@ -156,4 +157,30 @@ export async function deleteCollection(
     redirect("/collections");
   }
   return { success: true, data: null, error: null };
+}
+
+export type SetCollectionFavoriteResult =
+  | { success: true; data: { isFavorite: boolean }; error: null }
+  | { success: false; data: null; error: string };
+
+/** Takes the state to set, not a flip, as `setItemFavorite` does. */
+export async function setCollectionFavorite(
+  collectionId: string,
+  isFavorite: boolean,
+): Promise<SetCollectionFavoriteResult> {
+  if (typeof isFavorite !== "boolean") return { success: false, data: null, error: "Invalid favorite value." };
+
+  try {
+    const session = await auth();
+    if (!session?.user?.id) return { success: false, data: null, error: "You are not signed in." };
+
+    const found = await setCollectionFavoriteQuery(session.user.id, collectionId, isFavorite);
+    if (!found) return { success: false, data: null, error: "This collection no longer exists." };
+  } catch (error) {
+    console.error("[collections] setCollectionFavorite failed:", error);
+    return { success: false, data: null, error: "Could not update the favorite. Try again." };
+  }
+
+  revalidatePath("/", "layout");
+  return { success: true, data: { isFavorite }, error: null };
 }

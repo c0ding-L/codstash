@@ -8,7 +8,7 @@ import { CardContent } from "@/components/ui/card";
 interface ImageCardBodyProps {
   src: string;
   alt: string;
-  /** The title and its pin/favorite marks, rendered on the server. */
+  /** The title and its pin mark, rendered on the server. */
   heading: ReactNode;
   /** The relative update time, measured on the server against the page's `now`. */
   time: string;

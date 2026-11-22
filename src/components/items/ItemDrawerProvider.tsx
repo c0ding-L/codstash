@@ -90,6 +90,12 @@ export function ItemDrawerProvider({ children }: { children: React.ReactNode }) 
     setDetail({ status: "ready", detail: savedDetail });
   }, []);
 
+  // Like a save: a favorite that lands after another item opened is dropped.
+  const handleFavoriteChanged = useCallback((itemId: string, isFavorite: boolean) => {
+    if (itemId !== currentId.current) return;
+    setCard((current) => (current?.id === itemId ? { ...current, isFavorite } : current));
+  }, []);
+
   // A delete that finishes after another item opened leaves the drawer alone.
   const handleDeleted = useCallback((itemId: string) => {
     if (itemId !== currentId.current) return;
@@ -103,7 +109,16 @@ export function ItemDrawerProvider({ children }: { children: React.ReactNode }) 
 
       <Sheet open={open} onOpenChange={handleOpenChange}>
         <SheetContent className="gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-lg">
-          {card ? <ItemDetails key={openCount} card={card} state={detail} onSaved={handleSaved} onDeleted={handleDeleted} /> : null}
+          {card ? (
+            <ItemDetails
+              key={openCount}
+              card={card}
+              state={detail}
+              onSaved={handleSaved}
+              onDeleted={handleDeleted}
+              onFavoriteChanged={handleFavoriteChanged}
+            />
+          ) : null}
         </SheetContent>
       </Sheet>
     </OpenItemContext.Provider>

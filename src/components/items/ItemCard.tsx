@@ -1,5 +1,6 @@
-import { Pin, Star } from "lucide-react";
+import { Pin } from "lucide-react";
 
+import { FavoriteButton } from "@/components/favorites/FavoriteButton";
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
 import { Card, CardContent } from "@/components/ui/card";
 import { TypeIconTile } from "@/components/items/TypeIconTile";
@@ -40,12 +41,6 @@ export function ItemCard({ item, now }: ItemCardProps) {
             {item.isPinned ? (
               <Pin className="size-3 shrink-0 text-muted-foreground" aria-label="Pinned" />
             ) : null}
-            {item.isFavorite ? (
-              <Star
-                className="size-3 shrink-0 fill-amber-400 text-amber-400"
-                aria-label="Favorite"
-              />
-            ) : null}
           </div>
 
           {item.description ? (
@@ -58,6 +53,14 @@ export function ItemCard({ item, now }: ItemCardProps) {
             <span>{formatRelativeTime(item.updatedAt.toISOString(), now)}</span>
           </div>
         </div>
+
+        <FavoriteButton
+          kind="item"
+          id={item.id}
+          name={item.title}
+          isFavorite={item.isFavorite}
+          className="-mt-1 -mr-2 shrink-0"
+        />
       </CardContent>
     </Card>
   );

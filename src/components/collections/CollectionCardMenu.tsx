@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useFavoriteToggle } from "@/hooks/use-favorite-toggle";
 import { cn } from "@/lib/utils";
 
 interface CollectionCardMenuProps {
@@ -27,6 +28,7 @@ interface CollectionCardMenuProps {
 export function CollectionCardMenu({ collection }: CollectionCardMenuProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const favorite = useFavoriteToggle("collection", collection.id, collection.isFavorite);
 
   return (
     <>
@@ -48,10 +50,9 @@ export function CollectionCardMenu({ collection }: CollectionCardMenuProps) {
             <Pencil aria-hidden />
             Edit
           </DropdownMenuItem>
-          {/* Placeholder: favoriting is not wired up yet. */}
-          <DropdownMenuItem>
-            <Star aria-hidden className={cn(collection.isFavorite && "fill-amber-400 text-amber-400")} />
-            Favorite
+          <DropdownMenuItem disabled={favorite.pending} onClick={favorite.toggle}>
+            <Star aria-hidden className={cn(favorite.isFavorite && "fill-amber-400 text-amber-400")} />
+            {favorite.isFavorite ? "Remove from favorites" : "Add to favorites"}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>

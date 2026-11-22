@@ -3,11 +3,12 @@ import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { createCollection, deleteCollection, updateCollection } from "@/actions/collections";
+import { createCollection, deleteCollection, setCollectionFavorite, updateCollection } from "@/actions/collections";
 import { auth } from "@/auth";
 import {
   createCollection as createCollectionQuery,
   deleteCollection as deleteCollectionQuery,
+  setCollectionFavorite as setCollectionFavoriteQuery,
   updateCollection as updateCollectionQuery,
 } from "@/lib/db/collections";
 
@@ -16,6 +17,7 @@ vi.mock("@/lib/db/collections", () => ({
   createCollection: vi.fn(),
   updateCollection: vi.fn(),
   deleteCollection: vi.fn(),
+  setCollectionFavorite: vi.fn(),
 }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
@@ -25,6 +27,7 @@ const createQuery = createCollectionQuery as unknown as Mock;
 const updateQuery = updateCollectionQuery as unknown as Mock;
 const deleteQuery = deleteCollectionQuery as unknown as Mock;
 const revalidate = revalidatePath as unknown as Mock;
+const favoriteQuery = setCollectionFavoriteQuery as unknown as Mock;
 const redirectTo = redirect as unknown as Mock;
 
 /** Prisma's error when the row to update or delete does not exist (or is not the user's). */
@@ -211,5 +214,62 @@ describe("deleteCollection", () => {
     const result = await deleteCollection("col_1");
 
     expect(result).toEqual({ success: false, data: null, error: "Could not delete the collection. Try again." });
+  });
+});
+
+describe("setCollectionFavorite", () => {
+  beforeEach(() => {
+    session.mockResolvedValue({ user: { id: USER_ID } });
+    favoriteQuery.mockResolvedValue(true);
+  });
+
+  it("refuses when not signed in", async () => {
+    session.mockResolvedValue(null);
+
+    const result = await setCollectionFavorite("col_1", true);
+
+    expect(result).toEqual({ success: false, data: null, error: "You are not signed in." });
+    expect(favoriteQuery).not.toHaveBeenCalled();
+    expect(revalidate).not.toHaveBeenCalled();
+  });
+
+  it("refuses a value that is not a boolean", async () => {
+    const result = await setCollectionFavorite("col_1", 1 as unknown as boolean);
+
+    expect(result).toEqual({ success: false, data: null, error: "Invalid favorite value." });
+    expect(favoriteQuery).not.toHaveBeenCalled();
+  });
+
+  it("favorites the collection as the signed-in user and refreshes the layout", async () => {
+    const result = await setCollectionFavorite("col_1", true);
+
+    expect(result).toEqual({ success: true, data: { isFavorite: true }, error: null });
+    expect(favoriteQuery).toHaveBeenCalledWith(USER_ID, "col_1", true);
+    expect(revalidate).toHaveBeenCalledWith("/", "layout");
+  });
+
+  it("unfavorites the collection", async () => {
+    const result = await setCollectionFavorite("col_1", false);
+
+    expect(result).toEqual({ success: true, data: { isFavorite: false }, error: null });
+    expect(favoriteQuery).toHaveBeenCalledWith(USER_ID, "col_1", false);
+  });
+
+  it("reports a collection that is missing or another user's as gone", async () => {
+    favoriteQuery.mockResolvedValue(false);
+
+    const result = await setCollectionFavorite("col_1", true);
+
+    expect(result).toEqual({ success: false, data: null, error: "This collection no longer exists." });
+    expect(revalidate).not.toHaveBeenCalled();
+  });
+
+  it("hides an unexpected database error behind a generic message", async () => {
+    favoriteQuery.mockRejectedValue(new Error("connection lost"));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const result = await setCollectionFavorite("col_1", true);
+
+    expect(result).toEqual({ success: false, data: null, error: "Could not update the favorite. Try again." });
   });
 });
