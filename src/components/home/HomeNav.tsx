@@ -26,16 +26,17 @@ export function HomeNav() {
         scrolled ? "border-border bg-background/90 backdrop-blur" : "border-transparent bg-transparent",
       )}
     >
-      <nav className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4 sm:px-6">
+      <nav className="relative mx-auto flex h-14 max-w-6xl items-center gap-6 px-4 sm:px-6">
         <HomeLogo />
 
-        <div className="hidden items-center gap-5 text-sm text-muted-foreground sm:flex">
-          <a href="#features" className="py-2 hover:text-foreground">
+        {/* Centred on the bar itself, not in the space left between the logo and the buttons. */}
+        <div className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-5 text-sm text-muted-foreground sm:flex">
+          <Link href="/#features" className="py-2 hover:text-foreground">
             Features
-          </a>
-          <a href="#pricing" className="py-2 hover:text-foreground">
+          </Link>
+          <Link href="/#pricing" className="py-2 hover:text-foreground">
             Pricing
-          </a>
+          </Link>
         </div>
 
         <div className="ml-auto flex items-center gap-2">

@@ -1,16 +1,35 @@
-# Current Feature
+# Current Feature: Homepage Nav on Auth Pages
 
 ## Status
 
-Not Started
+In Progress — branch `feature/auth-pages-nav`
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- `/sign-in` and `/register` show the same top nav as the homepage (`HomeNav`: logo, Features,
+  Pricing, Sign In, Get Started).
+- The nav's Features / Pricing links work from the auth pages: they go to `/#features` and
+  `/#pricing` instead of in-page `#` anchors that do nothing there.
+- The logo still leads back to `/`.
+- The auth card stays centered and is never hidden under the fixed nav, on desktop and phone
+  widths.
+- The homepage nav looks and behaves exactly as before.
+- Added during review: Features / Pricing are centred on the nav bar (homepage and auth pages).
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- `HomeNav` (`src/components/home/HomeNav.tsx`) is a client component, `fixed` at the top,
+  transparent until the page scrolls. Reuse it rather than copying it.
+- The auth pages render through `AuthCard` (`src/components/auth/AuthCard.tsx`), a
+  `min-h-svh` centered `<main>`. `AuthCard` is also used by forgot-password, reset-password
+  and verify-email — this feature only asks for sign-in and register, so add the nav in those
+  two pages (or behind an opt-in prop), not in `AuthCard` for everyone.
+- The auth pages barely scroll, so the nav will usually sit in its transparent state; check
+  that it still reads well over the auth page background.
+- Open question for start: on `/sign-in` keep both Sign In and Get Started buttons, or hide
+  the button for the page you are already on? Default: keep the nav identical.
+- Component change only: no server actions or utilities change, so no new unit tests. Verify
+  in the browser, then `npm test`, `npm run build`, `npm run lint`.
 
 ---
 

@@ -8,7 +8,7 @@ export default async function RegisterPage() {
   await connection();
 
   return (
-    <AuthCard title="Create your account" description="Register with your email and a password.">
+    <AuthCard withNav title="Create your account" description="Register with your email and a password.">
       <RegisterForm />
     </AuthCard>
   );

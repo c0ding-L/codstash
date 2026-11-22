@@ -15,7 +15,7 @@ export default async function SignInPage({
   const { callbackUrl, error } = await searchParams;
 
   return (
-    <AuthCard title="Sign in to Cortex" description="Use your email and password, or GitHub.">
+    <AuthCard withNav title="Sign in to Cortex" description="Use your email and password, or GitHub.">
       <SignInForm
         callbackUrl={callbackUrl ?? "/dashboard"}
         verificationEnabled={isEmailVerificationEnabled()}
