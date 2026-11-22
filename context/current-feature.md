@@ -14,6 +14,12 @@ Not Started
 
 ---
 
+Previous feature (completed) — Favorites Page: a protected `/favorites` page, opened from a star
+in the top bar, lists the user's favorite items and collections in a compact monospace list.
+Outcome in the History below.
+
+---
+
 Previous feature (completed) — Editor Preferences Settings: an Editor card on `/settings` (font
 size, tab size, theme, word wrap, minimap) saves each change on its own to `User.editorPreferences`,
 and every Monaco editor follows it. Outcome in the History below.
@@ -1974,3 +1980,21 @@ Environment notes that outlive any one feature:
   green; checked in the browser by the author.
 - 2026-11-22 — Editor Preferences Settings merged into `main` (`8e65bc9`, fast-forward); branch
   `feature/editor-preferences-settings` deleted. Feature completed.
+- 2026-11-22 — Favorites Page: new `/favorites` in the `(app)` group (with `loading.tsx` /
+  `error.tsx` copied from the dashboard), added to the proxy matcher. New queries
+  `getFavoriteItems` (`src/lib/db/items.ts`) and `getFavoriteCollectionCards`
+  (`src/lib/db/collections.ts`), both `updatedAt` desc with an `id` tie-break, capped at 100 / 50;
+  `loadCollectionCards` takes an optional filter spread before `userId`. Rows in
+  `src/components/favorites/FavoritesList.tsx`: type icon, title, type badge, relative date,
+  monospace, 32px high; item rows open the drawer via `ItemDrawerTrigger`, collection rows link
+  to the collection and use its most used type (badge "empty" when it has none) plus an item
+  count. Items and Collections sections with counts, global and per-section empty states. No
+  `favoritedAt` column, so the date and sort are `updatedAt`, as the spec says; nothing toggles a
+  favorite yet. The top-bar star sits just before New Collection at the author's request: the
+  `ml-auto` moved from `NewCollectionDialog`'s trigger to the star. The top bar already
+  overflowed at 390px before this feature; left as is. 592 tests, build and lint green; checked
+  in the browser with a Playwright script on `next start` (develop DB, `AUTH_TRUST_HOST=true`):
+  redirect, rows, drawer, collection link, star link. Empty state not seen (demo has
+  favorites). Read-only.
+- 2026-11-22 — Favorites Page merged into `main` (`15f0bcc`, fast-forward); branch
+  `feature/favorites-page` deleted. Feature completed.
