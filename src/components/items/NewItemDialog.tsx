@@ -58,7 +58,8 @@ export function NewItemDialog() {
         <Plus aria-hidden />
         New Item
       </DialogTrigger>
-      <DialogContent className="sm:max-w-lg" showCloseButton={!saving}>
+      {/* Capped to the viewport and scrollable: a long snippet would push "Create item" off screen. */}
+      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg" showCloseButton={!saving}>
         <DialogHeader>
           <DialogTitle>New item</DialogTitle>
           <DialogDescription>Choose a type, then fill in its fields.</DialogDescription>
