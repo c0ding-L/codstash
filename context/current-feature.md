@@ -30,8 +30,24 @@ Triaged out, with evidence:
   decorative homepage `DashboardPreview` mockup (left as is) and the PRO badge.
 - Hero demo labels are already `text-sm`.
 
-Open decisions (asked): social proof on the homepage, mobile nav to Features/Pricing,
-hero "Developer Knowledge" grey.
+Decisions: no social proof, no mobile nav menu, hero second line stays grey.
+
+### Homepage copy refresh (same branch, chosen by the author)
+
+- Hero: "Save It Once. Find It Forever." (second line grey, kept on one line); subtitle
+  "Stop digging through bash history and old chats. Keep every snippet, prompt, command and link
+  in one place, and find any of them in seconds."
+- Hero demo labels "Your knowledge today..." / "...with CodStash" removed.
+- Features: "One home for everything you know" / "From a one-line command to a full design doc,
+  everything is stored, tagged and searchable the same way."
+- AI: "Smart by default" / "Drop in a snippet. AI tags it, summarizes it and helps you understand
+  it later." (matches the listed AI features)
+- Pricing: "Pricing that scales with you" / "Start on the free plan, upgrade for files, images
+  and AI." (matches the Pro plan list)
+- Final CTA: "Never Lose a Snippet Again" / "Set up in a minute, find anything in seconds."
+- Page metadata left as is (product description, not hero copy).
+
+Rename to "Cortex" is a separate, later feature; the project keeps the codstash name.
 
 ---
 

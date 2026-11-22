@@ -145,7 +145,6 @@ export function ChaosBox() {
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm text-muted-foreground">Your knowledge today...</p>
       <div
         ref={boxRef}
         role="img"

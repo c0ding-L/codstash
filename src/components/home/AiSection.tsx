@@ -54,9 +54,9 @@ export function AiSection() {
             <Sparkles className="size-3.5" aria-hidden />
             Pro Feature
           </span>
-          <h2 className="mt-5 text-4xl font-semibold tracking-tight text-balance">AI that understands your code</h2>
+          <h2 className="mt-5 text-4xl font-semibold tracking-tight text-balance">Smart by default</h2>
           <p className="mt-4 text-muted-foreground">
-            Let CodStash do the organizing. Save an item, and AI handles the rest.
+            Drop in a snippet. AI tags it, summarizes it and helps you understand it later.
           </p>
           <ul className="mt-8 space-y-3">
             {capabilities.map((capability) => (

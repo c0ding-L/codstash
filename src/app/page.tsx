@@ -37,12 +37,12 @@ export default async function Home() {
           <div className="relative mx-auto max-w-6xl">
             <div className="mx-auto max-w-3xl text-center">
               <h1 className="text-5xl font-semibold tracking-tight md:text-7xl">
-                Stop Losing Your{" "}
-                <span className="text-neutral-500">Developer Knowledge</span>
+                Save It Once.{" "}
+                <span className="inline-block text-neutral-500">Find It Forever.</span>
               </h1>
               <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-                Snippets in VS Code, prompts in AI chats, commands in your bash history, links in a hundred
-                tabs. CodStash brings it all into one fast, searchable hub.
+                Stop digging through bash history and old chats. Keep every snippet, prompt, command and link
+                in one place, and find any of them in seconds.
               </p>
               <div className="mt-8 flex flex-wrap justify-center gap-3">
                 <Link href="/register" className={cn(buttonVariants({ size: "lg" }), "h-10 px-8")}>
@@ -57,7 +57,7 @@ export default async function Home() {
 
             <div className="mt-20 grid items-center gap-6 md:grid-cols-[1fr_auto_1.35fr]">
               <ChaosBox />
-              <div className="flex justify-center md:pt-6">
+              <div className="flex justify-center">
                 <div className="arrow-pulse grid size-12 rotate-90 place-items-center rounded-full border border-border bg-card md:rotate-0">
                   <ArrowRight className="size-5" aria-hidden />
                 </div>
@@ -70,9 +70,9 @@ export default async function Home() {
         <section id="features" className="scroll-mt-20 border-t border-border px-4 py-28 sm:px-6">
           <div className="mx-auto max-w-6xl">
             <Reveal className="mx-auto max-w-2xl text-center">
-              <h2 className="text-4xl font-semibold tracking-tight">Everything in one place</h2>
+              <h2 className="text-4xl font-semibold tracking-tight">One home for everything you know</h2>
               <p className="mt-4 text-muted-foreground">
-                Seven item types, one consistent home. Built for how developers actually work.
+                From a one-line command to a full design doc, everything is stored, tagged and searchable the same way.
               </p>
             </Reveal>
             <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -104,8 +104,8 @@ export default async function Home() {
 
         <section id="pricing" className="scroll-mt-20 border-t border-border px-4 py-28 sm:px-6">
           <Reveal className="mx-auto max-w-2xl text-center">
-            <h2 className="text-4xl font-semibold tracking-tight">Simple pricing</h2>
-            <p className="mt-4 text-muted-foreground">Start free. Upgrade when you need more.</p>
+            <h2 className="text-4xl font-semibold tracking-tight">Pricing that scales with you</h2>
+            <p className="mt-4 text-muted-foreground">Start on the free plan, upgrade for files, images and AI.</p>
           </Reveal>
           <div className="mt-10">
             <PricingPlans />
@@ -115,9 +115,9 @@ export default async function Home() {
         <section className="border-t border-border px-4 py-28 sm:px-6">
           <Reveal className="mx-auto max-w-3xl rounded-2xl border border-border bg-gradient-to-b from-card to-background px-6 py-16 text-center">
             <h2 className="text-3xl font-semibold tracking-tight text-balance md:text-4xl">
-              Ready to Organize Your Knowledge?
+              Never Lose a Snippet Again
             </h2>
-            <p className="mt-4 text-muted-foreground">Join developers who stopped searching and started building.</p>
+            <p className="mt-4 text-muted-foreground">Set up in a minute, find anything in seconds.</p>
             <Link href="/register" className={cn(buttonVariants({ size: "lg" }), "mt-8 h-10 px-8")}>
               Get Started Free
               <ArrowRight aria-hidden />

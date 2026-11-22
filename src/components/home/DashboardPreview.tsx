@@ -21,7 +21,6 @@ const cardClasses: Record<ColorToken, string> = {
 export function DashboardPreview() {
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-sm text-muted-foreground">...with CodStash</p>
       <div
         className="flex h-[340px] overflow-hidden rounded-xl border border-border bg-card shadow-2xl shadow-black/50"
         aria-hidden
