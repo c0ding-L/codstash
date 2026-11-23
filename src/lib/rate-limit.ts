@@ -12,6 +12,8 @@ const LIMITS = {
   upload: { attempts: 20, window: "1 h" },
   /** Per user: the current-password checks of change password and delete account. */
   reauth: { attempts: 5, window: "15 m" },
+  /** Per user: each attempt creates a Bictorys charge and a PENDING payment row. */
+  checkout: { attempts: 5, window: "15 m" },
 } satisfies Record<string, { attempts: number; window: Duration }>;
 
 export type RateLimitName = keyof typeof LIMITS;

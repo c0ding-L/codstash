@@ -30,9 +30,10 @@ model User {
   // Monaco settings from /settings; null or missing keys fall back to the defaults.
   editorPreferences Json?
 
-  isPro                Boolean @default(false)
-  stripeCustomerId     String?
-  stripeSubscriptionId String?
+  // Mirror of `proUntil`, a readable flag only: every gate reads `isProActive(proUntil)`.
+  isPro    Boolean   @default(false)
+  // Pro is active while this is in the future. Null: never paid.
+  proUntil DateTime?
 
   accounts    Account[]
   sessions    Session[]
@@ -40,6 +41,7 @@ model User {
   itemTypes   ItemType[]
   collections Collection[]
   tags        Tag[]
+  payments    Payment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -212,4 +214,51 @@ model ItemTag {
 
   @@id([itemId, tagId])
   @@index([tagId])
+}
+
+// ---------------------------------------------------------------------------
+// Billing (Bictorys one-off charges that extend `User.proUntil`)
+// ---------------------------------------------------------------------------
+
+enum BillingPlan {
+  MONTHLY
+  YEARLY
+}
+
+enum Currency {
+  USD
+  EUR
+  XOF
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  // Paid at Bictorys, but the amount or currency did not match; fixed by hand.
+  NEEDS_REVIEW
+}
+
+/// One Bictorys checkout. `reference` is the `paymentReference` sent to Bictorys,
+/// so every webhook maps to exactly one row.
+model Payment {
+  id        String @id @default(cuid())
+  reference String @unique
+
+  // SetNull, not Cascade: payments are kept when the account is deleted.
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  plan BillingPlan
+  // Major units, as sent to Bictorys.
+  amount        Int
+  currency      Currency
+  status        PaymentStatus @default(PENDING)
+  transactionId String?       @unique
+  paidAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
 }

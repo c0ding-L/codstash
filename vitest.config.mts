@@ -25,6 +25,10 @@ export default defineConfig({
       R2_ACCESS_KEY_ID: "",
       R2_SECRET_ACCESS_KEY: "",
       R2_BUCKET_NAME: "",
+      BICTORYS_API_URL: "",
+      BICTORYS_API_KEY: "",
+      BICTORYS_PRIVATE_KEY: "",
+      BICTORYS_WEBHOOK_SECRET: "",
     },
     // Before each test, a mock goes back to the implementation given to `vi.fn(...)`,
     // so a `mockResolvedValue` can't leak into the next test.
