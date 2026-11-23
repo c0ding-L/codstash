@@ -15,6 +15,7 @@ import {
   updateItem as updateItemQuery,
 } from "@/lib/db/items";
 import { deleteObjectsQuietly, headObject } from "@/lib/r2";
+import { LimitReachedError } from "@/lib/usage-limits";
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/db/items", () => ({
@@ -241,7 +242,7 @@ describe("createItem", () => {
       content: "  const a = 1;\n",
       language: "ts",
       tags: ["react", "hooks"], collectionIds: [],
-    });
+    }, { maxItems: undefined });
   });
 
   it("creates a link with its URL", async () => {
@@ -403,7 +404,7 @@ describe("createItem with an upload", () => {
       fileUrl: KEY,
       fileName: "Rapport été.pdf",
       fileSize: 2048,
-    });
+    }, { maxItems: undefined });
     expect(result).toEqual({ success: true, data: card, error: null });
   });
 
@@ -679,5 +680,17 @@ describe("createItem on the Free plan", () => {
     await createItem({ type: "file", title: "Report", fileKey: KEY, tags: [], collectionIds: [] });
 
     expect(deleteObjects).not.toHaveBeenCalled();
+  });
+});
+
+describe("createItem when the last Free slot is raced", () => {
+  it("answers with the limit message when the locked re-count refuses", async () => {
+    planStatus.mockResolvedValue(plan(false, 49));
+    createQuery.mockRejectedValue(new LimitReachedError("items"));
+
+    const result = await createItem({ type: "snippet", title: "Title", content: "x", tags: [], collectionIds: [] });
+
+    expect(result).toEqual({ success: false, data: null, error: "Free accounts can have 50 items. Upgrade to Pro in Settings." });
+    expect(createQuery.mock.calls[0]![2]).toEqual({ maxItems: 50 });
   });
 });

@@ -156,12 +156,20 @@ describe("amountMatches", () => {
 describe("applyPaymentStatus", () => {
   const paid = { status: "succeeded", amount: 4000, currency: "XOF", transactionId: TX_ID };
 
-  it("grants Pro for succeeded and authorized, storing the transaction id", async () => {
+  it("grants Pro for succeeded, storing the transaction id", async () => {
     findPayment.mockResolvedValue(payment());
 
     expect(await applyPaymentStatus(REFERENCE, paid)).toBe("SUCCEEDED");
-    expect(await applyPaymentStatus(REFERENCE, { ...paid, status: "authorized" })).toBe("SUCCEEDED");
     expect(succeed).toHaveBeenCalledWith(REFERENCE, { transactionId: TX_ID });
+  });
+
+  // An authorization holds the money without taking it, and can still be cancelled.
+  it("waits on authorized, granting nothing and logging nothing", async () => {
+    findPayment.mockResolvedValue(payment());
+
+    expect(await applyPaymentStatus(REFERENCE, { ...paid, status: "authorized" })).toBe("PENDING");
+    expect(succeed).not.toHaveBeenCalled();
+    expect(console.error).not.toHaveBeenCalled();
   });
 
   it("settles a FAILED row, since a link can be paid again after a declined card", async () => {

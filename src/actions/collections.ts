@@ -14,7 +14,7 @@ import {
   type CollectionSummary,
   type RecentCollection,
 } from "@/lib/db/collections";
-import { LIMIT_MESSAGES, canCreateCollection } from "@/lib/usage-limits";
+import { FREE_LIMITS, LIMIT_MESSAGES, LimitReachedError, canCreateCollection } from "@/lib/usage-limits";
 
 /** An input left blank is stored as null rather than "". */
 function blankToNull(value: unknown) {
@@ -89,13 +89,18 @@ export async function createCollection(input: CreateCollectionInput): Promise<Cr
     if (!session?.user?.id) return { success: false, data: null, error: "You are not signed in." };
 
     // Read now, not from the session: the token can be a request old.
-    if (!canCreateCollection(await getPlanStatus(session.user.id))) {
+    const plan = await getPlanStatus(session.user.id);
+    if (!canCreateCollection(plan)) {
       return { success: false, data: null, error: LIMIT_MESSAGES.collections };
     }
 
-    const collection = await createCollectionQuery(session.user.id, parsed.data);
+    // Re-checked under a lock in the insert, so parallel requests cannot all pass the count above.
+    const collection = await createCollectionQuery(session.user.id, parsed.data, {
+      maxCollections: plan.isPro ? undefined : FREE_LIMITS.collections,
+    });
     return { success: true, data: collection, error: null };
   } catch (error) {
+    if (error instanceof LimitReachedError) return { success: false, data: null, error: LIMIT_MESSAGES.collections };
     console.error("[collections] createCollection failed:", error);
     return { success: false, data: null, error: "Could not create the collection. Try again." };
   }

@@ -14,10 +14,14 @@ import {
 // component. Payload facts below come from real sandbox webhooks
 // (`src/lib/__fixtures__/bictorys/`, plan §10).
 
-export const PAID_STATUSES = new Set(["succeeded", "authorized"]);
+/**
+ * Only a captured payment grants Pro. Every real webhook so far says
+ * "succeeded"; "authorized" (money held, not taken, still cancellable) waits.
+ */
+export const PAID_STATUSES = new Set(["succeeded"]);
 export const FAILED_STATUSES = new Set(["failed", "cancelled"]);
 /** Not settled yet: no change, nothing to log. */
-const WAITING_STATUSES = new Set(["pending", "processing"]);
+const WAITING_STATUSES = new Set(["pending", "processing", "authorized"]);
 
 const MAX_SKEW_MS = 5 * 60 * 1000;
 
@@ -143,7 +147,7 @@ export async function applyPaymentStatus(reference: string, reported: ReportedPa
     // A status Cortex does not know (the docs also show "success"): never dropped silently.
     console.error("[billing] unknown payment status, left unchanged", { reference, ...reported });
   }
-  // pending / processing / reversed / anything new: no change.
+  // pending / processing / authorized / reversed / anything new: no change.
   return payment.status;
 }
 

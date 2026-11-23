@@ -2,6 +2,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { clipCommand } from "@/lib/command-text";
 import { clampLimit, MAX_ITEM_LIMIT } from "@/lib/db/limits";
 import { DASHBOARD_RECENT_ITEMS_LIMIT, ITEMS_PER_PAGE, pageOffset } from "@/lib/pagination";
+import { assertBelowLimit } from "@/lib/db/billing";
 import { prisma } from "@/lib/prisma";
 import { countWords, estimateTokens, markdownToPlainText, promptExcerpt } from "@/lib/prompt-text";
 import { searchPreview } from "@/lib/search-text";
@@ -481,6 +482,8 @@ export interface ItemCreate {
 export async function createItem(
   userId: string,
   { type: slug, tags, collectionIds, ...fields }: ItemCreate,
+  /** The Free item limit, re-checked under a lock; omitted for Pro. */
+  { maxItems }: { maxItems?: number } = {},
 ): Promise<DashboardItem> {
   const type = await prisma.itemType.findFirst({
     where: { slug, userId: null, isSystem: true },
@@ -488,7 +491,7 @@ export async function createItem(
   });
   if (!type) throw new Error(`No system item type "${slug}".`);
 
-  const created = await prisma.item.create({
+  const args = {
     data: {
       ...fields,
       user: { connect: { id: userId } },
@@ -497,7 +500,15 @@ export async function createItem(
       collections: { create: collectionLinks(collectionIds) },
     },
     select: dashboardItemSelect,
-  });
+  };
+
+  const created =
+    maxItems === undefined
+      ? await prisma.item.create(args)
+      : await prisma.$transaction(async (tx) => {
+          await assertBelowLimit(tx, userId, "items", maxItems);
+          return tx.item.create(args);
+        });
 
   return toDashboardItem(created);
 }

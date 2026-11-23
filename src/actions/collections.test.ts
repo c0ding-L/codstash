@@ -13,6 +13,8 @@ import {
   updateCollection as updateCollectionQuery,
 } from "@/lib/db/collections";
 
+import { LimitReachedError } from "@/lib/usage-limits";
+
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/db/collections", () => ({
   createCollection: vi.fn(),
@@ -75,6 +77,18 @@ describe("createCollection", () => {
     expect(createQuery).not.toHaveBeenCalled();
   });
 
+  it("passes the limit to the locked insert and maps a lost race to the limit message", async () => {
+    planStatus.mockResolvedValue(plan(false, 2));
+    createQuery.mockRejectedValue(new LimitReachedError("collections"));
+
+    expect(await createCollection({ name: "React" })).toEqual({
+      success: false,
+      data: null,
+      error: "Free accounts can have 3 collections. Upgrade to Pro in Settings.",
+    });
+    expect(createQuery.mock.calls[0]![2]).toEqual({ maxCollections: 3 });
+  });
+
   it("has no collection limit for Pro", async () => {
     planStatus.mockResolvedValue(plan(true, 3));
 
@@ -85,13 +99,17 @@ describe("createCollection", () => {
     const result = await createCollection({ name: "  React  ", description: "Hooks and patterns" });
 
     expect(result).toEqual({ success: true, data: card, error: null });
-    expect(createQuery).toHaveBeenCalledWith(USER_ID, { name: "React", description: "Hooks and patterns" });
+    expect(createQuery).toHaveBeenCalledWith(
+      USER_ID,
+      { name: "React", description: "Hooks and patterns" },
+      { maxCollections: undefined },
+    );
   });
 
   it("stores a blank description as null", async () => {
     await createCollection({ name: "React", description: "   " });
 
-    expect(createQuery).toHaveBeenCalledWith(USER_ID, { name: "React", description: null });
+    expect(createQuery).toHaveBeenCalledWith(USER_ID, { name: "React", description: null }, { maxCollections: undefined });
   });
 
   it("refuses a blank name and marks the field", async () => {
@@ -118,7 +136,7 @@ describe("createCollection", () => {
   it("ignores a userId sent from the client", async () => {
     await createCollection({ name: "React", userId: "someone_else" } as never);
 
-    expect(createQuery).toHaveBeenCalledWith(USER_ID, { name: "React" });
+    expect(createQuery).toHaveBeenCalledWith(USER_ID, { name: "React" }, { maxCollections: undefined });
   });
 
   it("refuses when not signed in", async () => {

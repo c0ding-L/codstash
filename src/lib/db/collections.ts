@@ -4,6 +4,7 @@ import { Prisma } from "@/generated/prisma/client";
 
 import { clampLimit, MAX_COLLECTION_LIMIT } from "@/lib/db/limits";
 import { COLLECTIONS_PER_PAGE, DASHBOARD_COLLECTIONS_LIMIT, pageOffset } from "@/lib/pagination";
+import { assertBelowLimit } from "@/lib/db/billing";
 import { prisma } from "@/lib/prisma";
 
 /** The seeded demo account, which the profile page refuses to delete. */
@@ -264,11 +265,20 @@ export interface CollectionCreate {
 export async function createCollection(
   userId: string,
   { name, description }: CollectionCreate,
+  /** The Free collection limit, re-checked under a lock; omitted for Pro. */
+  { maxCollections }: { maxCollections?: number } = {},
 ): Promise<RecentCollection> {
-  const created = await prisma.collection.create({
+  const args = {
     data: { name, description: description ?? null, user: { connect: { id: userId } } },
     select: { id: true, name: true, description: true, isFavorite: true, updatedAt: true },
-  });
+  };
+  const created =
+    maxCollections === undefined
+      ? await prisma.collection.create(args)
+      : await prisma.$transaction(async (tx) => {
+          await assertBelowLimit(tx, userId, "collections", maxCollections);
+          return tx.collection.create(args);
+        });
 
   return { ...created, itemCount: 0, types: [] };
 }

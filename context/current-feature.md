@@ -83,6 +83,11 @@ In Progress
   overwrite the webhook's transaction id; the return page treats a FAILED row reached through the
   success redirect (declined card, then a good one on the same page) as "Confirming…" and polls
   until the second webhook lands, instead of showing a failure.
+- **Security review fixes (2026-11-23):** only `succeeded` grants Pro; `authorized` (money held,
+  still cancellable) waits like `pending`. Free limits can no longer be raced: `createItem` /
+  `createCollection` take the limit and re-count inside a transaction that locks the user row
+  (`assertBelowLimit` in `src/lib/db/billing.ts`); a lost race answers with the usual limit
+  message. Pro creates skip the transaction.
 - Iframe mode, EUR/USD cards and XOF conversion wait for Bictorys support (plan §10 q10–q12);
   Phase 2 stays on the hosted checkout, and none of it changes the webhook or the server side.
 - EUR card payment is refused by the sandbox (Mastercard Ecom channel not configured) — deferred

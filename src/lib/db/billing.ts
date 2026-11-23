@@ -1,7 +1,9 @@
 import { randomUUID } from "node:crypto";
 
 import { BILLING_PLANS, extendProUntil, isProActive, type Currency, type Plan } from "@/lib/billing-plans";
+import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import { LimitReachedError } from "@/lib/usage-limits";
 
 // `Plan` and `Currency` are the same string unions as Prisma's `BillingPlan`
 // and `Currency` enums; the client-safe ones are used so callers need not
@@ -23,6 +25,24 @@ export async function getPlanStatus(userId: string): Promise<PlanStatus> {
   ]);
   const proUntil = user?.proUntil ?? null;
   return { proUntil, isPro: isProActive(proUntil), items, collections };
+}
+
+/**
+ * The Free-limit check that cannot be raced: run inside the create's
+ * transaction, it locks the user row, so concurrent creates of the same user
+ * queue up and each re-counts after the previous one committed. Throws
+ * `LimitReachedError` at `max`.
+ */
+export async function assertBelowLimit(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  limit: "items" | "collections",
+  max: number,
+) {
+  await tx.$queryRaw`SELECT 1 FROM "User" WHERE "id" = ${userId} FOR UPDATE`;
+  const count =
+    limit === "items" ? await tx.item.count({ where: { userId } }) : await tx.collection.count({ where: { userId } });
+  if (count >= max) throw new LimitReachedError(limit);
 }
 
 /**

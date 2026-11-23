@@ -8,7 +8,7 @@ import { getPlanStatus } from "@/lib/db/billing";
 import { ownsCollections } from "@/lib/db/collections";
 import { fromObjectMetadata, isOwnKey } from "@/lib/files";
 import { deleteObjectsQuietly, headObject } from "@/lib/r2";
-import { LIMIT_MESSAGES, canCreateItem, canUploadFiles } from "@/lib/usage-limits";
+import { FREE_LIMITS, LIMIT_MESSAGES, LimitReachedError, canCreateItem, canUploadFiles } from "@/lib/usage-limits";
 import {
   createItem as createItemQuery,
   deleteItem as deleteItemQuery,
@@ -257,6 +257,8 @@ export async function createItem(input: CreateItemInput): Promise<CreateItemResu
       await discardUpload();
       return { success: false, data: null, error: LIMIT_MESSAGES.items };
     }
+    // Re-checked under a lock in the insert, so parallel requests cannot all pass the count above.
+    const limits = { maxItems: plan.isPro ? undefined : FREE_LIMITS.items };
 
     // `connect` does not filter on the owner, so the ids are checked here.
     if (!(await ownsCollections(userId, parsed.data.collectionIds))) {
@@ -265,7 +267,7 @@ export async function createItem(input: CreateItemInput): Promise<CreateItemResu
     }
 
     if (parsed.data.type !== "file" && parsed.data.type !== "image") {
-      const card = await createItemQuery(userId, parsed.data);
+      const card = await createItemQuery(userId, parsed.data, limits);
       return { success: true, data: card, error: null };
     }
 
@@ -283,13 +285,11 @@ export async function createItem(input: CreateItemInput): Promise<CreateItemResu
     }
 
     try {
-      const card = await createItemQuery(userId, {
-        ...fields,
-        contentType: "file",
-        fileUrl: fileKey,
-        fileName: stored.fileName,
-        fileSize: head.size,
-      });
+      const card = await createItemQuery(
+        userId,
+        { ...fields, contentType: "file", fileUrl: fileKey, fileName: stored.fileName, fileSize: head.size },
+        limits,
+      );
       return { success: true, data: card, error: null };
     } catch (error) {
       // Nothing points at the upload any more.
@@ -297,6 +297,8 @@ export async function createItem(input: CreateItemInput): Promise<CreateItemResu
       throw error;
     }
   } catch (error) {
+    // Lost the race for the last Free slot; an upload was already removed above.
+    if (error instanceof LimitReachedError) return { success: false, data: null, error: LIMIT_MESSAGES.items };
     console.error("[items] createItem failed:", error);
     return { success: false, data: null, error: "Could not create the item. Try again." };
   }

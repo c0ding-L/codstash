@@ -29,3 +29,14 @@ export const LIMIT_MESSAGES = {
   collections: `Free accounts can have ${FREE_LIMITS.collections} collections. Upgrade to Pro in Settings.`,
   uploads: "File and image uploads are a Pro feature.",
 } as const;
+
+/**
+ * Thrown by the create queries when, re-counted under a lock, the Free limit
+ * is already reached: two requests racing past the action's early check.
+ */
+export class LimitReachedError extends Error {
+  constructor(readonly limit: "items" | "collections") {
+    super(LIMIT_MESSAGES[limit]);
+    this.name = "LimitReachedError";
+  }
+}

@@ -21,12 +21,15 @@ import {
   setItemPinned,
   updateItem,
 } from "@/lib/db/items";
+import { assertBelowLimit } from "@/lib/db/billing";
 import { MAX_ITEM_LIMIT } from "@/lib/db/limits";
 import { DASHBOARD_RECENT_ITEMS_LIMIT, ITEMS_PER_PAGE } from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
 
+vi.mock("@/lib/db/billing", () => ({ assertBelowLimit: vi.fn() }));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
+    $transaction: vi.fn(),
     $executeRaw: vi.fn(),
     item: {
       findMany: vi.fn(),
@@ -50,6 +53,7 @@ const findItemTags = prisma.itemTag.findMany as unknown as Mock;
 const update = prisma.item.update as unknown as Mock;
 const remove = prisma.item.delete as unknown as Mock;
 const create = prisma.item.create as unknown as Mock;
+const asMock = (fn: unknown) => fn as Mock;
 const findType = prisma.itemType.findFirst as unknown as Mock;
 
 const USER = "user_a";
@@ -510,6 +514,32 @@ describe("createItem", () => {
   beforeEach(() => {
     findType.mockResolvedValue({ id: "type_note" });
     create.mockResolvedValue(row);
+  });
+
+  it("creates without a transaction when there is no limit (Pro)", async () => {
+    await createItem(USER, { type: "note", title: "Title", tags: [], collectionIds: [] });
+
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+    expect(assertBelowLimit).not.toHaveBeenCalled();
+  });
+
+  it("re-checks the Free limit inside the transaction, before creating", async () => {
+    asMock(prisma.$transaction).mockImplementation((fn: (tx: typeof prisma) => unknown) => fn(prisma));
+
+    await createItem(USER, { type: "note", title: "Title", tags: [], collectionIds: [] }, { maxItems: 50 });
+
+    expect(assertBelowLimit).toHaveBeenCalledWith(prisma, USER, "items", 50);
+    expect(asMock(assertBelowLimit).mock.invocationCallOrder[0]).toBeLessThan(create.mock.invocationCallOrder[0]!);
+  });
+
+  it("creates nothing when the locked re-count refuses", async () => {
+    asMock(prisma.$transaction).mockImplementation((fn: (tx: typeof prisma) => unknown) => fn(prisma));
+    asMock(assertBelowLimit).mockRejectedValue(new Error("limit"));
+
+    await expect(
+      createItem(USER, { type: "note", title: "Title", tags: [], collectionIds: [] }, { maxItems: 50 }),
+    ).rejects.toThrow("limit");
+    expect(create).not.toHaveBeenCalled();
   });
 
   it("looks up the system type of that slug, never a user's own", async () => {

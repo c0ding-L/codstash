@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import {
+  assertBelowLimit,
   createPendingPayment,
   getPlanStatus,
   markPaymentFailed,
@@ -9,6 +10,7 @@ import {
   setPaymentTransactionId,
 } from "@/lib/db/billing";
 import { prisma } from "@/lib/prisma";
+import { LimitReachedError } from "@/lib/usage-limits";
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
@@ -245,5 +247,31 @@ describe("markPaymentFailed / markPaymentNeedsReview", () => {
 
     expect(updatePayments.mock.calls[0]![0].data).toEqual({ status: "FAILED", transactionId: "tx_1" });
     expect(updatePayments.mock.calls[1]![0].data).toEqual({ status: "NEEDS_REVIEW", transactionId: "tx_2" });
+  });
+});
+
+describe("assertBelowLimit", () => {
+  const tx = prisma as never;
+
+  it("locks the user row before counting", async () => {
+    countItems.mockResolvedValue(49);
+
+    await assertBelowLimit(tx, USER, "items", 50);
+
+    const [strings, userId] = queryRaw.mock.calls[0]!;
+    expect(strings.join("?")).toMatch(/SELECT 1 FROM "User" WHERE "id" = \? FOR UPDATE/);
+    expect(userId).toBe(USER);
+    expect(queryRaw.mock.invocationCallOrder[0]).toBeLessThan(countItems.mock.invocationCallOrder[0]!);
+    expect(countItems).toHaveBeenCalledWith({ where: { userId: USER } });
+  });
+
+  it("throws at the limit, for items and collections", async () => {
+    countItems.mockResolvedValue(50);
+    countCollections.mockResolvedValue(3);
+
+    await expect(assertBelowLimit(tx, USER, "items", 50)).rejects.toBeInstanceOf(LimitReachedError);
+    await expect(assertBelowLimit(tx, USER, "collections", 3)).rejects.toThrow(
+      "Free accounts can have 3 collections. Upgrade to Pro in Settings.",
+    );
   });
 });
