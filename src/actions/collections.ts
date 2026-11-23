@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { auth } from "@/auth";
+import { getPlanStatus } from "@/lib/db/billing";
 import {
   createCollection as createCollectionQuery,
   deleteCollection as deleteCollectionQuery,
@@ -13,6 +14,7 @@ import {
   type CollectionSummary,
   type RecentCollection,
 } from "@/lib/db/collections";
+import { LIMIT_MESSAGES, canCreateCollection } from "@/lib/usage-limits";
 
 /** An input left blank is stored as null rather than "". */
 function blankToNull(value: unknown) {
@@ -85,6 +87,11 @@ export async function createCollection(input: CreateCollectionInput): Promise<Cr
   try {
     const session = await auth();
     if (!session?.user?.id) return { success: false, data: null, error: "You are not signed in." };
+
+    // Read now, not from the session: the token can be a request old.
+    if (!canCreateCollection(await getPlanStatus(session.user.id))) {
+      return { success: false, data: null, error: LIMIT_MESSAGES.collections };
+    }
 
     const collection = await createCollectionQuery(session.user.id, parsed.data);
     return { success: true, data: collection, error: null };

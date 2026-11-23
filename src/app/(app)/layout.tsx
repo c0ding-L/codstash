@@ -5,6 +5,7 @@ import { ItemDrawerProvider } from "@/components/items/ItemDrawerProvider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { loadEditorPreferences } from "@/lib/load-editor-preferences";
+import { loadUploadsAllowed } from "@/lib/load-uploads-allowed";
 
 /**
  * App shell for every signed-in page (`/dashboard`, `/profile`, `/items`). `(app)` is a
@@ -26,6 +27,8 @@ export default function AppLayout({
 }>) {
   // Not awaited: the shell renders at once and the result streams in.
   const editorPreferences = loadEditorPreferences();
+  // Free accounts cannot upload; the New Item dialog disables File and Image.
+  const uploadsAllowed = loadUploadsAllowed();
 
   return (
     <EditorPreferencesProvider preferences={editorPreferences}>
@@ -35,7 +38,7 @@ export default function AppLayout({
           {/* `min-w-0`: a flex item otherwise grows to its widest content, and `truncate` inside never applies. */}
           <SidebarInset className="min-w-0">
             <ItemDrawerProvider>
-              <TopBar />
+              <TopBar uploadsAllowed={uploadsAllowed} />
               <div className="flex-1 p-6">{children}</div>
             </ItemDrawerProvider>
           </SidebarInset>

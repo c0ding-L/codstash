@@ -4,9 +4,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { auth } from "@/auth";
+import { getPlanStatus } from "@/lib/db/billing";
 import { ownsCollections } from "@/lib/db/collections";
 import { fromObjectMetadata, isOwnKey } from "@/lib/files";
 import { deleteObjectsQuietly, headObject } from "@/lib/r2";
+import { LIMIT_MESSAGES, canCreateItem, canUploadFiles } from "@/lib/usage-limits";
 import {
   createItem as createItemQuery,
   deleteItem as deleteItemQuery,
@@ -236,13 +238,29 @@ export async function createItem(input: CreateItemInput): Promise<CreateItemResu
 
     const userId = session.user.id;
 
+    // A refused create leaves the upload pointing nowhere (the form uploads again
+    // on the next try), so an unused object of this user's is removed.
+    const discardUpload = async () => {
+      if (!("fileKey" in parsed.data)) return;
+      const { fileKey } = parsed.data;
+      if (isOwnKey(userId, fileKey) && !(await isFileKeyInUse(userId, fileKey))) await deleteObjectsQuietly([fileKey]);
+    };
+
+    // Read now, not from the session: the token can be a request old.
+    const plan = await getPlanStatus(userId);
+    const isUpload = parsed.data.type === "file" || parsed.data.type === "image";
+    if (isUpload && !canUploadFiles(plan)) {
+      await discardUpload();
+      return { success: false, data: null, error: LIMIT_MESSAGES.uploads };
+    }
+    if (!canCreateItem(plan)) {
+      await discardUpload();
+      return { success: false, data: null, error: LIMIT_MESSAGES.items };
+    }
+
     // `connect` does not filter on the owner, so the ids are checked here.
     if (!(await ownsCollections(userId, parsed.data.collectionIds))) {
-      // The form uploads again on the next try, so this upload would point nowhere.
-      if ("fileKey" in parsed.data) {
-        const { fileKey } = parsed.data;
-        if (isOwnKey(userId, fileKey) && !(await isFileKeyInUse(userId, fileKey))) await deleteObjectsQuietly([fileKey]);
-      }
+      await discardUpload();
       return { success: false, data: null, error: UNKNOWN_COLLECTION, field: "collectionIds" };
     }
 

@@ -1,0 +1,9 @@
+{
+  "_note": "POST /pay/v1/charges (hosted checkout, no payment_type), sandbox 2026-11-23. HTTP 202. chargeId is NOT the transaction id the webhook and status endpoint use. EUR adds payment_category=card to the link.",
+  "response": {
+    "type": "CheckoutLinkObject",
+    "link": "https://pay.test.bictorys.com/payment/v1/checkout?charge_id=e37b479a-574c-4c32-b1ce-e8b68959cf13&op_token=<op-token>",
+    "chargeId": "e37b479a-574c-4c32-b1ce-e8b68959cf13",
+    "opToken": "<op-token>"
+  }
+}

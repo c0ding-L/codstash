@@ -1,0 +1,11 @@
+{
+  "_note": "GET /pay/v1/transactions/{id}/status, sandbox 2026-11-23. With the webhook/transaction id it returns the status; with the hosted-checkout chargeId it returns id null + pending. No amount or currency.",
+  "byTransactionId": {
+    "id": "45d46858-ad68-4e1c-ab03-6104929eb5e1",
+    "status": "succeeded"
+  },
+  "byChargeId": {
+    "id": null,
+    "status": "pending"
+  }
+}

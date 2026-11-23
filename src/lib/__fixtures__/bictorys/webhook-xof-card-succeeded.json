@@ -1,0 +1,63 @@
+{
+  "_note": "Real Bictorys sandbox webhook, captured 2026-11-23 (hosted checkout, card, XOF, merchant pays fees). merchantId scrubbed; X-Secret-Key replaced by a placeholder. Only X-Secret-Key and X-Webhook-Version are sent: no X-Webhook-Signature / X-Webhook-Timestamp.",
+  "headers": {
+    "content-type": "application/json",
+    "user-agent": "ReactorNetty/1.1.5",
+    "x-webhook-version": "1",
+    "x-secret-key": "<webhook-secret>"
+  },
+  "body": {
+    "eventType": null,
+    "id": "45d46858-ad68-4e1c-ab03-6104929eb5e1",
+    "merchantId": "00000000-0000-0000-0000-000000000001",
+    "subMerchantId": null,
+    "type": "payment",
+    "customerId": null,
+    "customerObject": {
+      "id": null,
+      "name": "Capture Test",
+      "phone": null,
+      "email": "capture-test@example.com",
+      "address": null,
+      "city": null,
+      "postalCode": null,
+      "country": "SN",
+      "alias": null,
+      "locale": "en-US",
+      "createdAt": null,
+      "updatedAt": null
+    },
+    "pspTransactionId": "urn:payment:1d781b3a-c8c5-4be1-a5aa-f18052405d82",
+    "pspName": "card",
+    "paymentMeans": "230377******0275",
+    "paymentChannel": "Online",
+    "amount": 4000.0,
+    "merchantFees": 121.9,
+    "customerFees": 0.0,
+    "transactionFeeAmountHT": null,
+    "transactionFeeAmountTax": null,
+    "currency": "XOF",
+    "paymentReference": "capture-XOF2-1795394439",
+    "cashier": null,
+    "settledAmount": 4000.0,
+    "settledCurrency": "XOF",
+    "merchantReference": "capture-test",
+    "orderType": "flat",
+    "orderId": null,
+    "orderDetails": [
+      {
+        "id": null,
+        "name": "Cortex Pro monthly",
+        "reference": null,
+        "price": 4000.0,
+        "quantity": 1.0,
+        "discount": 0.0,
+        "taxRate": 0.0,
+        "totalPrice": 0.0
+      }
+    ],
+    "status": "succeeded",
+    "originIp": null,
+    "timestamp": "2026-11-23 00:49:07.334538"
+  }
+}

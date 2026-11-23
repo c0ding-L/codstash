@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 
 import { auth } from "@/auth";
+import { getPlanStatus } from "@/lib/db/billing";
 import { buildFileKey, isUploadKind, toObjectMetadata, UPLOAD_RULES, validateUpload } from "@/lib/files";
 import { putObject } from "@/lib/r2";
 import { checkRateLimit, tooManyAttemptsResponse } from "@/lib/rate-limit";
 import { readFormDataWithin } from "@/lib/request-body";
+import { LIMIT_MESSAGES, canUploadFiles } from "@/lib/usage-limits";
 
 /** Room for the multipart boundaries and the other fields on top of the largest file. */
 const MAX_BODY_BYTES = UPLOAD_RULES.file.maxBytes + 64 * 1024;
@@ -24,6 +26,11 @@ export async function POST(request: Request) {
   // Before the body is read, so a refused upload costs nothing.
   const limit = await checkRateLimit("upload", session.user.id);
   if (!limit.success) return tooManyAttemptsResponse(limit.reset);
+
+  // Uploads are Pro-only; also before the body is read.
+  if (!canUploadFiles(await getPlanStatus(session.user.id))) {
+    return NextResponse.json({ error: LIMIT_MESSAGES.uploads }, { status: 403 });
+  }
 
   // Counted as it arrives, so a body with no or a false Content-Length is cut off too.
   const body = await readFormDataWithin(request, MAX_BODY_BYTES);

@@ -1,0 +1,63 @@
+{
+  "_note": "Real Bictorys sandbox webhook, captured 2026-11-23 (hosted checkout, failing test card 2303 7799 9900 0291, XOF). merchantId scrubbed; X-Secret-Key replaced by a placeholder.",
+  "headers": {
+    "content-type": "application/json",
+    "user-agent": "ReactorNetty/1.1.5",
+    "x-webhook-version": "1",
+    "x-secret-key": "<webhook-secret>"
+  },
+  "body": {
+    "eventType": null,
+    "id": "b42e2c8a-d5d0-498e-bf55-24306f6f3cee",
+    "merchantId": "00000000-0000-0000-0000-000000000001",
+    "subMerchantId": null,
+    "type": "payment",
+    "customerId": null,
+    "customerObject": {
+      "id": null,
+      "name": "Capture Test",
+      "phone": null,
+      "email": "capture-test@example.com",
+      "address": null,
+      "city": null,
+      "postalCode": null,
+      "country": "SN",
+      "alias": null,
+      "locale": "en-US",
+      "createdAt": null,
+      "updatedAt": null
+    },
+    "pspTransactionId": "urn:payment:5622f905-92bc-4e0e-b776-7e05bbc38210",
+    "pspName": "card",
+    "paymentMeans": "230377******0291",
+    "paymentChannel": "Online",
+    "amount": 4000.0,
+    "merchantFees": 121.9,
+    "customerFees": 0.0,
+    "transactionFeeAmountHT": null,
+    "transactionFeeAmountTax": null,
+    "currency": "XOF",
+    "paymentReference": "capture-XOF-fail-1795395055",
+    "cashier": null,
+    "settledAmount": 4000.0,
+    "settledCurrency": "XOF",
+    "merchantReference": "capture-test",
+    "orderType": "flat",
+    "orderId": null,
+    "orderDetails": [
+      {
+        "id": null,
+        "name": "Cortex Pro monthly",
+        "reference": null,
+        "price": 4000.0,
+        "quantity": 1.0,
+        "discount": 0.0,
+        "taxRate": 0.0,
+        "totalPrice": 0.0
+      }
+    ],
+    "status": "failed",
+    "originIp": null,
+    "timestamp": "2026-11-23 00:52:53.624541"
+  }
+}

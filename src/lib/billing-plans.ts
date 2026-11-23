@@ -15,6 +15,43 @@ export const BILLING_PLANS = {
 
 export const DEFAULT_CURRENCY: Currency = "USD";
 
+/** A `?currency=` value, or the default when it is missing or not one Cortex charges. */
+export function parseCurrency(value: unknown): Currency {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  return typeof candidate === "string" && (CURRENCIES as readonly string[]).includes(candidate.toUpperCase())
+    ? (candidate.toUpperCase() as Currency)
+    : DEFAULT_CURRENCY;
+}
+
+/**
+ * Currencies Bictorys card payments accept as they are. EUR/USD cards are
+ * refused ("payment channel is not configured", plan §10 q10), so those
+ * prices are shown as chosen but charged in XOF. Add "EUR" / "USD" here if
+ * Bictorys enables them.
+ */
+export const CHARGED_DIRECTLY: readonly Currency[] = ["XOF"];
+
+/** The legal fixed parity of the CFA franc. */
+export const XOF_PER_EUR = 655.957;
+
+/**
+ * A price in XOF, rounded to the franc. EUR uses the fixed parity; USD needs
+ * the day's USD→EUR rate (`src/lib/exchange-rates.ts`).
+ */
+export function toXof(amount: number, currency: Currency, usdToEur?: number) {
+  if (currency === "XOF") return amount;
+  if (currency === "EUR") return Math.round(amount * XOF_PER_EUR);
+  if (usdToEur === undefined || !(usdToEur > 0)) throw new Error("A USD→EUR rate is required to convert USD.");
+  return Math.round(amount * usdToEur * XOF_PER_EUR);
+}
+
+/** What the Bictorys checkout offers per currency (sandbox-verified, plan §2.1). */
+export const PAYMENT_METHODS: Record<Currency, string> = {
+  USD: "Card only",
+  EUR: "Card only",
+  XOF: "Card or Mobile Money",
+};
+
 /**
  * "$7", "€7", "4 000 FCFA". XOF is formatted by hand: Intl's XOF output
  * ("F CFA 4,000") is not how prices are written locally. The thousands
@@ -36,4 +73,9 @@ export function isProActive(proUntil: Date | null | undefined, now = new Date())
 export function extendProUntil(current: Date | null | undefined, days: number, now = new Date()) {
   const start = current && current.getTime() > now.getTime() ? current : now;
   return new Date(start.getTime() + days * DAY_MS);
+}
+
+/** "December 23, 2026": the day Pro ends, in UTC so server and client agree. */
+export function formatProUntil(proUntil: Date) {
+  return proUntil.toLocaleDateString("en-US", { dateStyle: "long", timeZone: "UTC" });
 }

@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
  * mobile; "New Collection" and "New Item" open their create dialogs. The star
  * before them links to `/favorites`; its `ml-auto` pushes the three right.
  */
-export function TopBar() {
+export function TopBar({ uploadsAllowed }: { uploadsAllowed: Promise<boolean> }) {
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-4">
       <SidebarTrigger />
@@ -30,7 +30,7 @@ export function TopBar() {
         <Star aria-hidden />
       </Link>
       <NewCollectionDialog />
-      <NewItemDialog />
+      <NewItemDialog uploadsAllowed={uploadsAllowed} />
     </header>
   );
 }

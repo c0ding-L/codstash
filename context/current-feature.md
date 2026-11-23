@@ -1,16 +1,99 @@
-# Current Feature
+# Current Feature: Bictorys Billing Phase 2 — Integration & UI
+
+Spec: `@context/features/bictorys-phase-2-spec.md`. Reference: `docs/bictorys-integration-plan.md`.
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Real sandbox webhooks (XOF and EUR card payments) and one status response are captured through
+  a temporary logging-only route; scrubbed fixtures sit next to `billing-webhook.test.ts`, and
+  the answers to §10 q1, q4, q5, q6 are written into the plan
+- `src/lib/billing-webhook.ts` (server-only): `verifyWebhook` (constant-time `X-Secret-Key`,
+  HMAC only when both headers are present, 5 min skew, empty secret → false), a passthrough Zod
+  payload schema, `applyPaymentStatus` as the single confirm path (mismatch → `NEEDS_REVIEW`,
+  no Pro), and `handleBictorysWebhook` (401 / 400 / 200, DB errors propagate)
+- `POST /api/webhooks/bictorys` is a thin wrapper over the handler; thrown errors become 500
+- `src/actions/billing.ts`: `startCheckout({ plan, currency })` (Zod, auth, `checkout` rate
+  limit, `APP_URL`, pending payment → charge → store `transactionId` → `redirectUrl`) and
+  `refreshPaymentStatus(reference)` (owner-checked, display only unless the captured status
+  response carries amount and currency)
+- Session carries `proUntil` / `isPro` from the existing `jwt` select; expired Pro resets the
+  stored flag lazily with one `updateMany`. Server gates still read `getPlanStatus`
+- Settings gets a **Plan** section (`id="plan"`, above Editor) with status and
+  `UpgradeButtons` (USD / EUR / XOF switch, `?currency=` initial value, prices from
+  `BILLING_PLANS`, payment-method hint, monthly/yearly with pending + error)
+- `/settings/billing` return page shows SUCCEEDED / PENDING (polls every 3 s, ~10 times) /
+  NEEDS_REVIEW / FAILED for the current user's payment only, and never grants Pro
+- Pricing section gets a currency switch, reads prices from `BILLING_PLANS`, and "Get Pro" links
+  to `/settings?currency=<chosen>#plan`
+- Free accounts are gated on the server: 50 items, 3 collections, no file/image items, `403`
+  from `/api/upload`; the New Item dialog hides/disables File and Image via a server prop.
+  Existing data is never removed
+- `context/project-overview.md` describes Bictorys instead of Stripe and lists `Payment`
+- Unit tests per the spec pass; `npm test`, `npm run build`, `npm run lint` pass; manual sandbox
+  scenarios (§9) run through the tunnel
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- **Needs a public tunnel and the Bictorys sandbox.** `cloudflared tunnel --url
+  http://localhost:3000` or `ngrok http 3000` → `APP_URL`, restart dev server; webhook in the
+  Bictorys test dashboard → `https://<tunnel>/api/webhooks/bictorys`, secret →
+  `BICTORYS_WEBHOOK_SECRET`. Choose the fee setting **before** capturing webhooks (it changes
+  `amount`). These steps need the author's hands.
+- Capture first, then write the confirm logic: `amountMatches` is decided from the fixtures,
+  never from the docs, and compares against what was charged.
+- **Decided from the sandbox captures (2026-11-23, plan §10):** `refreshPaymentStatus` is
+  **display only** (the status response is `{ id, status }`, no amount/currency). The webhook
+  `id` is the transaction id, not the hosted-checkout `chargeId`, so the webhook stores its `id`
+  in `Payment.transactionId`. Only `X-Secret-Key` is sent (no HMAC headers). `amount` = charged
+  amount (merchant pays fees); compare `amount` + `currency`, ignore `settledAmount`. Failure
+  webhooks arrive with `status: "failed"`. Fixtures: `src/lib/__fixtures__/bictorys/`.
+- **One checkout link can be paid several times** (3 succeeded transactions on `capture-XOF2`).
+  `applyPaymentStatus` on a non-PENDING row: same `id` as the stored `transactionId` → retry,
+  ignore; different `id` → `console.error` with that id for a manual refund, no Pro.
+- **`refreshPaymentStatus` reads the DB only** (spec said it calls `getTransactionStatus`): before
+  the webhook only the `chargeId` is stored, which Bictorys answers with "pending"; after it, the
+  row is already settled. So the Bictorys call can never help. `getTransactionStatus` stays in
+  `src/lib/bictorys.ts`, unused. No Pro guard on checkout for users with more than a year left.
+- **FAILED → SUCCEEDED is allowed** (Phase 1 change in `src/lib/db/billing.ts`): a declined card
+  then a good one on the same checkout page must grant Pro. `markPaymentSucceeded` and
+  `markPaymentNeedsReview` settle PENDING or FAILED rows; `markPaymentFailed` still only touches
+  PENDING, so a late failure never undoes a success. All three store the webhook `id`.
+- **EUR/USD are charged in XOF (author's decision, 2026-11-23).** Assumed unsupported by Bictorys
+  cards. The site shows only the chosen price ($7, €7); `chargeFor` (`src/lib/exchange-rates.ts`)
+  converts: EUR at the fixed parity (€7 → 4 592 XOF, €63 → 41 325), USD through the ECB USD→EUR
+  rate from Frankfurter (cached 12 h) then the parity. The Payment row stores the XOF amount
+  charged, which the webhook checks. EUR/USD checkouts open on the card tab only. No FCFA amount is
+  shown to EUR/USD customers (the Bictorys page itself shows CFA). Switch back per currency with
+  `CHARGED_DIRECTLY` in `billing-plans.ts`. If the rate service is down, USD checkout is refused.
+- Author's assumption: EUR/USD cards only work in live. XOF conversion stays the default until one
+  real live EUR payment with a foreign card succeeds; then flip `CHARGED_DIRECTLY` (plan §10).
+- The Bictorys dashboard "product" is not used: every charge carries its own amount and currency.
+- **§9 sandbox tests passed (2026-11-23, through a tunnel, demo account on develop):** XOF card
+  (Pro +30 d), EUR declined-then-good card on one page (4 592 XOF, Pro stacked to +60 d), USD
+  priced 4 178 XOF, Mobile Money QR (SUCCEEDED, +30 d), curl replays (duplicate and second id:
+  no change; wrong/no secret: 401; lower amount: NEEDS_REVIEW), expiry (Free again, `isPro`
+  reset, File/Image and collection gates back, data intact). Tunnel stopped, `allowedDevOrigins`
+  removed.
+- **Final review fixes (2026-11-23):** a failed `createCharge` now marks its row FAILED instead of
+  leaving it PENDING; `setPaymentTransactionId` only writes while no id is stored, so it can never
+  overwrite the webhook's transaction id; the return page treats a FAILED row reached through the
+  success redirect (declined card, then a good one on the same page) as "Confirming…" and polls
+  until the second webhook lands, instead of showing a failure.
+- Iframe mode, EUR/USD cards and XOF conversion wait for Bictorys support (plan §10 q10–q12);
+  Phase 2 stays on the hosted checkout, and none of it changes the webhook or the server side.
+- EUR card payment is refused by the sandbox (Mastercard Ecom channel not configured) — deferred
+  by the author, plan §10 q10.
+- Decided: no guard on checkout for a Pro user with more than a year left (paid time stacks).
+- Read the Next 16 docs for route handlers (`03-file-conventions/route.md`) and async
+  `searchParams` before writing those files.
+- `billing-webhook.ts` uses `node:crypto` — never import it from a client component.
+- Neon **develop** branch only; production setup is the author's job.
+- Optional split: sections 1–6 (payments, nothing gated) first, section 7 (gating) after.
+- Branch: `feature/bictorys-billing-phase-2`.
 
 ---
 

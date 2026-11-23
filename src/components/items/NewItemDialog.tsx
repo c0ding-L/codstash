@@ -2,7 +2,7 @@
 
 import { Plus } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useId, useState, useTransition, type TransitionStartFunction } from "react";
+import { Suspense, use, useId, useState, useTransition, type TransitionStartFunction } from "react";
 import { toast } from "sonner";
 
 import { type CreatableType, createItem, type CreateItemField, type CreateItemInput } from "@/actions/items";
@@ -46,8 +46,13 @@ const TYPES: { slug: CreatableType; label: string }[] = [
   { slug: "link", label: "Link" },
 ];
 
+interface NewItemDialogProps {
+  /** From the server's plan check; File and Image are disabled while it is false. */
+  uploadsAllowed: Promise<boolean>;
+}
+
 /** The top bar's "New Item" button and the dialog it opens. */
-export function NewItemDialog() {
+export function NewItemDialog({ uploadsAllowed }: NewItemDialogProps) {
   const [open, setOpen] = useState(false);
   const [saving, startSaving] = useTransition();
 
@@ -66,7 +71,14 @@ export function NewItemDialog() {
           <DialogDescription>Choose a type, then fill in its fields.</DialogDescription>
         </DialogHeader>
         {/* Inside the popup, so it unmounts on close and every opening starts empty. */}
-        <NewItemForm saving={saving} startSaving={startSaving} onCreated={() => setOpen(false)} />
+        <Suspense fallback={null}>
+          <NewItemForm
+            saving={saving}
+            startSaving={startSaving}
+            onCreated={() => setOpen(false)}
+            uploadsAllowed={uploadsAllowed}
+          />
+        </Suspense>
       </DialogContent>
     </Dialog>
   );
@@ -76,9 +88,11 @@ interface NewItemFormProps {
   saving: boolean;
   startSaving: TransitionStartFunction;
   onCreated: () => void;
+  uploadsAllowed: Promise<boolean>;
 }
 
-function NewItemForm({ saving, startSaving, onCreated }: NewItemFormProps) {
+function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed }: NewItemFormProps) {
+  const canUpload = use(uploadsAllowed);
   const router = useRouter();
   const id = useId();
   const { setError, isInvalid, messageFor, clearFor, fieldProps } = useFieldErrors<CreateItemField>(id);
@@ -86,7 +100,7 @@ function NewItemForm({ saving, startSaving, onCreated }: NewItemFormProps) {
   // Starts on the type of the listing page it was opened from, when that type can be created here.
   const pageType = itemTypeFromPathname(usePathname());
   const [type, setType] = useState<CreatableType>(
-    () => TYPES.find(({ slug }) => slug === pageType)?.slug ?? "snippet",
+    () => TYPES.find(({ slug }) => slug === pageType && (canUpload || !isUploadKind(slug)))?.slug ?? "snippet",
   );
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -154,6 +168,7 @@ function NewItemForm({ saving, startSaving, onCreated }: NewItemFormProps) {
       <TypePicker
         value={type}
         disabled={saving}
+        canUpload={canUpload}
         onChange={(slug) => {
           // A file chosen as one kind is not valid as the other.
           if (slug !== type) setFile(null);
@@ -243,17 +258,20 @@ function NewItemForm({ saving, startSaving, onCreated }: NewItemFormProps) {
 interface TypePickerProps {
   value: CreatableType;
   disabled: boolean;
+  /** False for Free accounts: File and Image stay visible but disabled, marked Pro. */
+  canUpload: boolean;
   onChange: (slug: CreatableType) => void;
 }
 
 /** The types the dialog can create, as a row of radio buttons in each type's colour. */
-function TypePicker({ value, disabled, onChange }: TypePickerProps) {
+function TypePicker({ value, disabled, canUpload, onChange }: TypePickerProps) {
   return (
     <div role="radiogroup" aria-label="Type" className="flex flex-wrap gap-1.5">
       {TYPES.map(({ slug, label }) => {
         const Icon = typeIcons[slug];
         const color = typeColors[slug];
         const selected = slug === value;
+        const proOnly = !canUpload && isUploadKind(slug);
         return (
           <Button
             key={slug}
@@ -263,11 +281,13 @@ function TypePicker({ value, disabled, onChange }: TypePickerProps) {
             variant="ghost"
             size="sm"
             className={cn(selected && ["ring-1 ring-foreground/20", surfaceClasses[color]])}
-            disabled={disabled}
+            disabled={disabled || proOnly}
+            title={proOnly ? "File and image uploads are a Pro feature." : undefined}
             onClick={() => onChange(slug)}
           >
             <Icon className={colorClasses[color]} aria-hidden />
             {label}
+            {proOnly ? <span className="text-xs text-muted-foreground">Pro</span> : null}
           </Button>
         );
       })}

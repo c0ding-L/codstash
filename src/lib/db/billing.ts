@@ -26,23 +26,28 @@ export async function getPlanStatus(userId: string): Promise<PlanStatus> {
 }
 
 /**
- * The amount always comes from `BILLING_PLANS`, never from the client. The
- * reference is the `paymentReference` sent to Bictorys.
+ * `charge` is what Bictorys will charge (`chargeFor`: the table's price, or its
+ * XOF conversion), never a client value. The webhook is checked against it.
+ * The reference is the `paymentReference` sent to Bictorys.
  */
-export function createPendingPayment(userId: string, plan: Plan, currency: Currency) {
+export function createPendingPayment(userId: string, plan: Plan, charge: { amount: number; currency: Currency }) {
   return prisma.payment.create({
     data: {
       reference: `cortex_${randomUUID().replace(/-/g, "")}`,
       userId,
       plan,
-      currency,
-      amount: BILLING_PLANS[plan].price[currency],
+      currency: charge.currency,
+      amount: charge.amount,
     },
   });
 }
 
+/**
+ * Stores the hosted checkout's chargeId, only while nothing else is stored: a
+ * webhook that got there first has written the real transaction id.
+ */
 export function setPaymentTransactionId(paymentId: string, transactionId: string) {
-  return prisma.payment.update({ where: { id: paymentId }, data: { transactionId } });
+  return prisma.payment.updateMany({ where: { id: paymentId, transactionId: null }, data: { transactionId } });
 }
 
 export function findPaymentByReference(reference: string) {
@@ -52,21 +57,37 @@ export function findPaymentByReference(reference: string) {
 export type MarkSucceededResult = { applied: false } | { applied: true; proUntil: Date | null };
 
 /**
- * Idempotent: only a PENDING row moves to SUCCEEDED, so a retried webhook (or
- * the webhook racing the status fallback) extends Pro once.
+ * Rows a "paid" report can still settle. FAILED is included because one Bictorys
+ * checkout link can be paid more than once (sandbox-verified): a declined card
+ * followed by a good one on the same page must still grant Pro.
+ */
+export const SETTLEABLE_STATUSES = ["PENDING", "FAILED"] as const;
+
+interface MarkOptions {
+  /** The Bictorys transaction id from the webhook; replaces the checkout's `chargeId`. */
+  transactionId?: string;
+  now?: Date;
+}
+
+/**
+ * Idempotent: only a PENDING or FAILED row moves to SUCCEEDED, so a retried
+ * webhook (or the webhook racing the status fallback) extends Pro once.
  *
  * `proUntil` is read under `FOR UPDATE`, so two different payments of the same
  * user settling at once queue up and stack, instead of both extending the same
  * old date.
  */
-export async function markPaymentSucceeded(reference: string, now = new Date()): Promise<MarkSucceededResult> {
+export async function markPaymentSucceeded(
+  reference: string,
+  { transactionId, now = new Date() }: MarkOptions = {},
+): Promise<MarkSucceededResult> {
   return prisma.$transaction(async (tx) => {
     const payment = await tx.payment.findUnique({ where: { reference } });
-    if (!payment || payment.status !== "PENDING") return { applied: false };
+    if (!payment || !isSettleable(payment.status)) return { applied: false };
 
     const claimed = await tx.payment.updateMany({
-      where: { id: payment.id, status: "PENDING" },
-      data: { status: "SUCCEEDED", paidAt: now },
+      where: { id: payment.id, status: { in: [...SETTLEABLE_STATUSES] } },
+      data: { status: "SUCCEEDED", paidAt: now, ...(transactionId && { transactionId }) },
     });
     if (claimed.count === 0) return { applied: false };
 
@@ -83,12 +104,22 @@ export async function markPaymentSucceeded(reference: string, now = new Date()):
   });
 }
 
+export function isSettleable(status: string) {
+  return (SETTLEABLE_STATUSES as readonly string[]).includes(status);
+}
+
 /** Only a PENDING row can fail; a late "failed" never undoes a success. */
-export function markPaymentFailed(reference: string) {
-  return prisma.payment.updateMany({ where: { reference, status: "PENDING" }, data: { status: "FAILED" } });
+export function markPaymentFailed(reference: string, transactionId?: string) {
+  return prisma.payment.updateMany({
+    where: { reference, status: "PENDING" },
+    data: { status: "FAILED", ...(transactionId && { transactionId }) },
+  });
 }
 
 /** Paid at Bictorys, but the amount or currency did not match; fixed by hand. */
-export function markPaymentNeedsReview(reference: string) {
-  return prisma.payment.updateMany({ where: { reference, status: "PENDING" }, data: { status: "NEEDS_REVIEW" } });
+export function markPaymentNeedsReview(reference: string, transactionId?: string) {
+  return prisma.payment.updateMany({
+    where: { reference, status: { in: [...SETTLEABLE_STATUSES] } },
+    data: { status: "NEEDS_REVIEW", ...(transactionId && { transactionId }) },
+  });
 }

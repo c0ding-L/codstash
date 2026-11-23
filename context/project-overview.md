@@ -110,15 +110,31 @@ model User {
   id                   String   @id @default(cuid())
   email                String   @unique
   password             String?
-  isPro                Boolean  @default(false)
-  stripeCustomerId     String?
-  stripeSubscriptionId String?
+  isPro                Boolean  @default(false) // mirror of proUntil, for display only
+  proUntil             DateTime? // Pro while proUntil > now; each payment extends it
+  payments             Payment[]
   items                Item[]
   itemTypes            ItemType[]
   collections          Collection[]
   tags                 Tag[]
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
+}
+
+// One Bictorys checkout; `reference` is the paymentReference sent to Bictorys.
+model Payment {
+  id            String        @id @default(cuid())
+  reference     String        @unique
+  userId        String?       // SetNull: payments are kept when the account is deleted
+  user          User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  plan          BillingPlan   // MONTHLY | YEARLY
+  amount        Int           // major units, as charged
+  currency      Currency      // the currency actually charged (XOF for EUR/USD prices today)
+  status        PaymentStatus @default(PENDING) // PENDING | SUCCEEDED | FAILED | NEEDS_REVIEW
+  transactionId String?       @unique // Bictorys transaction id, set by the webhook
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 }
 
 model Item {
@@ -224,7 +240,10 @@ model ItemTag {
 | Free | $0              | 50 items, 3 collections | Basic search, no AI                             |
 | Pro  | $7/mo or $63/yr | Unlimited               | File & image uploads, custom types, AI, export  |
 
-> Stripe for subscriptions + webhooks for syncing
+> Bictorys one-off payments, priced in USD, EUR or XOF, each extending `proUntil` by 30 or 365
+> days. EUR/USD prices are charged by card in XOF (fixed EUR parity, ECB rate for USD), since
+> Bictorys cards refuse EUR/USD for now; XOF also offers Mobile Money. No automatic renewal. The webhook is the only thing that grants
+> Pro; prices live in `BILLING_PLANS` (`src/lib/billing-plans.ts`).
 
 ---
 

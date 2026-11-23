@@ -1,6 +1,19 @@
 import { describe, expect, it } from "vitest";
 
-import { BILLING_PLANS, CURRENCIES, PLANS, extendProUntil, formatPrice, isProActive } from "@/lib/billing-plans";
+import {
+  BILLING_PLANS,
+  CURRENCIES,
+  DEFAULT_CURRENCY,
+  PAYMENT_METHODS,
+  PLANS,
+  XOF_PER_EUR,
+  extendProUntil,
+  formatPrice,
+  formatProUntil,
+  isProActive,
+  parseCurrency,
+  toXof,
+} from "@/lib/billing-plans";
 
 const DAY_MS = 86_400_000;
 const NOW = new Date("2026-11-22T12:00:00Z");
@@ -60,5 +73,55 @@ describe("extendProUntil", () => {
   it("adds to the remaining time while active", () => {
     const active = new Date(NOW.getTime() + 10 * DAY_MS);
     expect(extendProUntil(active, 365, NOW)).toEqual(new Date(NOW.getTime() + 375 * DAY_MS));
+  });
+});
+
+describe("parseCurrency", () => {
+  it("reads a supported currency, in any case", () => {
+    expect(parseCurrency("XOF")).toBe("XOF");
+    expect(parseCurrency("eur")).toBe("EUR");
+    expect(parseCurrency(["usd", "xof"])).toBe("USD");
+  });
+
+  it("falls back to the default otherwise", () => {
+    expect(parseCurrency(undefined)).toBe(DEFAULT_CURRENCY);
+    expect(parseCurrency("GBP")).toBe(DEFAULT_CURRENCY);
+    expect(parseCurrency("")).toBe(DEFAULT_CURRENCY);
+  });
+});
+
+describe("PAYMENT_METHODS", () => {
+  it("offers Mobile Money in XOF only", () => {
+    for (const currency of CURRENCIES) {
+      expect(PAYMENT_METHODS[currency].includes("Mobile Money")).toBe(currency === "XOF");
+    }
+  });
+});
+
+describe("formatProUntil", () => {
+  it("formats the day in UTC", () => {
+    expect(formatProUntil(new Date("2026-12-23T23:30:00Z"))).toBe("December 23, 2026");
+  });
+});
+
+describe("toXof", () => {
+  it("keeps XOF as it is", () => {
+    expect(toXof(4_000, "XOF")).toBe(4_000);
+  });
+
+  it("converts EUR at the fixed parity, rounded to the franc", () => {
+    expect(XOF_PER_EUR).toBe(655.957);
+    expect(toXof(7, "EUR")).toBe(4_592);
+    expect(toXof(63, "EUR")).toBe(41_325);
+  });
+
+  it("converts USD through the day's USD→EUR rate", () => {
+    expect(toXof(7, "USD", 0.90992)).toBe(Math.round(7 * 0.90992 * 655.957));
+  });
+
+  it("refuses USD without a usable rate", () => {
+    expect(() => toXof(7, "USD")).toThrow();
+    expect(() => toXof(7, "USD", 0)).toThrow();
+    expect(() => toXof(7, "USD", Number.NaN)).toThrow();
   });
 });

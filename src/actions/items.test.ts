@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createItem, deleteItem, setItemFavorite, setItemPinned, updateItem } from "@/actions/items";
 import { auth } from "@/auth";
+import { getPlanStatus } from "@/lib/db/billing";
 import { ownsCollections } from "@/lib/db/collections";
 import {
   createItem as createItemQuery,
@@ -25,6 +26,7 @@ vi.mock("@/lib/db/items", () => ({
   setItemPinned: vi.fn(),
 }));
 vi.mock("@/lib/db/collections", () => ({ ownsCollections: vi.fn() }));
+vi.mock("@/lib/db/billing", () => ({ getPlanStatus: vi.fn() }));
 vi.mock("@/lib/r2", () => ({ headObject: vi.fn(), deleteObjectsQuietly: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
@@ -39,6 +41,9 @@ const owns = ownsCollections as unknown as Mock;
 const favoriteQuery = setItemFavoriteQuery as unknown as Mock;
 const pinQuery = setItemPinnedQuery as unknown as Mock;
 const revalidate = revalidatePath as unknown as Mock;
+const planStatus = getPlanStatus as unknown as Mock;
+
+const plan = (isPro: boolean, items: number) => ({ proUntil: null, isPro, items, collections: 0 });
 
 const USER_ID = "user_1";
 
@@ -66,6 +71,8 @@ beforeEach(() => {
   createQuery.mockResolvedValue(card);
   keyInUse.mockResolvedValue(false);
   owns.mockResolvedValue(true);
+  // Pro by default, so the plan gate only shows up in its own tests.
+  planStatus.mockResolvedValue(plan(true, 0));
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -620,5 +627,57 @@ describe("setItemPinned", () => {
     const result = await setItemPinned("item_1", true);
 
     expect(result).toEqual({ success: false, data: null, error: "Could not update the pin. Try again." });
+  });
+});
+
+describe("createItem on the Free plan", () => {
+  const KEY = `${USER_ID}/0f8fad5b-d9cb-469f-a165-70867728950e/report.pdf`;
+  const ITEMS = "Free accounts can have 50 items. Upgrade to Pro in Settings.";
+  const UPLOADS = "File and image uploads are a Pro feature.";
+
+  it("creates the 50th item", async () => {
+    planStatus.mockResolvedValue(plan(false, 49));
+
+    const result = await createItem({ type: "snippet", title: "Title", content: "x", tags: [], collectionIds: [] });
+
+    expect(result).toEqual({ success: true, data: card, error: null });
+    expect(planStatus).toHaveBeenCalledWith(USER_ID);
+  });
+
+  it("refuses the 51st", async () => {
+    planStatus.mockResolvedValue(plan(false, 50));
+
+    const result = await createItem({ type: "snippet", title: "Title", content: "x", tags: [], collectionIds: [] });
+
+    expect(result).toEqual({ success: false, data: null, error: ITEMS });
+    expect(createQuery).not.toHaveBeenCalled();
+  });
+
+  it("has no item limit for Pro", async () => {
+    planStatus.mockResolvedValue(plan(true, 50));
+
+    const result = await createItem({ type: "snippet", title: "Title", content: "x", tags: [], collectionIds: [] });
+
+    expect(result).toMatchObject({ success: true });
+  });
+
+  it.each(["file", "image"] as const)("refuses a %s item and removes the unused upload", async (type) => {
+    planStatus.mockResolvedValue(plan(false, 0));
+
+    const result = await createItem({ type, title: "Report", fileKey: KEY, tags: [], collectionIds: [] });
+
+    expect(result).toEqual({ success: false, data: null, error: UPLOADS });
+    expect(createQuery).not.toHaveBeenCalled();
+    expect(head).not.toHaveBeenCalled();
+    expect(deleteObjects).toHaveBeenCalledWith([KEY]);
+  });
+
+  it("keeps an upload another item already uses", async () => {
+    planStatus.mockResolvedValue(plan(false, 0));
+    keyInUse.mockResolvedValue(true);
+
+    await createItem({ type: "file", title: "Report", fileKey: KEY, tags: [], collectionIds: [] });
+
+    expect(deleteObjects).not.toHaveBeenCalled();
   });
 });

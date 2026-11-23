@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 
 import { createCollection, deleteCollection, setCollectionFavorite, updateCollection } from "@/actions/collections";
 import { auth } from "@/auth";
+import { getPlanStatus } from "@/lib/db/billing";
 import {
   createCollection as createCollectionQuery,
   deleteCollection as deleteCollectionQuery,
@@ -19,6 +20,7 @@ vi.mock("@/lib/db/collections", () => ({
   deleteCollection: vi.fn(),
   setCollectionFavorite: vi.fn(),
 }));
+vi.mock("@/lib/db/billing", () => ({ getPlanStatus: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 
@@ -29,6 +31,9 @@ const deleteQuery = deleteCollectionQuery as unknown as Mock;
 const revalidate = revalidatePath as unknown as Mock;
 const favoriteQuery = setCollectionFavoriteQuery as unknown as Mock;
 const redirectTo = redirect as unknown as Mock;
+const planStatus = getPlanStatus as unknown as Mock;
+
+const plan = (isPro: boolean, collections: number) => ({ proUntil: null, isPro, items: 0, collections });
 
 /** Prisma's error when the row to update or delete does not exist (or is not the user's). */
 const notFound = Object.assign(new Error("Record not found"), { code: "P2025" });
@@ -49,6 +54,31 @@ describe("createCollection", () => {
   beforeEach(() => {
     session.mockResolvedValue({ user: { id: USER_ID } });
     createQuery.mockResolvedValue(card);
+    planStatus.mockResolvedValue(plan(true, 0));
+  });
+
+  it("creates a Free account's 3rd collection", async () => {
+    planStatus.mockResolvedValue(plan(false, 2));
+
+    expect(await createCollection({ name: "React" })).toMatchObject({ success: true });
+    expect(planStatus).toHaveBeenCalledWith(USER_ID);
+  });
+
+  it("refuses a Free account's 4th collection", async () => {
+    planStatus.mockResolvedValue(plan(false, 3));
+
+    expect(await createCollection({ name: "React" })).toEqual({
+      success: false,
+      data: null,
+      error: "Free accounts can have 3 collections. Upgrade to Pro in Settings.",
+    });
+    expect(createQuery).not.toHaveBeenCalled();
+  });
+
+  it("has no collection limit for Pro", async () => {
+    planStatus.mockResolvedValue(plan(true, 3));
+
+    expect(await createCollection({ name: "React" })).toMatchObject({ success: true });
   });
 
   it("creates the collection for the session's user", async () => {

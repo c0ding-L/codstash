@@ -4,7 +4,9 @@ import { Check, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
+import { CurrencySwitch } from "@/components/billing/CurrencySwitch";
 import { buttonVariants } from "@/components/ui/button";
+import { BILLING_PLANS, DEFAULT_CURRENCY, PAYMENT_METHODS, formatPrice, type Currency } from "@/lib/billing-plans";
 import { cn } from "@/lib/utils";
 
 type Billing = "monthly" | "yearly";
@@ -24,13 +26,25 @@ const proFeatures = [
   "Export (JSON / ZIP)",
 ];
 
-/** Free and Pro side by side, with a monthly / yearly switch for the Pro price. */
+/**
+ * Free and Pro side by side, with monthly / yearly and currency switches for
+ * the Pro price. Display only: the currency is passed to Settings, not stored.
+ */
 export function PricingPlans() {
   const [billing, setBilling] = useState<Billing>("monthly");
+  const [currency, setCurrency] = useState<Currency>(DEFAULT_CURRENCY);
+
+  const price = (billing === "monthly" ? BILLING_PLANS.MONTHLY : BILLING_PLANS.YEARLY).price[currency];
+  // Whole units for XOF; cents otherwise ($5.25).
+  const perMonth = BILLING_PLANS.YEARLY.price[currency] / 12;
+  const perMonthLabel =
+    currency === "XOF"
+      ? formatPrice(Math.round(perMonth), currency)
+      : new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(perMonth);
 
   return (
     <div>
-      <div className="flex justify-center">
+      <div className="flex flex-wrap items-center justify-center gap-3">
         <div
           role="group"
           aria-label="Billing period"
@@ -52,7 +66,12 @@ export function PricingPlans() {
             </button>
           ))}
         </div>
+        <CurrencySwitch value={currency} onChange={setCurrency} />
       </div>
+      <p className="mt-3 text-center text-xs text-muted-foreground">
+        {PAYMENT_METHODS[currency]}
+        {currency === "XOF" ? " (West Africa)" : null}
+      </p>
 
       <div className="mx-auto mt-12 grid max-w-4xl gap-5 md:grid-cols-2">
         <div className="flex flex-col rounded-2xl border border-border bg-card/60 p-8">
@@ -86,10 +105,13 @@ export function PricingPlans() {
             Most Popular
           </span>
           <h3 className="font-medium">Pro</h3>
-          <p className="mt-4 flex items-baseline gap-1">
-            <span className="text-4xl font-semibold tracking-tight">{billing === "monthly" ? "$7" : "$63"}</span>
+          {/* The monthly figure goes on its own line: "36 000 FCFA" leaves no room beside it. */}
+          <p className="mt-4 flex flex-wrap items-baseline gap-x-1 gap-y-1">
+            <span className="text-4xl font-semibold tracking-tight whitespace-nowrap">{formatPrice(price, currency)}</span>
             <span className="text-muted-foreground">/{billing === "monthly" ? "month" : "year"}</span>
-            {billing === "yearly" ? <span className="ml-2 text-sm text-muted-foreground">$5.25/month</span> : null}
+            {billing === "yearly" ? (
+              <span className="w-full text-sm text-muted-foreground">{perMonthLabel}/month</span>
+            ) : null}
           </p>
           <ul className="mt-8 flex-1 space-y-3 text-sm">
             {proFeatures.map((feature) => (
@@ -99,7 +121,8 @@ export function PricingPlans() {
               </li>
             ))}
           </ul>
-          <Link href="/register" className={cn(buttonVariants({ size: "lg" }), "mt-8 h-9")}>
+          {/* Signed-out visitors go through sign-in, which returns them to Settings (the hash is lost, but Plan is the first section). */}
+          <Link href={`/settings?currency=${currency}#plan`} className={cn(buttonVariants({ size: "lg" }), "mt-8 h-9")}>
             Get Pro
           </Link>
         </div>
