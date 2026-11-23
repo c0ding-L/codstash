@@ -14,6 +14,11 @@ Not Started
 
 ---
 
+Previous feature (completed) — Bictorys Billing Phase 1: schema, prices, Free limits, Bictorys
+client and payment queries for Cortex Pro; nothing user-visible yet. Outcome in the History below.
+
+---
+
 Previous feature (completed) — Lower Pro price: Pro costs $7/month or $63/year on the homepage
 and in the spec. Outcome in the History below.
 
@@ -2152,3 +2157,18 @@ Environment notes that outlive any one feature:
   the yearly toggle, "Save 25%" still correct); `project-overview.md` pricing table matches.
   Display/spec change only. 625 tests, build and lint green. Merged into `main` (`1402126`,
   fast-forward); branch `feature/lower-pro-price` deleted (never pushed). Feature completed.
+- 2026-11-23 — Bictorys Billing Phase 1 (core infrastructure): migration
+  `20261122234851_bictorys_billing` (User `proUntil` + `payments`, Stripe fields dropped, `isPro`
+  kept as a mirror; `BillingPlan` / `Currency` / `PaymentStatus` enums; `Payment` model with
+  `onDelete: SetNull`) applied to Neon develop only. New `billing-plans.ts`, `usage-limits.ts`,
+  `bictorys.ts` and `db/billing.ts`, each with tests; `checkout` rate limit; `BICTORYS_*` blanked
+  in Vitest; `.env.example` now tracked (`.gitignore` `!.env.example`). Adaptations: payment
+  reference is `cortex_<uuid without dashes>` (no cuid library installed);
+  `markPaymentNeedsReview` touches PENDING rows only; `getTransactionStatus` returns `null` on a
+  missing env; after review, `markPaymentSucceeded` reads `proUntil` under `FOR UPDATE` so two
+  payments of one user settling at once stack. Interactive `$transaction` and the locked
+  `$queryRaw` verified on develop (rolled back). Author still to: restart the dev server, remove
+  `STRIPE_*` from `.env` / `.env.production`, apply the migration to production at deploy time
+  (check Stripe columns and `isPro` users first). 677 tests, build and lint green. Merged into
+  `main` (`b818c4d`, fast-forward); branch `feature/bictorys-billing-phase-1` deleted (never
+  pushed). Feature completed.
