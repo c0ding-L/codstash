@@ -10,12 +10,15 @@ import { FileList } from "@/components/items/FileList";
 import { ImageCard } from "@/components/items/ImageCard";
 import { ItemCard } from "@/components/items/ItemCard";
 import { LinkList } from "@/components/items/LinkList";
+import { NewItemDialog } from "@/components/items/NewItemDialog";
 import { PromptList } from "@/components/items/PromptList";
 import { SnippetList } from "@/components/items/SnippetList";
+import { TypeEmptyState } from "@/components/items/TypeEmptyState";
 import { TypeIconTile } from "@/components/items/TypeIconTile";
 import { getPlanStatus } from "@/lib/db/billing";
 import { getCommandTexts, getItemsByType, getPromptPreviews, getSnippetPreviews } from "@/lib/db/items";
-import { itemTypeFromSegment, itemTypeHref, typeColors, typePluralNames } from "@/lib/item-type-ui";
+import { itemTypeFromSegment, itemTypeHref, typeColors, typePluralNames, typeSingularNames } from "@/lib/item-type-ui";
+import { loadUploadsAllowed } from "@/lib/load-uploads-allowed";
 import { ITEMS_PER_PAGE, pageCount, pageOffset, parsePageParam } from "@/lib/pagination";
 import { canUploadFiles } from "@/lib/usage-limits";
 
@@ -63,19 +66,32 @@ export default async function ItemsPage({ params, searchParams }: ItemsPageProps
   const label = typePluralNames[slug];
   const color = typeColors[slug];
   const now = new Date().toISOString();
+  // For the New Item dialog's type picker. The upload pages already know the plan;
+  // the others read it without waiting, as the layout does for the top bar.
+  const uploadsAllowed = isUploadType ? Promise.resolve(!showUpsell) : loadUploadsAllowed();
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-baseline justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="flex items-center gap-3 text-2xl font-semibold">
           <TypeIconTile slug={slug} color={color} className="size-9 shrink-0 rounded-lg" iconClassName="size-5" />
           {label}
         </h1>
-        {items.length > 0 ? (
-          <span className="text-sm text-muted-foreground">
-            {first}–{first + items.length - 1} of {totalCount}
-          </span>
-        ) : null}
+        <div className="flex items-center gap-4">
+          {items.length > 0 ? (
+            <span className="text-sm text-muted-foreground">
+              {first}–{first + items.length - 1} of {totalCount}
+            </span>
+          ) : null}
+          {/* Free users on Files and Images cannot create one: the upsell is their way forward. */}
+          {showUpsell ? null : (
+            <NewItemDialog
+              uploadsAllowed={uploadsAllowed}
+              label={`New ${typeSingularNames[slug]}`}
+              iconOnlyOnMobile={false}
+            />
+          )}
+        </div>
       </div>
 
       {showUpsell ? <ProFeatureUpsell /> : null}
@@ -111,7 +127,7 @@ export default async function ItemsPage({ params, searchParams }: ItemsPageProps
           )}
         </>
       ) : showUpsell ? null : (
-        <p className="text-sm text-muted-foreground">No {label.toLowerCase()} yet.</p>
+        <TypeEmptyState slug={slug} />
       )}
 
       <Pagination basePath={itemTypeHref(slug)} page={page} pageCount={pages} rowIds={ids} />

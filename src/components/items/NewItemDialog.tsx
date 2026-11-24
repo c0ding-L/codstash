@@ -49,20 +49,27 @@ const TYPES: { slug: CreatableType; label: string }[] = [
 interface NewItemDialogProps {
   /** From the server's plan check; File and Image are disabled while it is false. */
   uploadsAllowed: Promise<boolean>;
+  /** The button's text. The top bar's is "New Item"; type pages say "New Snippet" and so on. */
+  label?: string;
+  /** The top bar shows only the icon on narrow screens; the type pages always show the text. */
+  iconOnlyOnMobile?: boolean;
 }
 
-/** The top bar's "New Item" button and the dialog it opens. */
-export function NewItemDialog({ uploadsAllowed }: NewItemDialogProps) {
+/**
+ * A "New Item" button and the dialog it opens: in the top bar, and on the type
+ * pages, where the dialog starts on the page's type.
+ */
+export function NewItemDialog({ uploadsAllowed, label = "New Item", iconOnlyOnMobile = true }: NewItemDialogProps) {
   const [open, setOpen] = useState(false);
   const [saving, startSaving] = useTransition();
 
   return (
     // Kept open while saving, so a create in flight cannot be dismissed half done.
     <Dialog open={open} onOpenChange={(next) => (saving ? undefined : setOpen(next))}>
-      <DialogTrigger render={<Button size="lg" aria-label="New Item" />}>
+      <DialogTrigger render={<Button size="lg" aria-label={label} />}>
         <Plus aria-hidden />
-        {/* Icon only on narrow screens, like "New Collection". */}
-        <span className="hidden sm:inline">New Item</span>
+        {/* In the top bar, icon only on narrow screens, like "New Collection". */}
+        <span className={cn(iconOnlyOnMobile && "hidden sm:inline")}>{label}</span>
       </DialogTrigger>
       {/* Capped to the viewport and scrollable: a long snippet would push "Create item" off screen. */}
       <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg" showCloseButton={!saving}>

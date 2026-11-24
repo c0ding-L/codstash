@@ -1,16 +1,34 @@
 # Current Feature
 
+Type page empty state and "New <type>" button
+
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Every type page (`/items/[type]`) has a **New <Type>** button in its header ("New Snippet",
+  "New File", …), right of the title. It opens the existing New Item dialog, already set to that
+  type (the dialog picks the page's type from the pathname today).
+- When the user has no items of that type, the plain "No snippets yet." line is replaced by an
+  empty-state card: the type's icon tile in its color, "No snippets yet", one short line on what
+  that type is for. No button in the card: the header's New button is the way to create one.
+- Files and Images for Free users: no New button and no empty card — the Pro upsell stays the
+  only call to action (uploads are Pro-only, the dialog disables those types for Free users).
+- Pro users on Files/Images get the button and the empty card like the other types.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Reuse `NewItemDialog`: add optional props for the trigger (label, button variant) instead of a
+  second dialog. The top bar's button stays as is.
+- The page already knows `showUpsell`; pass it down to hide the button / empty card.
+- A small `typeSingularNames` map (or derive from `TYPES`) in `src/lib/item-type-ui.ts` for the
+  labels; per-type one-line descriptions live next to it.
+- Empty card is a server component (`src/components/items/TypeEmptyState.tsx`) wrapping the
+  client dialog trigger. Uses the existing `Card` and `TypeIconTile`.
+- Components are not unit-tested; check in the browser (empty type, non-empty type, Free on
+  Files) plus `npm test`, `npm run build`, `npm run lint`.
 
 ---
 
