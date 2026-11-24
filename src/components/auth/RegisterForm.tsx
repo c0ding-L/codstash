@@ -83,7 +83,7 @@ export function RegisterForm() {
 
   return (
     <>
-      <form onSubmit={onSubmit} className="grid gap-3" noValidate>
+      <form method="post" onSubmit={onSubmit} className="grid gap-3" noValidate>
         <label className="grid gap-1.5 text-sm font-medium">
           Name
           <Input name="name" autoComplete="name" maxLength={MAX_NAME_LENGTH} required />

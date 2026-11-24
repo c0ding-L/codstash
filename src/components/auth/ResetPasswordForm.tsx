@@ -60,7 +60,7 @@ export function ResetPasswordForm({ email, token }: Readonly<{ email: string; to
   }
 
   return (
-    <form onSubmit={onSubmit} className="grid gap-3" noValidate>
+    <form method="post" onSubmit={onSubmit} className="grid gap-3" noValidate>
       <label className="grid gap-1.5 text-sm font-medium">
         New password
         <Input name="password" type="password" autoComplete="new-password" required />
