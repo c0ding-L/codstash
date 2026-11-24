@@ -1,16 +1,31 @@
-# Current Feature
+# Current Feature: Pro Upsell on Files and Images
 
 ## Status
 
-Not Started
+Complete
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- A Free user who opens `/items/files` or `/items/images` sees that files and images are a Pro
+  feature, with the Upgrade buttons, instead of "No files yet." / "No images yet."
+- The upsell reuses `UpgradeButtons` (`src/components/settings/UpgradeButtons.tsx`): currency
+  switch, payment methods, one checkout button per plan, same `startCheckout` flow as Settings.
+- The Pro check is `canUploadFiles(await getPlanStatus(userId))`, the same rule as the upload
+  route, `createItem` and the New Item dialog.
+- Pro users see the page exactly as today (list, or "No files yet." when empty).
+- The other type pages are unchanged.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Page: `src/app/(app)/items/[type]/page.tsx`. Only the `file` and `image` slugs get the upsell.
+- New presentational component (e.g. `src/components/billing/ProFeatureUpsell.tsx`): lock icon,
+  "Files and images are a Pro feature", one line on what Pro adds, then `UpgradeButtons` with
+  `initialCurrency = DEFAULT_CURRENCY` and `isPro = false`.
+- A Free user who still owns files or images (Pro expired) keeps seeing their items, with the
+  upsell shown above the list — the items are never hidden.
+- No server action or utility changes, so no new unit tests (components are not tested).
+- Verify in the browser with the demo account (Free): both pages show the upsell; another type
+  page still shows its list.
 
 ---
 

@@ -4,6 +4,7 @@ import { connection } from "next/server";
 
 import { auth } from "@/auth";
 import { Pagination } from "@/components/Pagination";
+import { ProFeatureUpsell } from "@/components/billing/ProFeatureUpsell";
 import { CommandList } from "@/components/items/CommandList";
 import { FileList } from "@/components/items/FileList";
 import { ImageCard } from "@/components/items/ImageCard";
@@ -12,9 +13,11 @@ import { LinkList } from "@/components/items/LinkList";
 import { PromptList } from "@/components/items/PromptList";
 import { SnippetList } from "@/components/items/SnippetList";
 import { TypeIconTile } from "@/components/items/TypeIconTile";
+import { getPlanStatus } from "@/lib/db/billing";
 import { getCommandTexts, getItemsByType, getPromptPreviews, getSnippetPreviews } from "@/lib/db/items";
 import { itemTypeFromSegment, itemTypeHref, typeColors, typePluralNames } from "@/lib/item-type-ui";
 import { ITEMS_PER_PAGE, pageCount, pageOffset, parsePageParam } from "@/lib/pagination";
+import { canUploadFiles } from "@/lib/usage-limits";
 
 interface ItemsPageProps {
   params: Promise<{ type: string }>;
@@ -42,7 +45,13 @@ export default async function ItemsPage({ params, searchParams }: ItemsPageProps
   const page = parsePageParam((await searchParams).page);
   if (page === null) notFound();
 
-  const { items, totalCount } = await getItemsByType(session.user.id, slug, page);
+  // Files and images are Pro-only: Free users get the upsell, above any items
+  // they kept from an expired Pro period.
+  const isUploadType = slug === "file" || slug === "image";
+  const [{ items, totalCount }, showUpsell] = await Promise.all([
+    getItemsByType(session.user.id, slug, page),
+    isUploadType ? getPlanStatus(session.user.id).then((plan) => !canUploadFiles(plan)) : false,
+  ]);
   const pages = pageCount(totalCount, ITEMS_PER_PAGE);
   if (page > pages) notFound();
   const first = pageOffset(page, ITEMS_PER_PAGE) + 1;
@@ -68,6 +77,8 @@ export default async function ItemsPage({ params, searchParams }: ItemsPageProps
           </span>
         ) : null}
       </div>
+
+      {showUpsell ? <ProFeatureUpsell /> : null}
 
       {items.length > 0 ? (
         <>
@@ -99,7 +110,7 @@ export default async function ItemsPage({ params, searchParams }: ItemsPageProps
             </ul>
           )}
         </>
-      ) : (
+      ) : showUpsell ? null : (
         <p className="text-sm text-muted-foreground">No {label.toLowerCase()} yet.</p>
       )}
 
