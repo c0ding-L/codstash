@@ -1,44 +1,22 @@
-# Current Feature: Upgrade Page and Header Upgrade Button
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Free users see an "Upgrade" button in the app header (`TopBar`); Pro users do not.
-- The button is a ghost button, more subtle than the other header buttons (New Collection,
-  New Item), and links to `/upgrade` — not straight to checkout.
-- New `/upgrade` page inside the `(app)` shell shows Free vs Pro features, like the homepage
-  pricing section (`PricingPlans`): same feature lists, monthly / yearly switch, currency switch,
-  payment methods line.
-- The user selects their preferred plan (Monthly or Yearly) and currency on the page, then clicks
-  one Upgrade button that starts checkout for that selection (`startCheckout` → Bictorys redirect).
-- Pending and error states while opening checkout, as `UpgradeButtons` does today.
-- Free users opening `/items/files` or `/items/images` are redirected to `/upgrade` (added at
-  start). The `ProFeatureUpsell` card that showed there is removed.
-- Unit tests for any new or changed server action / utility; `npm test`, `npm run build` and
-  `npm run lint` green; checked in the browser (Free demo account, desktop and mobile 390 px).
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- The spec says "Stripe checkout"; this project's checkout is **Bictorys** (`startCheckout` in
-  `src/actions/billing.ts`). The page reuses that flow — no Stripe.
-- Header plan check: the `(app)` layout already streams `loadUploadsAllowed()` (Free/Pro via
-  `getPlanStatus`) to `TopBar` without blocking. The Upgrade button should get the plan the same
-  way (a promise read behind Suspense, or a shared `loadPlanStatus`), so the shell does not wait on
-  data. A failed read hides the button.
-- Ghost variant: `buttonVariants({ variant: "ghost" })` on a `Link`, likely `size="sm"` and muted
-  text so it sits quieter than the outline / filled New buttons. On mobile, keep the header from
-  overflowing (icon-only or hidden label).
-- Share the feature lists and the price/period display with `PricingPlans` instead of copying them
-  (e.g. move `freeFeatures` / `proFeatures` to a shared module) — minimal change, no restyle of the
-  homepage.
-- Pro users visiting `/upgrade` are redirected to Settings › Plan (decided at start).
-- The existing entry points (homepage "Get Pro", Settings › Plan, `ProFeatureUpsell` on
-  Files/Images) stay unchanged (decided at start).
-- Server-rendered, dynamic page (`await connection()` pattern); client component only for the
-  selector and checkout button.
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — Upgrade page and header Upgrade button: Free users get an Upgrade
+link in the top bar and a `/upgrade` page to pick a plan and check out. Outcome in the History
+below.
 
 ---
 
@@ -2255,3 +2233,19 @@ Environment notes that outlive any one feature:
   Browser-checked with the demo account (Free): empty Notes, Snippets list, Files upsell, mobile
   390 px. 758 tests, build and lint green. Merged into `main` (`732c1e9`, fast-forward); branch
   `feature/type-page-empty-state` deleted (never pushed). Feature completed.
+- 2026-11-24 — Upgrade page and header Upgrade button: Free users see a ghost "Upgrade" link
+  (sparkles icon, muted, icon-only on mobile) in `TopBar`, streamed behind Suspense from the new
+  `loadShowUpgrade` (`src/lib/load-show-upgrade.ts`; hidden on a failed read). New `/upgrade` page
+  (`src/app/(app)/upgrade/`, guarded by the proxy matcher): Free vs Pro cards with period and
+  currency switches (`UpgradePlans`, default Yearly) and one button that calls `startCheckout` for
+  the chosen plan; Pro users are redirected to `/settings#plan`. The cards and the period switch
+  moved to shared `PlanCards.tsx` / `BillingPeriodSwitch.tsx`, used by the homepage too; the Free
+  price now follows the currency (`$0`, `€0`, `0 FCFA`); `formatYearlyPerMonth` added to
+  `billing-plans.ts`. On the author's request, Free users opening `/items/files` or `/items/images`
+  are redirected to `/upgrade` and `ProFeatureUpsell` is deleted (expired-Pro users no longer see
+  that list). `getPlanStatus` is wrapped in React `cache`, so layout and page share one read per
+  request. Checkout is Bictorys, not Stripe as the request said. Browser-checked with the demo
+  account (Free): header link, `/upgrade` desktop and 390 px, redirects, homepage pricing; the
+  checkout button itself was not clicked. 763 tests, build and lint green. Merged into `main`
+  (`84742c4`, fast-forward); branch `feature/upgrade-page` deleted (never pushed). Feature
+  completed.
