@@ -1,16 +1,44 @@
-# Current Feature
+# Current Feature: Upgrade Page and Header Upgrade Button
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Free users see an "Upgrade" button in the app header (`TopBar`); Pro users do not.
+- The button is a ghost button, more subtle than the other header buttons (New Collection,
+  New Item), and links to `/upgrade` — not straight to checkout.
+- New `/upgrade` page inside the `(app)` shell shows Free vs Pro features, like the homepage
+  pricing section (`PricingPlans`): same feature lists, monthly / yearly switch, currency switch,
+  payment methods line.
+- The user selects their preferred plan (Monthly or Yearly) and currency on the page, then clicks
+  one Upgrade button that starts checkout for that selection (`startCheckout` → Bictorys redirect).
+- Pending and error states while opening checkout, as `UpgradeButtons` does today.
+- Free users opening `/items/files` or `/items/images` are redirected to `/upgrade` (added at
+  start). The `ProFeatureUpsell` card that showed there is removed.
+- Unit tests for any new or changed server action / utility; `npm test`, `npm run build` and
+  `npm run lint` green; checked in the browser (Free demo account, desktop and mobile 390 px).
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- The spec says "Stripe checkout"; this project's checkout is **Bictorys** (`startCheckout` in
+  `src/actions/billing.ts`). The page reuses that flow — no Stripe.
+- Header plan check: the `(app)` layout already streams `loadUploadsAllowed()` (Free/Pro via
+  `getPlanStatus`) to `TopBar` without blocking. The Upgrade button should get the plan the same
+  way (a promise read behind Suspense, or a shared `loadPlanStatus`), so the shell does not wait on
+  data. A failed read hides the button.
+- Ghost variant: `buttonVariants({ variant: "ghost" })` on a `Link`, likely `size="sm"` and muted
+  text so it sits quieter than the outline / filled New buttons. On mobile, keep the header from
+  overflowing (icon-only or hidden label).
+- Share the feature lists and the price/period display with `PricingPlans` instead of copying them
+  (e.g. move `freeFeatures` / `proFeatures` to a shared module) — minimal change, no restyle of the
+  homepage.
+- Pro users visiting `/upgrade` are redirected to Settings › Plan (decided at start).
+- The existing entry points (homepage "Get Pro", Settings › Plan, `ProFeatureUpsell` on
+  Files/Images) stay unchanged (decided at start).
+- Server-rendered, dynamic page (`await connection()` pattern); client component only for the
+  selector and checkout button.
 
 ---
 

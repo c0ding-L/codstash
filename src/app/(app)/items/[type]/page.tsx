@@ -4,7 +4,6 @@ import { connection } from "next/server";
 
 import { auth } from "@/auth";
 import { Pagination } from "@/components/Pagination";
-import { ProFeatureUpsell } from "@/components/billing/ProFeatureUpsell";
 import { CommandList } from "@/components/items/CommandList";
 import { FileList } from "@/components/items/FileList";
 import { ImageCard } from "@/components/items/ImageCard";
@@ -48,13 +47,12 @@ export default async function ItemsPage({ params, searchParams }: ItemsPageProps
   const page = parsePageParam((await searchParams).page);
   if (page === null) notFound();
 
-  // Files and images are Pro-only: Free users get the upsell, above any items
-  // they kept from an expired Pro period.
+  // Files and images are Pro-only: Free users go to the upgrade page, even with
+  // items kept from an expired Pro period.
   const isUploadType = slug === "file" || slug === "image";
-  const [{ items, totalCount }, showUpsell] = await Promise.all([
-    getItemsByType(session.user.id, slug, page),
-    isUploadType ? getPlanStatus(session.user.id).then((plan) => !canUploadFiles(plan)) : false,
-  ]);
+  if (isUploadType && !canUploadFiles(await getPlanStatus(session.user.id))) redirect("/upgrade");
+
+  const { items, totalCount } = await getItemsByType(session.user.id, slug, page);
   const pages = pageCount(totalCount, ITEMS_PER_PAGE);
   if (page > pages) notFound();
   const first = pageOffset(page, ITEMS_PER_PAGE) + 1;
@@ -66,9 +64,9 @@ export default async function ItemsPage({ params, searchParams }: ItemsPageProps
   const label = typePluralNames[slug];
   const color = typeColors[slug];
   const now = new Date().toISOString();
-  // For the New Item dialog's type picker. The upload pages already know the plan;
-  // the others read it without waiting, as the layout does for the top bar.
-  const uploadsAllowed = isUploadType ? Promise.resolve(!showUpsell) : loadUploadsAllowed();
+  // For the New Item dialog's type picker. Only Pro users reach the upload pages;
+  // the others read the plan without waiting, as the layout does for the top bar.
+  const uploadsAllowed = isUploadType ? Promise.resolve(true) : loadUploadsAllowed();
 
   return (
     <div className="flex flex-col gap-6">
@@ -83,18 +81,13 @@ export default async function ItemsPage({ params, searchParams }: ItemsPageProps
               {first}–{first + items.length - 1} of {totalCount}
             </span>
           ) : null}
-          {/* Free users on Files and Images cannot create one: the upsell is their way forward. */}
-          {showUpsell ? null : (
-            <NewItemDialog
-              uploadsAllowed={uploadsAllowed}
-              label={`New ${typeSingularNames[slug]}`}
-              iconOnlyOnMobile={false}
-            />
-          )}
+          <NewItemDialog
+            uploadsAllowed={uploadsAllowed}
+            label={`New ${typeSingularNames[slug]}`}
+            iconOnlyOnMobile={false}
+          />
         </div>
       </div>
-
-      {showUpsell ? <ProFeatureUpsell /> : null}
 
       {items.length > 0 ? (
         <>
@@ -126,7 +119,7 @@ export default async function ItemsPage({ params, searchParams }: ItemsPageProps
             </ul>
           )}
         </>
-      ) : showUpsell ? null : (
+      ) : (
         <TypeEmptyState slug={slug} />
       )}
 

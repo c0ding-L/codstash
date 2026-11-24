@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { cache } from "react";
 
 import { BILLING_PLANS, extendProUntil, isProActive, type Currency, type Plan } from "@/lib/billing-plans";
 import type { Prisma } from "@/generated/prisma/client";
@@ -16,8 +17,12 @@ export interface PlanStatus {
   collections: number;
 }
 
-/** `isPro` here is `isProActive(proUntil)`, never the stored mirror column. */
-export async function getPlanStatus(userId: string): Promise<PlanStatus> {
+/**
+ * `isPro` here is `isProActive(proUntil)`, never the stored mirror column.
+ * Cached per request: the layout's top bar, the New Item dialog and the page
+ * all ask for it, and share one read.
+ */
+export const getPlanStatus = cache(async (userId: string): Promise<PlanStatus> => {
   const [user, items, collections] = await Promise.all([
     prisma.user.findUnique({ where: { id: userId }, select: { proUntil: true } }),
     prisma.item.count({ where: { userId } }),
@@ -25,7 +30,7 @@ export async function getPlanStatus(userId: string): Promise<PlanStatus> {
   ]);
   const proUntil = user?.proUntil ?? null;
   return { proUntil, isPro: isProActive(proUntil), items, collections };
-}
+});
 
 /**
  * The Free-limit check that cannot be raced: run inside the create's

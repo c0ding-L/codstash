@@ -10,6 +10,7 @@ import {
   extendProUntil,
   formatPrice,
   formatProUntil,
+  formatYearlyPerMonth,
   isProActive,
   parseCurrency,
   toXof,
@@ -123,5 +124,16 @@ describe("toXof", () => {
     expect(() => toXof(7, "USD")).toThrow();
     expect(() => toXof(7, "USD", 0)).toThrow();
     expect(() => toXof(7, "USD", Number.NaN)).toThrow();
+  });
+});
+
+describe("formatYearlyPerMonth", () => {
+  it("shows cents for USD and EUR", () => {
+    expect(formatYearlyPerMonth("USD")).toBe("$5.25");
+    expect(formatYearlyPerMonth("EUR")).toBe("€5.25");
+  });
+
+  it("rounds XOF to the franc", () => {
+    expect(formatYearlyPerMonth("XOF")).toBe("3 000 FCFA");
   });
 });

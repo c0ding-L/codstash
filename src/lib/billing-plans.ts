@@ -62,6 +62,16 @@ export function formatPrice(amount: number, currency: Currency) {
   return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 0 }).format(amount);
 }
 
+/**
+ * The yearly price per month: "$5.25", "€5.25", "3 000 FCFA". Cents for USD/EUR,
+ * whole francs for XOF.
+ */
+export function formatYearlyPerMonth(currency: Currency) {
+  const perMonth = BILLING_PLANS.YEARLY.price[currency] / 12;
+  if (currency === "XOF") return formatPrice(Math.round(perMonth), currency);
+  return new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(perMonth);
+}
+
 const DAY_MS = 86_400_000;
 
 /** The only place that decides whether a user is Pro. Expires at `proUntil` exactly. */
