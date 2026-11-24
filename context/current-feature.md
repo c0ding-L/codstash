@@ -1,31 +1,21 @@
-# Current Feature: Pro Upsell on Files and Images
+# Current Feature
 
 ## Status
 
-Complete
+Not Started
 
 ## Goals
 
-- A Free user who opens `/items/files` or `/items/images` sees that files and images are a Pro
-  feature, with the Upgrade buttons, instead of "No files yet." / "No images yet."
-- The upsell reuses `UpgradeButtons` (`src/components/settings/UpgradeButtons.tsx`): currency
-  switch, payment methods, one checkout button per plan, same `startCheckout` flow as Settings.
-- The Pro check is `canUploadFiles(await getPlanStatus(userId))`, the same rule as the upload
-  route, `createItem` and the New Item dialog.
-- Pro users see the page exactly as today (list, or "No files yet." when empty).
-- The other type pages are unchanged.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Page: `src/app/(app)/items/[type]/page.tsx`. Only the `file` and `image` slugs get the upsell.
-- New presentational component (e.g. `src/components/billing/ProFeatureUpsell.tsx`): lock icon,
-  "Files and images are a Pro feature", one line on what Pro adds, then `UpgradeButtons` with
-  `initialCurrency = DEFAULT_CURRENCY` and `isPro = false`.
-- A Free user who still owns files or images (Pro expired) keeps seeing their items, with the
-  upsell shown above the list — the items are never hidden.
-- No server action or utility changes, so no new unit tests (components are not tested).
-- Verify in the browser with the demo account (Free): both pages show the upsell; another type
-  page still shows its list.
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — Pro Upsell on Files and Images: Free users see a Pro card with the
+Upgrade buttons on `/items/files` and `/items/images`. Outcome in the History below.
 
 ---
 
@@ -2210,3 +2200,13 @@ Environment notes that outlive any one feature:
   §10 q10–q12, live webhook + keys. 758 tests, build and lint green. Merged into `main`
   (`cb246b0`, fast-forward); branch `feature/bictorys-billing-phase-2` deleted (never pushed).
   Feature completed.
+- 2026-11-24 — Pro Upsell on Files and Images: `/items/files` and `/items/images` show
+  `ProFeatureUpsell` (`src/components/billing/ProFeatureUpsell.tsx`: lock icon, one line on Pro,
+  `UpgradeButtons` with `DEFAULT_CURRENCY`) to Free users, decided by
+  `canUploadFiles(getPlanStatus(userId))` alongside the item query; it replaces "No files yet." /
+  "No images yet." and sits above any items kept from an expired Pro period. Pro users and the
+  other type pages are unchanged. Browser-checked with the demo account (Free): upsell on Files
+  and Images, none on Snippets. The full sign-up → upgrade → Pro flow was also run in the Bictorys
+  sandbox through a tunnel (XOF monthly, webhook → SUCCEEDED, `proUntil` + 30 d). 758 tests,
+  build and lint green. Merged into `main` (`d820a00`, fast-forward); branch
+  `feature/pro-upsell-files-images` deleted (never pushed). Feature completed.
