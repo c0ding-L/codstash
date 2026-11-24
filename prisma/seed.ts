@@ -8,6 +8,9 @@
  * accounts and sessions) and recreates everything. Rows belonging to any other
  * user are never touched.
  *
+ * The demo user is a Free account, so the seed stays inside the Free limits in
+ * `src/lib/usage-limits.ts`: 3 collections at most and fewer than 50 items.
+ *
  * The system item types are upserted on a fixed id and never deleted:
  * `Item.typeId` is `onDelete: Restrict`, so removing a type any user still
  * references would fail.
@@ -182,7 +185,7 @@ Code:
   },
   {
     name: "DevOps",
-    description: "Infrastructure and deployment resources",
+    description: "Infrastructure, deployment and everyday shell commands",
     items: [
       {
         type: "snippet",
@@ -230,12 +233,6 @@ CMD ["node", "server.js"]`,
         description: "Every instruction, with the caching rules that go with it.",
         url: "https://docs.docker.com/reference/dockerfile/",
       },
-    ],
-  },
-  {
-    name: "Terminal Commands",
-    description: "Useful shell commands for everyday development",
-    items: [
       {
         type: "command",
         title: "Undo the last commit, keep the changes",
@@ -264,36 +261,6 @@ CMD ["node", "server.js"]`,
         description: "Sorts installed packages by size, biggest last.",
         language: "bash",
         content: `du -sh node_modules/* | sort -h | tail -20`,
-      },
-    ],
-  },
-  {
-    name: "Design Resources",
-    description: "UI/UX resources and references",
-    items: [
-      {
-        type: "link",
-        title: "Tailwind CSS documentation",
-        description: "Utility reference and the v4 CSS-first configuration guide.",
-        url: "https://tailwindcss.com/docs",
-      },
-      {
-        type: "link",
-        title: "shadcn/ui components",
-        description: "The component source this project copies from.",
-        url: "https://ui.shadcn.com/docs/components",
-      },
-      {
-        type: "link",
-        title: "Refactoring UI",
-        description: "Practical design rules for developers building their own UI.",
-        url: "https://www.refactoringui.com/",
-      },
-      {
-        type: "link",
-        title: "Lucide icons",
-        description: "Searchable index of the icon set used across the app.",
-        url: "https://lucide.dev/icons/",
       },
     ],
   },
