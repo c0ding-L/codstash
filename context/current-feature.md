@@ -14,6 +14,12 @@ Not Started
 
 ---
 
+Previous feature (completed) — AI Prompt Optimization: Pro users get an "Optimize" button in the
+header of a prompt in the item drawer that proposes a refined prompt to use or discard. Outcome in
+the History below.
+
+---
+
 Previous feature (completed) — AI Explain Code: Pro users get an "Explain" button in the code
 editor of the item drawer that explains a snippet or command in Markdown, with Code / Explain tabs.
 Outcome in the History below.
@@ -2335,4 +2341,28 @@ Environment notes that outlive any one feature:
   ~60 s; Favorite/Pin wait during an explanation; the streamed route is now the follow-up; light
   theme of the explanation not checked. Browser-checked with the demo account set Pro temporarily
   on develop (reset to Free after). 888 tests, build and lint green. Merged into `main` (`b731d3b`,
+  fast-forward); branch deleted (never pushed). Feature completed.
+- 2026-11-25 — AI Prompt Optimization (`feature/ai-prompt-optimization`). An "Optimize" button in
+  the header of `MarkdownEditor` in the drawer's read view, prompts only, through an opt-in
+  `optimize={{ itemId, aiAllowed, onApplied }}` prop that only `ItemBody` passes. Explain's button
+  moved to a shared `AiHeaderButton` (Pro: violet Sparkles, `Loader2` while pending; Free: amber
+  crown linking to `/upgrade`). The rewrite shows in Original / Optimized tabs as plain
+  preformatted text, not Markdown (the preview drops `<tag>` placeholders), under "Use the
+  optimized prompt?" with Discard / Use this; Copy copies the tab shown. `optimizePrompt({ itemId })`:
+  Zod, auth, `aiGate`, owner-scoped `getItemForExplain`, prompts only, refuses over 8,000
+  characters instead of truncating (the rewrite replaces the whole prompt), 3,000 tokens, 90 s.
+  `complete()` got an opt-in `rejectCutOff`: an answer stopped on the token cap is an error ("The
+  AI's answer was cut short"), never offered half-written. `parseOptimizedPrompt` strips a lead-in
+  line and a wrapping fence; `NO_CHANGES` or the original (whitespace aside) gives a "nothing to
+  change" toast. `applyOptimizedPrompt` + `updatePromptContent` (owner and `prompt` type in the
+  update's where, P2025 otherwise) write the content only and return the saved item for the
+  drawer's `onSaved`. Author's choices: dedicated save action, refuse long prompts, no Undo, no
+  placeholder check. Measured on the free Nemotron: 4.7 s direct and 7 s in the browser, 16 s for
+  a 6,000-character input, but one browser run took 91 s (provider queueing, most likely).
+  Latency accepted for now like Explain (the action blocks Favorite / Pin / Save while it runs);
+  move both to a route handler later. Open: no `maxDuration` set, and Vercel's documented
+  default with Fluid compute is 300 s, so check Fluid compute is on for the project; Discard not
+  clicked in the browser; the seeded "Code review" prompt's `updatedAt` on develop is now
+  2026-11-25 (content restored). Browser-checked with the demo account set Pro temporarily on
+  develop (reset to Free after). 921 tests, build and lint green. Merged into `main` (`a9b37cf`,
   fast-forward); branch deleted (never pushed). Feature completed.
