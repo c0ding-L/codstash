@@ -7,7 +7,7 @@ import { Suspense, useState } from "react";
 import { useEditorPreferences } from "@/components/editor/EditorPreferencesContext";
 import { Button } from "@/components/ui/button";
 import { copyToClipboard } from "@/lib/clipboard";
-import { toMonacoLanguage } from "@/lib/code-language";
+import { languageLabel, toMonacoLanguage } from "@/lib/code-language";
 import { DEFAULT_EDITOR_PREFERENCES } from "@/lib/editor-preferences";
 import { CUSTOM_MONACO_THEMES } from "@/lib/monaco-themes";
 import { cn } from "@/lib/utils";
@@ -64,7 +64,7 @@ interface CodeEditorProps {
 export function CodeEditor({ value, language, onChange, ariaLabel = "Code", className }: CodeEditorProps) {
   const readOnly = !onChange;
   const minHeight = readOnly ? 0 : MIN_EDIT_HEIGHT;
-  const label = language?.trim() || "plain text";
+  const label = languageLabel(language?.trim());
 
   return (
     <div className={cn("overflow-hidden rounded-lg border border-border bg-card", className)}>

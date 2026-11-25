@@ -5,7 +5,7 @@ import { useId, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { updateItem, type UpdateItemField, type UpdateItemInput } from "@/actions/items";
-import { CollectionsField, ContentField, Field, TagsField, useFieldErrors } from "@/components/items/item-form-fields";
+import { CollectionsField, ContentField, Field, LanguageField, TagsField, useFieldErrors } from "@/components/items/item-form-fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -95,6 +95,18 @@ export function ItemEditForm({ card, detail, slug, onCancel, onSaved, children }
           <Textarea value={description} className="resize-none" {...fieldProps("description", setDescription)} />
         </Field>
 
+        {hasLanguage ? (
+          <LanguageField
+            id={id}
+            value={language}
+            error={messageFor("language")}
+            onChange={(value) => {
+              setLanguage(value);
+              clearFor("language");
+            }}
+          />
+        ) : null}
+
         {hasContent ? (
           <ContentField
             id={id}
@@ -107,12 +119,6 @@ export function ItemEditForm({ card, detail, slug, onCancel, onSaved, children }
               clearFor("content");
             }}
           />
-        ) : null}
-
-        {hasLanguage ? (
-          <Field id={`${id}-language`} label="Language" error={messageFor("language")}>
-            <Input value={language} placeholder="e.g. typescript" {...fieldProps("language", setLanguage)} />
-          </Field>
         ) : null}
 
         {hasUrl ? (

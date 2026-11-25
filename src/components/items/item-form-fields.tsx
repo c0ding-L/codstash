@@ -15,8 +15,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { CollectionOption } from "@/lib/db/collections";
-import { isCodeType } from "@/lib/code-language";
+import { isCodeType, languageOptionsFor } from "@/lib/code-language";
 import { toTags } from "@/lib/tags";
 import type { ItemTypeSlug } from "@/types/item-type";
 
@@ -109,6 +110,42 @@ export function ContentField({ id, slug, value, language, error, onChange }: Con
           onChange={onChange}
         />
       )}
+    </Field>
+  );
+}
+
+interface LanguageFieldProps {
+  /** The form's `useId`; the field's id is `${id}-language`. */
+  id: string;
+  value: string;
+  error?: string;
+  onChange: (value: string) => void;
+}
+
+/** The language, picked from a list; the code editor below highlights with it. */
+export function LanguageField({ id, value, error, onChange }: LanguageFieldProps) {
+  const fieldId = `${id}-language`;
+  const options = languageOptionsFor(value);
+
+  return (
+    <Field id={fieldId} label="Language" error={error}>
+      <Select items={options} value={value} onValueChange={(next) => next !== null && onChange(next)}>
+        <SelectTrigger
+          id={fieldId}
+          className="w-full"
+          aria-invalid={error !== undefined || undefined}
+          aria-describedby={`${fieldId}-message`}
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </Field>
   );
 }

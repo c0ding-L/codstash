@@ -7,7 +7,7 @@ import { toast } from "sonner";
 
 import { type CreatableType, createItem, type CreateItemField, type CreateItemInput } from "@/actions/items";
 import { FileUpload } from "@/components/items/FileUpload";
-import { CollectionsField, ContentField, Field, TagsField, useFieldErrors } from "@/components/items/item-form-fields";
+import { CollectionsField, ContentField, Field, LanguageField, TagsField, useFieldErrors } from "@/components/items/item-form-fields";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -217,6 +217,18 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed }: NewItem
         </Field>
       ) : null}
 
+      {hasLanguage ? (
+        <LanguageField
+          id={id}
+          value={language}
+          error={messageFor("language")}
+          onChange={(value) => {
+            setLanguage(value);
+            clearFor("language");
+          }}
+        />
+      ) : null}
+
       {hasContent ? (
         <ContentField
           id={id}
@@ -229,12 +241,6 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed }: NewItem
             clearFor("content");
           }}
         />
-      ) : null}
-
-      {hasLanguage ? (
-        <Field id={`${id}-language`} label="Language" error={messageFor("language")}>
-          <Input value={language} placeholder="e.g. typescript" {...fieldProps("language", setLanguage)} />
-        </Field>
       ) : null}
 
       <TagsField id={id} value={tags} error={messageFor("tags")} inputProps={fieldProps("tags", setTags)} />

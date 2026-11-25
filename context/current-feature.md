@@ -1,16 +1,34 @@
-# Current Feature
+# Current Feature: Language dropdown above the code editor
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- In both the New Item dialog and the item edit form, the Language field is a dropdown
+  (`src/components/ui/select.tsx`) instead of a free-text input.
+- The Language field sits directly above the Content field for code types (snippet, command).
+- Choosing a language re-highlights the code in the Monaco editor right away, and typing keeps
+  that highlighting.
+- The dropdown lists a curated set of common languages Monaco can highlight, plus a
+  "Plain text" choice that saves an empty language.
+- An item saved earlier with a language not in the list still shows it as the selected value
+  in the edit form, and saving without touching it keeps it unchanged.
+- The CodeEditor header label shows the chosen language.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- `language` stays free text in the database and in the server actions (`ITEM_LIMITS.language`
+  = 50, `optionalText`); no schema change, no migration.
+- Highlighting already follows the language: `ContentField` passes it to `CodeEditor`, which maps
+  it with `toMonacoLanguage` (`src/lib/code-language.ts`). Today the Language input is below the
+  content, so the change is mainly the control and its position.
+- The curated list (value saved + label shown) belongs in `src/lib/code-language.ts` next to
+  `toMonacoLanguage`; each value must map to a Monaco id. Unit-test that mapping.
+- Only types where `hasLanguageField` is true show the dropdown; other types are unchanged.
+- Files: `NewItemDialog.tsx`, `ItemEditForm.tsx`, `item-form-fields.tsx` (a shared
+  `LanguageField`), `src/lib/code-language.ts`.
 
 ---
 

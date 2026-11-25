@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isCodeType, toMonacoLanguage } from "./code-language";
+import { LANGUAGE_OPTIONS, isCodeType, languageLabel, languageOptionsFor, toMonacoLanguage } from "./code-language";
 
 describe("isCodeType", () => {
   it("is true for snippets and commands only", () => {
@@ -39,5 +39,43 @@ describe("toMonacoLanguage", () => {
 
   it("passes unknown names through lowercased", () => {
     expect(toMonacoLanguage("Elixir")).toBe("elixir");
+  });
+});
+
+describe("LANGUAGE_OPTIONS", () => {
+  it("saves each language as the Monaco id it highlights with", () => {
+    for (const { value } of LANGUAGE_OPTIONS) {
+      expect(toMonacoLanguage(value)).toBe(value || "plaintext");
+    }
+  });
+
+  it("has no duplicate values", () => {
+    const values = LANGUAGE_OPTIONS.map((option) => option.value);
+    expect(new Set(values).size).toBe(values.length);
+  });
+});
+
+describe("languageOptionsFor", () => {
+  it("is the list itself for a listed language or plain text", () => {
+    expect(languageOptionsFor("python")).toBe(LANGUAGE_OPTIONS);
+    expect(languageOptionsFor("")).toBe(LANGUAGE_OPTIONS);
+  });
+
+  it("adds an unlisted saved language as it was typed", () => {
+    const options = languageOptionsFor("TS");
+    expect(options).toHaveLength(LANGUAGE_OPTIONS.length + 1);
+    expect(options.at(-1)).toEqual({ value: "TS", label: "TS" });
+  });
+});
+
+describe("languageLabel", () => {
+  it("names listed languages and plain text", () => {
+    expect(languageLabel("csharp")).toBe("C#");
+    expect(languageLabel("")).toBe("Plain text");
+    expect(languageLabel(null)).toBe("Plain text");
+  });
+
+  it("shows an unlisted language as saved", () => {
+    expect(languageLabel("elixir")).toBe("elixir");
   });
 });
