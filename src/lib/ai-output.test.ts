@@ -67,6 +67,11 @@ describe("parseDescription", () => {
     expect(parseDescription("Summary: “Lists open ports.”")).toBe("Lists open ports.");
   });
 
+  it("strips a French prefix, with or without a no-break space", () => {
+    expect(parseDescription("Description\u00a0: Liste les ports ouverts.")).toBe("Liste les ports ouverts.");
+    expect(parseDescription("Résumé : Un hook React.")).toBe("Un hook React.");
+  });
+
   it("keeps quotes inside the text", () => {
     expect(parseDescription('Runs "npm test" on save.')).toBe('Runs "npm test" on save.');
   });

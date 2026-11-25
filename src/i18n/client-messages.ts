@@ -1,11 +1,12 @@
 import type { Messages } from "next-intl";
 
 /**
- * Namespaces only the server reads (page titles and emails).
+ * Namespaces only the server reads (page titles, emails and the homepage, whose text is rendered
+ * by server components; `HomeNav`, a client component, reads `homeNav`).
  * Everything else reaches the browser: an allowlist would let a client component that uses a
  * forgotten namespace build fine and then render raw keys.
  */
-export const SERVER_ONLY_NAMESPACES = ["metadata", "emails"] as const;
+export const SERVER_ONLY_NAMESPACES = ["metadata", "emails", "home"] as const;
 
 type ServerOnly = (typeof SERVER_ONLY_NAMESPACES)[number];
 

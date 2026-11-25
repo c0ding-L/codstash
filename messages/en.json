@@ -280,7 +280,11 @@
     "page": "Page {page}"
   },
   "metadata": {
-    "page": "{page} · Cortex"
+    "page": "{page} · Cortex",
+    "home": {
+      "title": "Cortex — Developer Knowledge Hub",
+      "description": "Keep your snippets, prompts, commands, notes, files, images and links in one searchable place."
+    }
   },
   "drawer": {
     "type": "Type",
@@ -721,5 +725,91 @@
     "invalidEmail": "Enter a valid email address.",
     "tooManyAttempts": "Too many attempts. Try again later.",
     "unreachable": "Could not reach the server. Try again."
+  },
+  "homeNav": {
+    "features": "Features",
+    "pricing": "Pricing",
+    "signIn": "Sign In",
+    "getStarted": "Get Started"
+  },
+  "home": {
+    "hero": {
+      "titleStart": "Save It Once.",
+      "titleEnd": "Find It Forever.",
+      "subtitle": "Stop digging through bash history and old chats. Keep every snippet, prompt, command and link in one place, and find any of them in seconds.",
+      "getStartedFree": "Get Started Free",
+      "seeFeatures": "See Features"
+    },
+    "preview": {
+      "types": "Types",
+      "collections": "Collections",
+      "search": "Search items...",
+      "text": {
+        "useDebounce": "useDebounce hook",
+        "codeReview": "Code review prompt",
+        "postgresIndexing": "Postgres indexing",
+        "tailwindDocs": "Tailwind docs",
+        "database": "Database",
+        "reactPatterns": "React Patterns",
+        "devops": "DevOps",
+        "aiWorkflows": "AI Workflows"
+      }
+    },
+    "features": {
+      "title": "One home for everything you know",
+      "subtitle": "From a one-line command to a full design doc, everything is stored, tagged and searchable the same way.",
+      "cards": {
+        "snippets": {
+          "title": "Code Snippets",
+          "description": "Save reusable code with syntax highlighting, language tags and one-click copy."
+        },
+        "prompts": {
+          "title": "AI Prompts",
+          "description": "Keep your best prompts versioned and ready for any model."
+        },
+        "commands": {
+          "title": "Commands",
+          "description": "Never dig through bash history again. Store the commands you always forget."
+        },
+        "notes": {
+          "title": "Notes & Links",
+          "description": "Markdown notes and bookmarks living right next to your code."
+        },
+        "files": {
+          "title": "Files & Images",
+          "description": "Configs, diagrams and screenshots, attached and searchable."
+        },
+        "search": {
+          "title": "Collections & Instant Search",
+          "description": "Group anything into collections and find it in milliseconds with ⌘K."
+        }
+      }
+    },
+    "ai": {
+      "badge": "Pro Feature",
+      "title": "Smart by default",
+      "subtitle": "Drop in a snippet. AI tags it, summarizes it and helps you understand it later.",
+      "capabilities": {
+        "tagging": "Auto-tagging for every item you save",
+        "summaries": "AI summaries of long notes and files",
+        "explain": "Explain Code in plain language",
+        "optimize": "Prompt optimization for better results"
+      },
+      "generatedTags": "AI Generated Tags"
+    },
+    "pricing": {
+      "title": "Pricing that scales with you",
+      "subtitle": "Start on the free plan, upgrade for files, images and AI."
+    },
+    "cta": {
+      "title": "Never Lose a Snippet Again",
+      "subtitle": "Set up in a minute, find anything in seconds."
+    },
+    "footer": {
+      "tagline": "The developer knowledge hub for snippets, prompts, commands and more.",
+      "product": "Product",
+      "account": "Account",
+      "rights": "© {year} Cortex. All rights reserved."
+    }
   }
 }

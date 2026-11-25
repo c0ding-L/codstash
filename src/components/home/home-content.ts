@@ -1,57 +1,38 @@
+import type { Messages } from "next-intl";
+
 import type { ItemTypeSlug } from "@/types/item-type";
 
-/** Cards in the hero's dashboard preview. */
-export const previewItems: { type: ItemTypeSlug; title: string; meta: string; favorite?: boolean }[] = [
-  { type: "snippet", title: "useDebounce hook", meta: "React · TypeScript", favorite: true },
-  { type: "prompt", title: "Code review prompt", meta: "Claude · GPT" },
-  { type: "command", title: "git rebase -i HEAD~3", meta: "Git" },
-  { type: "note", title: "Postgres indexing", meta: "Database" },
-  { type: "link", title: "Tailwind docs", meta: "tailwindcss.com" },
-  { type: "file", title: "docker-compose.yml", meta: "2.1 KB" },
+/** A key of `home.preview.text`: our sample content, worded per language. */
+export type PreviewTextKey = keyof Messages["home"]["preview"]["text"];
+
+/**
+ * Text on a preview card. The samples are ours, so prose is translated by key; code, commands,
+ * file and product names are not language and stay as written; a file size is formatted for the
+ * locale.
+ */
+export type PreviewText = { key: PreviewTextKey } | { literal: string } | { bytes: number };
+
+/** Cards in the hero's dashboard preview. `id` keys the list, the same in every language. */
+export const previewItems: { id: string; type: ItemTypeSlug; title: PreviewText; meta: PreviewText; favorite?: boolean }[] = [
+  { id: "debounce", type: "snippet", title: { key: "useDebounce" }, meta: { literal: "React · TypeScript" }, favorite: true },
+  { id: "review", type: "prompt", title: { key: "codeReview" }, meta: { literal: "Claude · GPT" } },
+  { id: "rebase", type: "command", title: { literal: "git rebase -i HEAD~3" }, meta: { literal: "Git" } },
+  { id: "postgres", type: "note", title: { key: "postgresIndexing" }, meta: { key: "database" } },
+  { id: "tailwind", type: "link", title: { key: "tailwindDocs" }, meta: { literal: "tailwindcss.com" } },
+  { id: "compose", type: "file", title: { literal: "docker-compose.yml" }, meta: { bytes: 2150 } },
 ];
 
-export const previewTypes: { type: ItemTypeSlug; label: string }[] = [
-  { type: "snippet", label: "Snippets" },
-  { type: "prompt", label: "Prompts" },
-  { type: "note", label: "Notes" },
-  { type: "command", label: "Commands" },
-  { type: "file", label: "Files" },
-  { type: "image", label: "Images" },
-  { type: "link", label: "Links" },
-];
+/** The sidebar of the preview; labels are the item types' own plural names. */
+export const previewTypes: ItemTypeSlug[] = ["snippet", "prompt", "note", "command", "file", "image", "link"];
 
-export const previewCollections = ["React Patterns", "DevOps", "AI Workflows"];
+export const previewCollections: PreviewTextKey[] = ["reactPatterns", "devops", "aiWorkflows"];
 
-/** Feature cards. `type` picks the accent; `null` is the neutral card. */
-export const features: { type: ItemTypeSlug | null; title: string; description: string }[] = [
-  {
-    type: "snippet",
-    title: "Code Snippets",
-    description: "Save reusable code with syntax highlighting, language tags and one-click copy.",
-  },
-  {
-    type: "prompt",
-    title: "AI Prompts",
-    description: "Keep your best prompts versioned and ready for any model.",
-  },
-  {
-    type: "command",
-    title: "Commands",
-    description: "Never dig through bash history again. Store the commands you always forget.",
-  },
-  {
-    type: "note",
-    title: "Notes & Links",
-    description: "Markdown notes and bookmarks living right next to your code.",
-  },
-  {
-    type: "file",
-    title: "Files & Images",
-    description: "Configs, diagrams and screenshots, attached and searchable.",
-  },
-  {
-    type: null,
-    title: "Collections & Instant Search",
-    description: "Group anything into collections and find it in milliseconds with ⌘K.",
-  },
+/** Feature cards, worded in `home.features.cards`. `type` picks the accent; `null` is the neutral card. */
+export const features: { type: ItemTypeSlug | null; key: keyof Messages["home"]["features"]["cards"] }[] = [
+  { type: "snippet", key: "snippets" },
+  { type: "prompt", key: "prompts" },
+  { type: "command", key: "commands" },
+  { type: "note", key: "notes" },
+  { type: "file", key: "files" },
+  { type: null, key: "search" },
 ];

@@ -280,7 +280,11 @@
     "page": "Page {page}"
   },
   "metadata": {
-    "page": "{page} · Cortex"
+    "page": "{page} · Cortex",
+    "home": {
+      "title": "Cortex — La plateforme de connaissances des développeurs",
+      "description": "Conservez vos snippets, vos prompts, vos commandes, vos notes, vos fichiers, vos images et vos liens dans un seul et même endroit où vous pouvez effectuer des recherches."
+    }
   },
   "drawer": {
     "type": "Type",
@@ -721,5 +725,91 @@
     "invalidEmail": "Saisissez une adresse e-mail valide.",
     "tooManyAttempts": "Trop de tentatives. Réessayez plus tard.",
     "unreachable": "Impossible de joindre le serveur. Réessayez."
+  },
+  "homeNav": {
+    "features": "Fonctionnalités",
+    "pricing": "Tarifs",
+    "signIn": "Se connecter",
+    "getStarted": "Commencer"
+  },
+  "home": {
+    "hero": {
+      "titleStart": "Enregistrez-le une seule fois.",
+      "titleEnd": "Retrouvez-le à tout moment.",
+      "subtitle": "Ne perdez plus votre temps à fouiller dans l’historique de Bash et vos anciennes conversations. Conservez tous vos snippets de code, prompts, commandes et liens au même endroit, et retrouvez-les en quelques secondes.",
+      "getStartedFree": "Commencez gratuitement",
+      "seeFeatures": "Voir les fonctionnalités"
+    },
+    "preview": {
+      "types": "Types",
+      "collections": "Collections",
+      "search": "Rechercher des éléments…",
+      "text": {
+        "useDebounce": "Hook useDebounce",
+        "codeReview": "Revue de code",
+        "postgresIndexing": "Indexation Postgres",
+        "tailwindDocs": "Doc Tailwind",
+        "database": "Base de données",
+        "reactPatterns": "Modèles React",
+        "devops": "DevOps",
+        "aiWorkflows": "Flux de travail basés sur l’IA"
+      }
+    },
+    "features": {
+      "title": "Un seul et même site pour tout ce que vous savez",
+      "subtitle": "Qu’il s’agisse d’une simple ligne de commande ou d’un document de conception complet, tout est stocké, taggué et consultable de la même manière.",
+      "cards": {
+        "snippets": {
+          "title": "Snippets de code",
+          "description": "Enregistrez du code réutilisable grâce à la mise en évidence de la syntaxe, aux tags de langage et à la fonction de copie en un clic."
+        },
+        "prompts": {
+          "title": "Prompts IA",
+          "description": "Veillez à ce que vos meilleurs prompts soient classés par version et prêts à être utilisés avec n’importe quel modèle."
+        },
+        "commands": {
+          "title": "Commandes",
+          "description": "Plus besoin de fouiller dans l’historique de Bash. Enregistrez les commandes que vous oubliez toujours."
+        },
+        "notes": {
+          "title": "Notes et liens",
+          "description": "Des notes au format Markdown et des signets, directement à côté de votre code."
+        },
+        "files": {
+          "title": "Fichiers et images",
+          "description": "Fichiers de configuration, schémas et captures d’écran, joints et consultables."
+        },
+        "search": {
+          "title": "Collections et recherche instantanée",
+          "description": "Regroupez tout ce que vous souhaitez dans des collections et retrouvez-le en quelques millisecondes grâce à ⌘K."
+        }
+      }
+    },
+    "ai": {
+      "badge": "Fonctionnalité Pro",
+      "title": "Intelligent par défaut",
+      "subtitle": "Ajoutez un snippet. L’IA lui ajoute des tags, le résume et vous aide à le comprendre plus tard.",
+      "capabilities": {
+        "tagging": "Ajout automatique de tags pour chaque élément que vous enregistrez",
+        "summaries": "Résumés générés par l’IA à partir de notes et de fichiers volumineux",
+        "explain": "Expliquez le code en langage clair",
+        "optimize": "Optimisation des prompts pour de meilleurs résultats"
+      },
+      "generatedTags": "Tags générés par l’IA"
+    },
+    "pricing": {
+      "title": "Une tarification qui s’adapte à votre évolution",
+      "subtitle": "Commencez par la formule gratuite, puis passez à Pro pour accéder aux fichiers, aux images et à l’IA."
+    },
+    "cta": {
+      "title": "Ne perdez plus jamais un snippet de code",
+      "subtitle": "Une minute pour démarrer, quelques secondes pour tout retrouver."
+    },
+    "footer": {
+      "tagline": "La plateforme de connaissances destinée aux développeurs, consacrée aux snippets, aux prompts, aux commandes et bien plus encore.",
+      "product": "Produit",
+      "account": "Compte",
+      "rights": "© {year} Cortex. Tous droits réservés."
+    }
   }
 }

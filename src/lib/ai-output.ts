@@ -40,7 +40,7 @@ export function parseDescription(answer: string): string {
   let text = answer
     .replace(/```[\w-]*/g, "")
     .trim()
-    .replace(/^(?:description|summary)\s*:\s*/i, "")
+    .replace(/^(?:description|summary|résumé)\s*:\s*/iu, "")
     .replace(/(\*\*|__)(.+?)\1/g, "$2")
     .replace(/\s+/g, " ")
     .trim();

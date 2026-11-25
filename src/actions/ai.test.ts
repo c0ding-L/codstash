@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import { explainCode, generateAutoTags, generateDescription, optimizePrompt } from "@/actions/ai";
 import { auth } from "@/auth";
+import { setTestLocale } from "@/lib/__fixtures__/i18n-setup";
 import { AiProviderError, complete } from "@/lib/ai-client";
 import { getPlanStatus } from "@/lib/db/billing";
 import { getItemForExplain } from "@/lib/db/items";
@@ -525,5 +526,45 @@ describe("optimizePrompt", () => {
       data: null,
       error: "Could not optimize this prompt. Try again.",
     });
+  });
+});
+
+describe("answers in the UI language", () => {
+  /** The system prompt `complete` was called with. */
+  const systemPrompt = () => (ai.mock.calls[0]![0] as { role: string; content: string }[])[0]!.content;
+
+  it("asks Explain for French when the UI is in French", async () => {
+    setTestLocale("fr");
+    itemForExplain.mockResolvedValue({ content: "ls -la", language: "bash", slug: "command" });
+    ai.mockResolvedValue("Liste les fichiers.");
+
+    await explainCode({ itemId: "item_1" });
+
+    expect(systemPrompt()).toContain("Write the answer in French.");
+  });
+
+  it("asks Description for French when the UI is in French", async () => {
+    setTestLocale("fr");
+    ai.mockResolvedValue("Un hook React qui temporise une valeur.");
+
+    await generateDescription(INPUT);
+
+    expect(systemPrompt()).toContain("Write the answer in French.");
+  });
+
+  it("asks nothing more in English", async () => {
+    ai.mockResolvedValue("A React hook that debounces a value.");
+
+    await generateDescription(INPUT);
+
+    expect(systemPrompt()).not.toContain("French");
+  });
+
+  it("leaves Tags in the language of the content", async () => {
+    setTestLocale("fr");
+
+    await generateAutoTags(INPUT);
+
+    expect(systemPrompt()).not.toContain("French");
   });
 });

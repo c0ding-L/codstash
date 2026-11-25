@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   DESCRIPTION_CONTENT_LIMIT,
   EXPLAIN_CONTENT_LIMIT,
+  FRENCH_ANSWER_INSTRUCTION,
   NO_CHANGES_SENTINEL,
   TAG_CONTENT_LIMIT,
   descriptionMessages,
@@ -72,6 +73,37 @@ describe("descriptionMessages", () => {
 
     expect(body.length).toBeLessThanOrEqual(DESCRIPTION_CONTENT_LIMIT + 1);
     expect(body.startsWith("</ content>")).toBe(true);
+  });
+});
+
+describe("answer language", () => {
+  const ITEM = { title: "Debounce hook", content: "export function useDebounce() {}", tags: [] };
+
+  it("asks Explain and Description for French when the UI is in French", () => {
+    expect(explainMessages({ content: "ls -la", locale: "fr" })[0]!.content).toContain(FRENCH_ANSWER_INSTRUCTION);
+    expect(descriptionMessages({ ...ITEM, locale: "fr" })[0]!.content).toContain(FRENCH_ANSWER_INSTRUCTION);
+  });
+
+  it("adds nothing in English or without a locale", () => {
+    for (const messages of [
+      explainMessages({ content: "ls -la", locale: "en" }),
+      explainMessages({ content: "ls -la" }),
+      descriptionMessages({ ...ITEM, locale: "en" }),
+      descriptionMessages(ITEM),
+    ]) {
+      expect(messages[0]!.content).not.toContain("French");
+    }
+  });
+
+  it("keeps the user message the same in both languages", () => {
+    expect(explainMessages({ content: "ls -la", language: "bash", locale: "fr" })[1]).toEqual(
+      explainMessages({ content: "ls -la", language: "bash" })[1],
+    );
+  });
+
+  it("leaves Tags and Optimize in the language of the content", () => {
+    expect(tagSuggestionMessages(ITEM)[0]!.content).not.toContain("French");
+    expect(optimizePromptMessages("Résume ce texte.")[0]!.content).not.toContain("French");
   });
 });
 

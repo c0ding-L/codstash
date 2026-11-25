@@ -1,5 +1,6 @@
 "use server";
 
+import { getLocale } from "next-intl/server";
 import { z } from "zod";
 
 import { auth } from "@/auth";
@@ -30,6 +31,7 @@ import { getPlanStatus } from "@/lib/db/billing";
 import { getItemForExplain } from "@/lib/db/items";
 import { toItemTypeSlug } from "@/lib/item-type-ui";
 import { ITEM_LIMITS } from "@/lib/item-limits";
+import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/locale";
 import { checkRateLimit, tooManyAttemptsMessage } from "@/lib/rate-limit";
 import { canUseAi } from "@/lib/usage-limits";
 
@@ -67,6 +69,12 @@ const autoTagsSchema = z.object({
 });
 
 const failure = (error: string) => ({ success: false, data: null, error }) as const;
+
+/** The UI language, which the prose answers (Explain, Description) are written in. */
+async function answerLocale(): Promise<Locale> {
+  const locale = await getLocale();
+  return isLocale(locale) ? locale : DEFAULT_LOCALE;
+}
 
 /**
  * The checks every AI action makes after auth: Pro first, so Free users spend
@@ -156,7 +164,9 @@ export async function generateDescription(input: DescriptionInput): Promise<AiRe
 
     let answer: string;
     try {
-      answer = await complete(descriptionMessages(parsed.data), { maxTokens: DESCRIPTION_MAX_TOKENS });
+      answer = await complete(descriptionMessages({ ...parsed.data, locale: await answerLocale() }), {
+        maxTokens: DESCRIPTION_MAX_TOKENS,
+      });
     } catch (error) {
       if (!(error instanceof AiProviderError)) {
         console.error("[ai] generateDescription could not call the AI:", error);
@@ -200,7 +210,8 @@ export async function explainCode(input: { itemId: string }): Promise<AiResult<s
 
     let answer: string;
     try {
-      answer = await complete(explainMessages({ content: item.content, language: item.language }), {
+      const messages = explainMessages({ content: item.content, language: item.language, locale: await answerLocale() });
+      answer = await complete(messages, {
         maxTokens: EXPLAIN_MAX_TOKENS,
         timeoutMs: EXPLAIN_TIMEOUT_MS,
       });

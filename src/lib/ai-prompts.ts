@@ -1,4 +1,16 @@
 import type { AiMessage } from "@/lib/ai-client";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/locale";
+
+/**
+ * Appended to the system prompt of the answers shown as prose (Explain, Description) when the UI
+ * is in French. The prompts themselves stay in English. Optimize keeps the language of the prompt
+ * being rewritten, and Tags the language of the content, so they take no locale.
+ */
+export const FRENCH_ANSWER_INSTRUCTION = "Write the answer in French. Keep code, identifiers and commands unchanged.";
+
+function systemPrompt(prompt: string, locale: Locale) {
+  return locale === "fr" ? `${prompt}\n${FRENCH_ANSWER_INSTRUCTION}` : prompt;
+}
 
 /** Only the start of the content is sent: enough to tag it, and a bounded cost per call. */
 export const TAG_CONTENT_LIMIT = 2_000;
@@ -54,6 +66,8 @@ export interface DescriptionPromptInput {
   url?: string | null;
   fileName?: string | null;
   tags: string[];
+  /** The UI language, which the description is written in. */
+  locale?: Locale;
 }
 
 const DESCRIPTION_SYSTEM_PROMPT = [
@@ -76,6 +90,7 @@ export function descriptionMessages({
   url,
   fileName,
   tags,
+  locale = DEFAULT_LOCALE,
 }: DescriptionPromptInput): AiMessage[] {
   const lines = [
     type ? `Type: ${type}` : null,
@@ -87,7 +102,7 @@ export function descriptionMessages({
     content?.trim() ? `<content>\n${contentBody(content, DESCRIPTION_CONTENT_LIMIT)}\n</content>` : null,
   ];
   return [
-    { role: "system", content: DESCRIPTION_SYSTEM_PROMPT },
+    { role: "system", content: systemPrompt(DESCRIPTION_SYSTEM_PROMPT, locale) },
     { role: "user", content: lines.filter((line) => line !== null).join("\n") },
   ];
 }
@@ -108,7 +123,10 @@ export const TRUNCATED_MARKER = "[truncated]";
 
 export interface ExplainPromptInput {
   content: string;
+  /** The programming language of the content. */
   language?: string | null;
+  /** The UI language, which the explanation is written in. */
+  locale?: Locale;
 }
 
 const EXPLAIN_SYSTEM_PROMPT = [
@@ -123,12 +141,12 @@ const EXPLAIN_SYSTEM_PROMPT = [
  * `EXPLAIN_CONTENT_LIMIT`, marked `[truncated]` when it was, and kept inside
  * `<content>` delimiters, which it cannot close.
  */
-export function explainMessages({ content, language }: ExplainPromptInput): AiMessage[] {
+export function explainMessages({ content, language, locale = DEFAULT_LOCALE }: ExplainPromptInput): AiMessage[] {
   const truncated = content.length > EXPLAIN_CONTENT_LIMIT;
   const body = `${contentBody(content, EXPLAIN_CONTENT_LIMIT)}${truncated ? `\n${TRUNCATED_MARKER}` : ""}`;
   const lines = [language?.trim() ? `Language: ${language.trim()}` : null, `<content>\n${body}\n</content>`];
   return [
-    { role: "system", content: EXPLAIN_SYSTEM_PROMPT },
+    { role: "system", content: systemPrompt(EXPLAIN_SYSTEM_PROMPT, locale) },
     { role: "user", content: lines.filter((line) => line !== null).join("\n") },
   ];
 }

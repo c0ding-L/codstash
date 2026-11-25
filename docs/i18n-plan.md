@@ -142,6 +142,10 @@ hand-written `Accept-Language` parser is enough for two locales. `negotiator` an
 - The user menu in the top bar: a short `EN / FR` entry, for quick access.
 - Public pages (homepage, sign-in, register, forgot and reset password): a small toggle in the
   header or footer. It writes the cookie only.
+- As built: the homepage's `HomeNav` carries the toggle, and `/sign-in` and `/register`, which show
+  `HomeNav`, hide the one under their card (`AuthCard` shows it only without the nav). Forgot and
+  reset password keep the card's toggle; `/verify-email` has none (switching refreshes the page,
+  which would spend its token again).
 
 ---
 

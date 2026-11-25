@@ -1,14 +1,11 @@
 import { Check, Sparkles } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import type { ReactNode } from "react";
 
 import { Reveal } from "./Reveal";
 
-const capabilities = [
-  "Auto-tagging for every item you save",
-  "AI summaries of long notes and files",
-  "Explain Code in plain language",
-  "Prompt optimization for better results",
-];
+/** Keys of `home.ai.capabilities`, in display order. */
+const capabilities = ["tagging", "summaries", "explain", "optimize"] as const;
 
 const tags = ["react", "hooks", "typescript", "debounce", "performance"];
 
@@ -45,26 +42,26 @@ const code: ReactNode[] = [
 ];
 
 /** Pro's AI features: the checklist on one side, a snippet with generated tags on the other. */
-export function AiSection() {
+export async function AiSection() {
+  const t = await getTranslations("home.ai");
+
   return (
     <section className="border-t border-border px-4 py-28 sm:px-6">
       <div className="mx-auto grid max-w-6xl items-center gap-12 md:grid-cols-2 [&>*]:min-w-0">
         <Reveal>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-amber-400/10 px-3 py-1 text-xs font-medium text-amber-400">
             <Sparkles className="size-3.5" aria-hidden />
-            Pro Feature
+            {t("badge")}
           </span>
-          <h2 className="mt-5 text-4xl font-semibold tracking-tight text-balance">Smart by default</h2>
-          <p className="mt-4 text-muted-foreground">
-            Drop in a snippet. AI tags it, summarizes it and helps you understand it later.
-          </p>
+          <h2 className="mt-5 text-4xl font-semibold tracking-tight text-balance">{t("title")}</h2>
+          <p className="mt-4 text-muted-foreground">{t("subtitle")}</p>
           <ul className="mt-8 space-y-3">
             {capabilities.map((capability) => (
               <li key={capability} className="flex items-center gap-3 text-sm">
                 <span className="grid size-5 place-items-center rounded-full bg-emerald-400/10">
                   <Check className="size-3 text-emerald-400" aria-hidden />
                 </span>
-                {capability}
+                {t(`capabilities.${capability}`)}
               </li>
             ))}
           </ul>
@@ -86,7 +83,7 @@ export function AiSection() {
             <div className="border-t border-border bg-amber-400/[0.04] px-5 py-4">
               <p className="flex items-center gap-1.5 text-xs font-medium text-amber-400">
                 <Sparkles className="size-3.5" aria-hidden />
-                AI Generated Tags
+                {t("generatedTags")}
               </p>
               <ul className="mt-3 flex flex-wrap gap-2">
                 {tags.map((tag) => (

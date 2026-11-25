@@ -2,7 +2,7 @@
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
@@ -20,7 +20,33 @@ Not Started
 
 - Spec: `context/features/i18n-phase-4-spec.md`. Plan: `docs/i18n-plan.md` §5.6 and §8.
 - Draft French with DeepL (`DEEPL_API_KEY` in `.env`, glossary `codstash-ui-en-fr`), then review.
-- Branch: `feature/i18n-phase-4`.
+- Branch: `feature/i18n-phase-4` (the plan's `feature/i18n-home-ai` name is superseded by the spec).
+- Scope found: `src/app/page.tsx` (176 lines, server, plus its `metadata`) and
+  `src/components/home` (~630 lines): `home-content.ts` (preview items, type labels, collections,
+  feature cards), `AiSection`, `DashboardPreview`, `HomeNav`, `PricingPlans` (already French since
+  Phase 2), `ChaosBox` (icons only). No `home` namespace yet. Client components: `HomeNav`,
+  `ChaosBox`, `PricingPlans`, `Reveal`.
+- `HomeNav` also sits on `/sign-in` and `/register`, which already show the `AuthCard` toggle:
+  one toggle per page, not two.
+- Decisions (author, 2026-11-25):
+  - AI language: the plan's choice. Explain and Description answer in the UI language; Optimize
+    keeps the prompt's language, Tags the content's.
+  - Toggle: in `HomeNav`. On `/sign-in` and `/register` (which show `HomeNav`), the `AuthCard`
+    toggle is hidden so there is only one; the other auth pages keep the card's toggle.
+  - Rule: what a user types is never translated; what comes from us is. The preview samples are
+    ours, so their prose titles, details and collection names are translated; code, commands,
+    file and product names are not language and stay as written.
+  - French strings come from DeepL with the glossary; only typography and the app's fixed terms
+    are adjusted afterwards.
+  - Hand-worded with the author's OK, where DeepL changed the meaning, broke the grammar or cut
+    the preview cards: hero "Retrouvez-le à tout moment.", AI subtitle (tags, not "thèmes"), CTA
+    subtitle, the page title, and the preview titles "Hook useDebounce", "Revue de code",
+    "Doc Tailwind" (no card is cut at 1280 or 375 px, as in English).
+  - Mobile: below `sm` (640 px), `HomeNav` drops "Get Started" (the hero's call to action sits
+    right under it). English already overflowed by 4 px at 320 px before the toggle.
+- Found while building: with the toggle, the centred "Features / Pricing" links ran into the
+  buttons between 640 and ~830 px in French, so they show from `lg` (1024 px); the hero and the
+  footer link to both sections.
 
 ---
 

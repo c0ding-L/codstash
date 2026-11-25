@@ -9,9 +9,13 @@ Translate the public homepage and choose the language of the AI answers. Referen
 
 - **Homepage**: `src/components/home` (about 570 lines of marketing text) and its metadata, using the
   `home` namespace. Add an EN / FR toggle in the header or the footer.
+  - As built: the toggle is in `HomeNav`; `/sign-in` and `/register`, which show it, hide the
+    card's. `home` is server-only (`SERVER_ONLY_NAMESPACES`); `HomeNav` reads a small `homeNav`.
 - **AI** (`src/lib/ai-prompts.ts`): the system prompts stay in English.
   - **Explain** and **Description**: when `locale === "fr"`, append one line to the system prompt,
     "Write the answer in French."
+    - As built, approved by the author: "Write the answer in French. Keep code, identifiers and
+      commands unchanged.", so Explain does not translate the code it quotes.
   - **Optimize** keeps the language of the prompt being rewritten, and **Tags** the language of
     the content. No change for those two.
   - `src/actions/ai.ts` passes the locale (`getLocale()`) to the message builders.

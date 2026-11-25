@@ -1,10 +1,14 @@
 import { Folder, Search, Star } from "lucide-react";
+import { getLocale, getTranslations } from "next-intl/server";
 
+import { getItemTypeLabel } from "@/i18n/labels-server";
+import { formatFileSize } from "@/lib/format";
 import { colorClasses, typeColors, typeIcons } from "@/lib/item-type-ui";
+import { isLocale } from "@/lib/locale";
 import { cn } from "@/lib/utils";
 import type { ColorToken } from "@/types/item-type";
 
-import { previewCollections, previewItems, previewTypes } from "./home-content";
+import { previewCollections, previewItems, previewTypes, type PreviewText } from "./home-content";
 
 /** Tinted card per type colour; spelled out so Tailwind sees every class. */
 const cardClasses: Record<ColorToken, string> = {
@@ -18,7 +22,14 @@ const cardClasses: Record<ColorToken, string> = {
 };
 
 /** A small, static copy of the dashboard: types and collections, search, item cards. */
-export function DashboardPreview() {
+export async function DashboardPreview() {
+  const [t, typeLabel, locale] = await Promise.all([getTranslations("home.preview"), getItemTypeLabel(), getLocale()]);
+  const text = (value: PreviewText) => {
+    if ("key" in value) return t(`text.${value.key}`);
+    if ("bytes" in value) return formatFileSize(value.bytes, isLocale(locale) ? locale : undefined);
+    return value.literal;
+  };
+
   return (
     <div className="flex flex-col gap-3">
       <div
@@ -26,21 +37,21 @@ export function DashboardPreview() {
         aria-hidden
       >
         <aside className="hidden w-36 shrink-0 flex-col gap-0.5 border-r border-border bg-neutral-950/60 p-2.5 text-[11px] sm:flex">
-          <p className="px-1.5 pb-1 text-[10px] text-muted-foreground/70">Types</p>
-          {previewTypes.map(({ type, label }) => {
+          <p className="px-1.5 pb-1 text-[10px] text-muted-foreground/70">{t("types")}</p>
+          {previewTypes.map((type) => {
             const Icon = typeIcons[type];
             return (
               <div key={type} className="flex items-center gap-2 rounded px-1.5 py-1 text-neutral-300">
                 <Icon className={cn("size-3.5", colorClasses[typeColors[type]])} />
-                {label}
+                {typeLabel({ slug: type, name: type }, "other")}
               </div>
             );
           })}
-          <p className="mt-2 px-1.5 pb-1 text-[10px] text-muted-foreground/70">Collections</p>
-          {previewCollections.map((name) => (
-            <div key={name} className="flex items-center gap-2 px-1.5 py-1 text-neutral-400">
+          <p className="mt-2 px-1.5 pb-1 text-[10px] text-muted-foreground/70">{t("collections")}</p>
+          {previewCollections.map((key) => (
+            <div key={key} className="flex items-center gap-2 px-1.5 py-1 text-neutral-400">
               <Folder className="size-3.5" />
-              {name}
+              {t(`text.${key}`)}
             </div>
           ))}
         </aside>
@@ -48,7 +59,7 @@ export function DashboardPreview() {
         <div className="flex flex-1 flex-col gap-3 p-3">
           <div className="flex items-center gap-2 rounded-md border border-border bg-background/60 px-2.5 py-1.5 text-[11px] text-muted-foreground">
             <Search className="size-3.5" />
-            Search items...
+            {t("search")}
             <kbd className="ml-auto font-mono text-[10px]">⌘K</kbd>
           </div>
           <div className="grid flex-1 grid-cols-2 gap-2 lg:grid-cols-3">
@@ -57,7 +68,7 @@ export function DashboardPreview() {
               const Icon = typeIcons[item.type];
               return (
                 <div
-                  key={item.title}
+                  key={item.id}
                   className={cn("flex flex-col justify-between rounded-lg border p-2.5", cardClasses[color])}
                 >
                   <div className="flex items-start justify-between">
@@ -65,8 +76,8 @@ export function DashboardPreview() {
                     {item.favorite ? <Star className="size-3.5 fill-amber-400 text-amber-400" /> : null}
                   </div>
                   <div>
-                    <p className="truncate text-[11px] font-medium text-neutral-100">{item.title}</p>
-                    <p className="truncate text-[10px] text-muted-foreground">{item.meta}</p>
+                    <p className="truncate text-[11px] font-medium text-neutral-100">{text(item.title)}</p>
+                    <p className="truncate text-[10px] text-muted-foreground">{text(item.meta)}</p>
                   </div>
                 </div>
               );

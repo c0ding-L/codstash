@@ -4,8 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { cn } from "@/lib/utils";
 
 /**
- * Centered card shared by the auth pages. `withNav` adds the homepage top nav above it.
- * `languageToggle={false}` hides EN / FR, for a page that must not re-render (switching refreshes it).
+ * Centered card shared by the auth pages. `withNav` adds the homepage top nav above it, which has
+ * its own EN / FR toggle, so the card's is left out. `languageToggle={false}` hides it too, for a
+ * page that must not re-render (switching refreshes it).
  */
 export function AuthCard({
   title,
@@ -32,7 +33,7 @@ export function AuthCard({
           </CardHeader>
           <CardContent className="grid gap-4">{children}</CardContent>
         </Card>
-        {languageToggle && <LanguageToggle />}
+        {languageToggle && !withNav && <LanguageToggle />}
       </main>
     </>
   );
