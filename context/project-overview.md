@@ -157,8 +157,7 @@ model Item {
   typeId      String
   type        ItemType @relation(fields: [typeId], references: [id])
 
-  collectionId String?
-  collection   Collection? @relation(fields: [collectionId], references: [id])
+  collections ItemCollection[] // an item can sit in several collections
 
   tags        ItemTag[]
 
@@ -188,7 +187,7 @@ model Collection {
   userId      String
   user        User @relation(fields: [userId], references: [id])
 
-  items       Item[]
+  items       ItemCollection[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -200,6 +199,17 @@ model Tag {
   user   User @relation(fields: [userId], references: [id])
 
   items  ItemTag[]
+}
+
+model ItemCollection {
+  itemId       String
+  collectionId String
+  addedAt      DateTime @default(now())
+
+  item       Item       @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  @@id([itemId, collectionId])
 }
 
 model ItemTag {
@@ -219,13 +229,15 @@ model ItemTag {
 
 | Category     | Choice                       |
 | ------------ | ---------------------------- |
-| Framework    | **Next.js (React 19)**       |
+| Framework    | **Next.js 16 (App Router, Turbopack), React 19** |
 | Language     | TypeScript                   |
 | Database     | Neon PostgreSQL + Prisma ORM |
-| Caching      | Redis (optional)             |
+| Caching      | Upstash Redis (rate limiting) |
 | File Storage | Cloudflare R2                |
 | CSS/UI       | Tailwind CSS v4 + ShadCN     |
 | Auth         | NextAuth v5 (email + GitHub) |
+| Email        | Resend                       |
+| Payments     | Bictorys (one-off checkout)  |
 | AI           | OpenAI gpt-5-nano            |
 | Deployment   | Vercel (likely)              |
 | Monitoring   | Sentry (later)               |
@@ -244,6 +256,11 @@ model ItemTag {
 > days. EUR/USD prices are charged by card in XOF (fixed EUR parity, ECB rate for USD), since
 > Bictorys cards refuse EUR/USD for now; XOF also offers Mobile Money. No automatic renewal. The webhook is the only thing that grants
 > Pro; prices live in `BILLING_PLANS` (`src/lib/billing-plans.ts`).
+>
+> Upgrade flow: Free users see a subtle "Upgrade" link in the top bar that opens `/upgrade`, where
+> they pick monthly or yearly and a currency, then go to the Bictorys checkout. Free users opening
+> `/items/files` or `/items/images` are redirected to `/upgrade`. Pro users extend from
+> Settings › Plan (`/upgrade` redirects them there).
 
 ---
 
@@ -256,7 +273,7 @@ model ItemTag {
 
 ### Layout
 
-- **Collapsible sidebar** with filters & 1
+- **Collapsible sidebar** with item types, favorite collections and recent collections
 - Main grid/list workspace
 - Full‑screen item editor
 
