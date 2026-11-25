@@ -1,71 +1,21 @@
-# Current Feature: AI Auto-Tagging
+# Current Feature
 
 ## Status
 
-Complete
+Not Started
 
 ## Goals
 
-- Pro users get a "Suggest Tags" button (Sparkles icon, ghost variant) next to the tags input in
-  the create dialog (`NewItemDialog.tsx`) and the drawer edit form (`ItemEditForm.tsx`); it is
-  hidden for Free users.
-- A click sends the form's current `{ title, content, tags }` (content cut to 2000 chars) and
-  shows 3-5 freeform, lowercase suggestions as badges with accept (check) / reject (X).
-  Accepting adds the tag to the form's local tag list only; nothing is saved until Save/Create.
-- The button sits at the top right of the tags input (in the label row) and is disabled while a
-  request runs (`useTransition`). Suggestions show in blue, with a green accept tick and a red
-  reject cross. No privacy line under the button (removed at the user's request, 2026-11-25).
-- Errors (Pro gating, rate limits, AI service errors) show as toasts.
-- New provider-generic AI client `src/lib/ai-client.ts`: server-only `fetch` wrapper over Chat
-  Completions, modelled on `src/lib/bictorys.ts`, no SDK, no new dependency. `config()` reads env
-  at call time; `complete(messages, { maxTokens })` returns trimmed text; throws
-  `AiProviderError` (`provider`, `status`, `code`, `retryAfter`, message). All provider
-  differences live in one adapter in that file.
-- Switching OpenRouter → OpenAI is env vars only (`AI_PROVIDER`, `AI_MODEL`, `OPENROUTER_API_KEY`,
-  `OPENAI_API_KEY`), no code change — verified by unit tests for both providers.
-- `generateAutoTags` server action in `src/actions/ai.ts`: Zod → auth →
-  `canUseAi(await getPlanStatus(userId))` → rate limits `ai` (20/h), `aiDaily` (50/day),
-  `aiGlobal` (18/min, identifier `"global"`) → AI call → tag parser.
-- `ITEM_LIMITS` moved to `src/lib/item-limits.ts`, imported by `items.ts` and `ai.ts`.
-- `canUseAi(plan)` and `LIMIT_MESSAGES.ai` in `src/lib/usage-limits.ts`; `src/lib/load-ai-allowed.ts`
-  (copy of `load-uploads-allowed.ts`, fails closed to `false`).
-- Unit tests: `ai-client`, `aiErrorMessage`, tag parser, `ai.ts` action, `canUseAi`,
-  `load-ai-allowed`. `npm test`, `npm run build`, `npm run lint` pass.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Spec: `context/features/ai-auto-tag-spec.md` (full adapter table, error→toast table, switch-day
-  checklist). Context: `docs/ai-integration-plan.md`, `docs/ai-model-pricing.md`.
-- Provider plan: now OpenRouter free `nvidia/nemotron-3-ultra-550b-a55b:free`; around
-  2026-11-27 OpenAI direct `gpt-6-luna`. Do **not** set `AI_PROVIDER=openai` before the OpenAI
-  account has credits.
-- Env: `AI_PROVIDER` (default `openrouter`), `AI_MODEL` (default per provider), both keys. Empty
-  means default (read with `||`). Add all four to `.env.example`; blank all four in the `env`
-  block of `vitest.config.mts`.
-- Adapter: OpenRouter sends `max_tokens`, `temperature: 0.2`,
-  `reasoning: { effort: "low", exclude: true }`; OpenAI sends `max_completion_tokens`,
-  `reasoning_effort: "none"`, no temperature. No `response_format`, no
-  `provider.require_parameters`. ~300 token cap.
-- Output: ask for one comma-separated lowercase line. Parse tolerantly (strip code fences,
-  `Tags:`, quotes, then `toTags` from `src/lib/tags.ts`), lowercase, 1-50 chars, drop existing
-  tags (case-insensitive), max 5. Nothing left → "No tag suggestions for this item."
-- Empty content or `finish_reason: "length"` with no text is an **error**, not "no tags". Check a
-  top-level `error` even on 200.
-- One `aiErrorMessage(error)` helper maps errors to toasts (see spec table); spend-limit /
-  out-of-credits 429 → "AI is unavailable right now.", never "try again in N s". Log upstream
-  bodies as excerpts with provider name; never log keys or headers.
-- `AbortSignal.timeout(15_000)`, no retries, never retry on 429. AI only runs on button click.
-- Rate-limit messages: `ai` → `tooManyAttemptsMessage(reset)`; `aiDaily` → "You've used today's
-  AI requests. Try again tomorrow."; `aiGlobal` → "AI is busy, try again in a minute." Pro
-  gating runs before rate limits so Free users spend no slots.
-- `src/actions/ai.ts` is `"use server"`: exports only actions. Prompts/parsers/constants in
-  `src/lib/` (e.g. `ai-prompts.ts`, `ai-output.ts`).
-- Prompt injection: content goes inside `<content>` delimiters; system prompt says it is data.
-- UI gating flows like `uploadsAllowed`: `(app)` layout → `TopBar` → `NewItemDialog`, and
-  `items/[type]/page.tsx`; drawer: `(app)` layout → `ItemDrawerProvider` → `ItemDetails` →
-  `ItemEditForm`. `session.user.isPro` is UI only; server uses `getPlanStatus(userId)`.
-- Open questions before production on OpenRouter: free-route data policy, and the 50/day
-  account-wide free cap without $10 of OpenRouter credits.
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — AI Auto-Tagging: Pro users get a "Suggest Tags" button on the tags
+input that proposes 3-5 tags to accept or reject. Outcome in the History below.
 
 ---
 
@@ -2321,3 +2271,22 @@ Environment notes that outlive any one feature:
   editing useDebounce (TypeScript shown above highlighted code); the unlisted-language case is
   covered by unit tests only. 769 tests, build and lint green. Merged into `main` (`7b36f49`,
   fast-forward); branch `feature/language-dropdown` deleted (never pushed). Feature completed.
+- 2026-11-25 — AI Auto-Tagging: Pro users get a ghost "Suggest Tags" button (sparkles) at the top
+  right of the Tags input, in the New Item dialog and the drawer edit form. It sends the form's
+  current title, content (first 2000 chars) and tags to the new `generateAutoTags` action
+  (`src/actions/ai.ts`: Zod → auth → `canUseAi(getPlanStatus)` → rate limits `ai` 20/h, `aiDaily`
+  50/day, `aiGlobal` 18/min "global"); suggestions show as blue badges with a green accept tick and
+  a red reject cross, and accepting only edits the form (`addTag` in `src/lib/tags.ts`, no
+  case-insensitive duplicate). New provider-generic client `src/lib/ai-client.ts` (fetch over Chat
+  Completions, one adapter table, `AiProviderError`, `aiErrorMessage`, 15 s timeout, no retries):
+  OpenRouter free `nvidia/nemotron-3-ultra-550b-a55b:free` now, OpenAI `gpt-6-luna` by setting
+  `AI_PROVIDER=openai` (env only, covered by unit tests; no real OpenAI call yet). Prompt in
+  `ai-prompts.ts` (content inside `<content>`, closing tag neutralised), tolerant parser in
+  `ai-output.ts`. `ITEM_LIMITS` moved to `src/lib/item-limits.ts`; `canUseAi`,
+  `LIMIT_MESSAGES.ai`, `loadAiAllowed` streamed from the `(app)` layout like `uploadsAllowed`. On
+  the author's request the privacy line under the button was removed. Real OpenRouter call checked
+  (tags returned, $0, ~4 s, 133 reasoning tokens of the 300 cap). Browser-checked with the demo
+  account set Pro temporarily on develop (reset to Free after); the author checked the final UI.
+  Open before production on OpenRouter: free-route data policy and the 50/day account-wide cap
+  without $10 of credits. 822 tests, build and lint green. Merged into `main` (`7a31682`,
+  fast-forward); branch `feature/ai-auto-tagging` deleted (never pushed). Feature completed.
