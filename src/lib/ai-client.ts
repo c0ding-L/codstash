@@ -125,10 +125,18 @@ function readError(body: unknown) {
   };
 }
 
-/** The answer's text, trimmed. Throws `AiProviderError` on any failure, including an empty answer. */
+/**
+ * The answer's text, trimmed. Throws `AiProviderError` on any failure, including an empty answer.
+ * With `rejectCutOff`, an answer that stopped on the token cap (`finish_reason: "length"`) is an
+ * error too, for callers that would otherwise save a half-written text.
+ */
 export async function complete(
   messages: AiMessage[],
-  { maxTokens, timeoutMs = DEFAULT_TIMEOUT_MS }: { maxTokens: number; timeoutMs?: number },
+  {
+    maxTokens,
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+    rejectCutOff = false,
+  }: { maxTokens: number; timeoutMs?: number; rejectCutOff?: boolean },
 ): Promise<string> {
   const { provider, adapter, apiKey, model } = config();
 
@@ -188,8 +196,20 @@ export async function complete(
       message: `${provider} gave an empty answer`,
     });
   }
+  if (rejectCutOff && isRecord(choice) && choice.finish_reason === "length") {
+    console.error(`[ai] ${provider} answer was cut off at the token cap`);
+    throw new AiProviderError({
+      provider,
+      status: null,
+      code: CUT_OFF_CODE,
+      message: `${provider} answer was cut off`,
+    });
+  }
   return answer;
 }
+
+/** The `AiProviderError` code of an answer cut off by `rejectCutOff`. */
+export const CUT_OFF_CODE = "cut_off";
 
 const UNAVAILABLE = "AI is unavailable right now.";
 const UNAVAILABLE_TRY_AGAIN = "AI is unavailable right now. Try again.";
@@ -211,6 +231,7 @@ function busyMessage(retryAfter: number | null) {
 /** What the user is told when an AI call fails. Anything that is not an `AiProviderError` reads as unavailable. */
 export function aiErrorMessage(error: unknown): string {
   if (!(error instanceof AiProviderError)) return UNAVAILABLE;
+  if (error.code === CUT_OFF_CODE) return "The AI's answer was cut short. Try again.";
   switch (error.status) {
     case 400:
       return "AI request failed.";

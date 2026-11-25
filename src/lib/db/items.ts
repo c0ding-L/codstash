@@ -379,7 +379,7 @@ export async function getItemDetail(userId: string, id: string): Promise<ItemDet
   return { ...item, tags: tags.map(({ name }) => name) };
 }
 
-/** What `explainCode` reads: the item's code and its type, or null when it is not this user's. */
+/** What `explainCode` and `optimizePrompt` read: the item's content and its type, or null when it is not this user's. */
 export interface ItemForExplain {
   content: string | null;
   language: string | null;
@@ -387,7 +387,7 @@ export interface ItemForExplain {
   slug: string;
 }
 
-/** The content, language and type slug of one of the user's items, for the AI explanation. */
+/** The content, language and type slug of one of the user's items, for the AI explanation and optimization. */
 export async function getItemForExplain(userId: string, id: string): Promise<ItemForExplain | null> {
   const item = await prisma.item.findFirst({
     where: { id, userId },
@@ -450,15 +450,42 @@ export async function updateItem(
       tags: { deleteMany: {}, create: tagLinks(userId, tags) },
       collections: { deleteMany: {}, create: collectionLinks(collectionIds) },
     },
-    select: {
-      ...dashboardItemSelect,
-      content: true,
-      language: true,
-      createdAt: true,
-      tags: { select: { tag: { select: { name: true } } } },
-    },
+    select: savedItemSelect,
   });
+  return toSavedItem(updated);
+}
 
+/**
+ * Replaces the content of one of the user's prompts, for an accepted AI optimization, and returns
+ * both halves the drawer shows. One `update` filtered on the owner and the prompt type, so another
+ * user's item, or one that is not a prompt, throws Prisma's P2025 just as a missing one does.
+ */
+export async function updatePromptContent(
+  userId: string,
+  id: string,
+  content: string,
+): Promise<{ card: DashboardItem; detail: ItemDetail }> {
+  const updated = await prisma.item.update({
+    where: { id, userId, type: { slug: "prompt" } },
+    data: { content },
+    select: savedItemSelect,
+  });
+  return toSavedItem(updated);
+}
+
+/** What a write reads back for the drawer: the card's fields plus the detail's. */
+const savedItemSelect = {
+  ...dashboardItemSelect,
+  content: true,
+  language: true,
+  createdAt: true,
+  tags: { select: { tag: { select: { name: true } } } },
+} satisfies Prisma.ItemSelect;
+
+function toSavedItem(updated: Prisma.ItemGetPayload<{ select: typeof savedItemSelect }>): {
+  card: DashboardItem;
+  detail: ItemDetail;
+} {
   const { content, language, createdAt, tags: links, ...card } = updated;
   return {
     card: toDashboardItem(card),

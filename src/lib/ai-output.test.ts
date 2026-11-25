@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { EXPLANATION_MAX_LENGTH, parseDescription, parseExplanation, parseTagSuggestions } from "@/lib/ai-output";
+import {
+  EXPLANATION_MAX_LENGTH,
+  parseDescription,
+  parseExplanation,
+  parseOptimizedPrompt,
+  parseTagSuggestions,
+} from "@/lib/ai-output";
 
 describe("parseTagSuggestions", () => {
   it("reads a comma-separated line", () => {
@@ -131,5 +137,64 @@ describe("parseExplanation", () => {
   it("is empty when nothing usable is left", () => {
     expect(parseExplanation("   ")).toBe("");
     expect(parseExplanation("```markdown\n\n```")).toBe("");
+  });
+});
+
+describe("parseOptimizedPrompt", () => {
+  const ORIGINAL = "review my code";
+
+  it("returns the rewrite, trimmed, keeping its line breaks", () => {
+    expect(parseOptimizedPrompt("\n  Review this:\n\n{{code}}  \n", ORIGINAL)).toEqual({
+      changed: true,
+      prompt: "Review this:\n\n{{code}}",
+    });
+  });
+
+  it("reads NO_CHANGES as no change, even quoted or in code", () => {
+    for (const answer of ["NO_CHANGES", " `NO_CHANGES` ", '"NO_CHANGES."', "**NO_CHANGES**"]) {
+      expect(parseOptimizedPrompt(answer, ORIGINAL)).toEqual({ changed: false });
+    }
+  });
+
+  it("reads the original, whitespace aside, as no change", () => {
+    expect(parseOptimizedPrompt("review\n  my   code", ORIGINAL)).toEqual({ changed: false });
+  });
+
+  it("strips a lead-in line", () => {
+    for (const lead of ["Here is the improved prompt:", "Here's an optimized prompt:", "Refined prompt", "Optimised prompt:"]) {
+      expect(parseOptimizedPrompt(`${lead}\nReview the code.`, ORIGINAL)).toEqual({
+        changed: true,
+        prompt: "Review the code.",
+      });
+    }
+  });
+
+  it("keeps a first line that only mentions a prompt", () => {
+    const answer = "Write a prompt that reviews code:\nfocus on bugs.";
+    expect(parseOptimizedPrompt(answer, ORIGINAL)).toEqual({ changed: true, prompt: answer });
+  });
+
+  it("strips a fence wrapping the whole answer, with or without a language", () => {
+    for (const fence of ["```", "```text", "```markdown", "````prompt"]) {
+      const close = fence.match(/^`+/)![0];
+      expect(parseOptimizedPrompt(`${fence}\nReview the code.\n${close}`, ORIGINAL)).toEqual({
+        changed: true,
+        prompt: "Review the code.",
+      });
+    }
+  });
+
+  it("keeps code blocks that are part of the prompt", () => {
+    const answer = "```js\nconst a = 1;\n```\nExplain the code above.\n```js\nconst b = 2;\n```";
+    expect(parseOptimizedPrompt(answer, ORIGINAL)).toEqual({ changed: true, prompt: answer });
+  });
+
+  it("is null when nothing is left", () => {
+    expect(parseOptimizedPrompt("   ", ORIGINAL)).toBeNull();
+    expect(parseOptimizedPrompt("```\n\n```", ORIGINAL)).toBeNull();
+  });
+
+  it("is null rather than cut when the rewrite is over the content limit", () => {
+    expect(parseOptimizedPrompt("a".repeat(100_001), ORIGINAL)).toBeNull();
   });
 });

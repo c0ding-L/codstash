@@ -1,18 +1,17 @@
 "use client";
 
 import Editor, { type BeforeMount, type OnMount } from "@monaco-editor/react";
-import { Copy, Crown, Loader2, Sparkles } from "lucide-react";
-import Link from "next/link";
-import { Suspense, use, useState, useTransition } from "react";
+import { Copy } from "lucide-react";
+import { Suspense, useState, useTransition } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 
 import { explainCode } from "@/actions/ai";
 import { useEditorPreferences } from "@/components/editor/EditorPreferencesContext";
+import { AiHeaderButton } from "@/components/items/AiHeaderButton";
 import { markdownComponents } from "@/components/items/MarkdownEditor";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
 import { copyToClipboard } from "@/lib/clipboard";
 import { languageLabel, toMonacoLanguage } from "@/lib/code-language";
 import { DEFAULT_EDITOR_PREFERENCES } from "@/lib/editor-preferences";
@@ -131,8 +130,11 @@ export function CodeEditor({ value, language, onChange, ariaLabel = "Code", clas
         <span className="ml-auto font-mono text-xs text-muted-foreground">{label}</span>
         {explain ? (
           <Suspense fallback={null}>
-            <ExplainButton
+            <AiHeaderButton
               aiAllowed={explain.aiAllowed}
+              label="Explain"
+              pendingLabel="Explaining…"
+              hint={EXPLAIN_HINT}
               pending={pending}
               disabled={!value.trim()}
               onClick={runExplain}
@@ -184,51 +186,7 @@ export function CodeEditor({ value, language, onChange, ariaLabel = "Code", clas
   );
 }
 
-const PRO_ONLY_HINT = "AI features require Pro subscription";
 const EXPLAIN_HINT = "Explain this code with AI. Sends the code to a third-party AI provider.";
-
-interface ExplainButtonProps {
-  /** From the server's plan check. */
-  aiAllowed: Promise<boolean>;
-  pending: boolean;
-  disabled: boolean;
-  onClick: () => void;
-}
-
-/**
- * The Explain button for Pro users; for Free users, a crown linking to `/upgrade` (the drawer
- * closes on the new page). The tooltip hangs on a wrapper because a disabled button takes no
- * pointer events. The action checks the plan again.
- */
-function ExplainButton({ aiAllowed, pending, disabled, onClick }: ExplainButtonProps) {
-  const allowed = use(aiAllowed);
-  return (
-    <Tooltip>
-      <TooltipTrigger render={<span className="inline-flex" />}>
-        {allowed ? (
-          <Button type="button" variant="ghost" size="xs" disabled={pending || disabled} onClick={onClick}>
-            {pending ? (
-              <Loader2 className="animate-spin text-violet-400" aria-hidden />
-            ) : (
-              <Sparkles className="text-violet-400" aria-hidden />
-            )}
-            {pending ? "Explaining…" : "Explain"}
-          </Button>
-        ) : (
-          <Link
-            href="/upgrade"
-            aria-label={`Explain: ${PRO_ONLY_HINT}. Upgrade`}
-            className={buttonVariants({ variant: "ghost", size: "xs" })}
-          >
-            <Crown className="text-amber-400" aria-hidden />
-            Explain
-          </Link>
-        )}
-      </TooltipTrigger>
-      <TooltipContent side="bottom">{allowed ? EXPLAIN_HINT : PRO_ONLY_HINT}</TooltipContent>
-    </Tooltip>
-  );
-}
 
 function EditorPlaceholder({ value, minHeight }: { value: string; minHeight: number }) {
   const height = estimateHeight(value, minHeight, lineHeightFor(DEFAULT_EDITOR_PREFERENCES.fontSize));

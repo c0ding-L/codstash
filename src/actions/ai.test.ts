@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
-import { explainCode, generateAutoTags, generateDescription } from "@/actions/ai";
+import { explainCode, generateAutoTags, generateDescription, optimizePrompt } from "@/actions/ai";
 import { auth } from "@/auth";
 import { AiProviderError, complete } from "@/lib/ai-client";
 import { getPlanStatus } from "@/lib/db/billing";
@@ -392,6 +392,137 @@ describe("explainCode", () => {
     expect(await explainCode({ itemId: "item_1" })).toMatchObject({
       success: false,
       error: "Could not explain this code. Try again.",
+    });
+  });
+});
+
+describe("optimizePrompt", () => {
+  const PROMPT = { content: "review my code", language: null, slug: "prompt" };
+  const BETTER = "Review the code below for bugs and readability.\n\n{{code}}";
+
+  beforeEach(() => {
+    itemForExplain.mockResolvedValue(PROMPT);
+    ai.mockResolvedValue(BETTER);
+  });
+
+  it("returns the rewrite of the user's prompt, refusing a cut-off answer", async () => {
+    expect(await optimizePrompt({ itemId: "item_1" })).toEqual({ success: true, data: BETTER, error: null });
+    expect(itemForExplain).toHaveBeenCalledWith(USER_ID, "item_1");
+    expect(ai).toHaveBeenCalledWith(expect.any(Array), { maxTokens: 3_000, timeoutMs: 90_000, rejectCutOff: true });
+  });
+
+  it("sends the whole prompt inside the delimiters", async () => {
+    await optimizePrompt({ itemId: "item_1" });
+
+    const [, user] = ai.mock.calls[0]![0];
+    expect(user.content).toBe(`<content>\n${PROMPT.content}\n</content>`);
+  });
+
+  it("returns null when there is nothing to improve", async () => {
+    ai.mockResolvedValue("NO_CHANGES");
+    expect(await optimizePrompt({ itemId: "item_1" })).toEqual({ success: true, data: null, error: null });
+
+    ai.mockResolvedValue("  review   my code\n");
+    expect(await optimizePrompt({ itemId: "item_1" })).toEqual({ success: true, data: null, error: null });
+  });
+
+  it("refuses a prompt over 8,000 characters without calling the AI", async () => {
+    itemForExplain.mockResolvedValue({ ...PROMPT, content: "a".repeat(8_001) });
+
+    expect(await optimizePrompt({ itemId: "item_1" })).toEqual({
+      success: false,
+      data: null,
+      error: "This prompt is too long to optimize (at most 8,000 characters).",
+    });
+    expect(ai).not.toHaveBeenCalled();
+  });
+
+  it("accepts a prompt of exactly 8,000 characters", async () => {
+    itemForExplain.mockResolvedValue({ ...PROMPT, content: "a".repeat(8_000) });
+
+    expect(await optimizePrompt({ itemId: "item_1" })).toMatchObject({ success: true });
+  });
+
+  it("rejects invalid input before anything else", async () => {
+    expect(await optimizePrompt({ itemId: "  " })).toMatchObject({ success: false, error: "Item not found." });
+    expect(await optimizePrompt({} as { itemId: string })).toMatchObject({ success: false });
+    expect(session).not.toHaveBeenCalled();
+    expect(ai).not.toHaveBeenCalled();
+  });
+
+  it("refuses when signed out", async () => {
+    session.mockResolvedValue(null);
+
+    expect(await optimizePrompt({ itemId: "item_1" })).toEqual({ success: false, data: null, error: "You are not signed in." });
+    expect(planStatus).not.toHaveBeenCalled();
+  });
+
+  it("refuses Free users before the rate limits and the item", async () => {
+    planStatus.mockResolvedValue({ proUntil: null, isPro: false, items: 0, collections: 0 });
+
+    expect(await optimizePrompt({ itemId: "item_1" })).toEqual({ success: false, data: null, error: LIMIT_MESSAGES.ai });
+    expect(rateLimit).not.toHaveBeenCalled();
+    expect(itemForExplain).not.toHaveBeenCalled();
+  });
+
+  it("stops at a rate limit before reading the item", async () => {
+    rateLimit.mockResolvedValueOnce(allowed).mockResolvedValueOnce(blocked);
+
+    expect(await optimizePrompt({ itemId: "item_1" })).toEqual({
+      success: false,
+      data: null,
+      error: "You've used today's AI requests. Try again tomorrow.",
+    });
+    expect(itemForExplain).not.toHaveBeenCalled();
+  });
+
+  it("refuses another user's or a missing item, other types and an empty prompt", async () => {
+    itemForExplain.mockResolvedValue(null);
+    expect(await optimizePrompt({ itemId: "item_1" })).toMatchObject({ success: false, error: "Item not found." });
+
+    itemForExplain.mockResolvedValue({ ...PROMPT, slug: "snippet" });
+    expect(await optimizePrompt({ itemId: "item_1" })).toMatchObject({
+      success: false,
+      error: "Only prompts can be optimized.",
+    });
+
+    itemForExplain.mockResolvedValue({ ...PROMPT, content: "  \n " });
+    expect(await optimizePrompt({ itemId: "item_1" })).toMatchObject({
+      success: false,
+      error: "There is no prompt to optimize.",
+    });
+    expect(ai).not.toHaveBeenCalled();
+  });
+
+  it("maps an AI failure, including a cut-off answer, to its message", async () => {
+    ai.mockRejectedValue(new AiProviderError({ provider: "openrouter", status: null, code: "cut_off", message: "x" }));
+    expect(await optimizePrompt({ itemId: "item_1" })).toEqual({
+      success: false,
+      data: null,
+      error: "The AI's answer was cut short. Try again.",
+    });
+
+    ai.mockRejectedValue(new AiProviderError({ provider: "openrouter", status: 408, code: "timeout", message: "x" }));
+    expect(await optimizePrompt({ itemId: "item_1" })).toMatchObject({ error: "AI took too long. Try again." });
+  });
+
+  it("fails when the answer holds nothing usable", async () => {
+    ai.mockResolvedValue("```\n\n```");
+
+    expect(await optimizePrompt({ itemId: "item_1" })).toEqual({
+      success: false,
+      data: null,
+      error: "Could not optimize this prompt.",
+    });
+  });
+
+  it("reports an unexpected failure without details", async () => {
+    itemForExplain.mockRejectedValue(new Error("db down"));
+
+    expect(await optimizePrompt({ itemId: "item_1" })).toEqual({
+      success: false,
+      data: null,
+      error: "Could not optimize this prompt. Try again.",
     });
   });
 });

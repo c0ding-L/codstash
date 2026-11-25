@@ -122,6 +122,18 @@ describe("complete on OpenRouter (the default)", () => {
     expect(await failure()).toMatchObject({ status: null, code: "length" });
   });
 
+  it("keeps a non-empty answer cut off at the token cap, unless the caller rejects it", async () => {
+    fetchMock.mockResolvedValue(answer("Half a prom", "length"));
+    expect(await complete(MESSAGES, { maxTokens: 300 })).toBe("Half a prom");
+
+    fetchMock.mockResolvedValue(answer("Half a prom", "length"));
+    const error = await complete(MESSAGES, { maxTokens: 300, rejectCutOff: true }).catch((caught: unknown) => caught);
+    expect(error).toMatchObject({ status: null, code: "cut_off" });
+
+    fetchMock.mockResolvedValue(answer("A whole prompt."));
+    expect(await complete(MESSAGES, { maxTokens: 300, rejectCutOff: true })).toBe("A whole prompt.");
+  });
+
   it("gives up after 15 s by default, or after the caller's timeout", async () => {
     const timeout = vi.spyOn(AbortSignal, "timeout");
     // A new response per call: a body can be read only once.
@@ -233,6 +245,10 @@ describe("aiErrorMessage", () => {
     for (const code of ["project_spend_limit_exceeded", "organization_spend_limit_exceeded", "insufficient_quota"]) {
       expect(aiErrorMessage(error(429, code, 30))).toBe("AI is unavailable right now.");
     }
+  });
+
+  it("says a cut-off answer was cut short", () => {
+    expect(aiErrorMessage(error(null, "cut_off"))).toBe("The AI's answer was cut short. Try again.");
   });
 
   it("reads an empty answer, a network failure or any other error as unavailable", () => {

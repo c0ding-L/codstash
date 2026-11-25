@@ -21,6 +21,7 @@ import {
   setItemFavorite,
   setItemPinned,
   updateItem,
+  updatePromptContent,
 } from "@/lib/db/items";
 import { assertBelowLimit } from "@/lib/db/billing";
 import { MAX_ITEM_LIMIT } from "@/lib/db/limits";
@@ -451,6 +452,45 @@ describe("updateItem", () => {
     update.mockRejectedValue(Object.assign(new Error("not found"), { code: "P2025" }));
 
     await expect(updateItem(USER, "someone_elses", { title: "t", tags: [], collectionIds: [] })).rejects.toMatchObject({ code: "P2025" });
+  });
+});
+
+describe("updatePromptContent", () => {
+  const row = {
+    id: "item_1",
+    title: "Reviewer",
+    description: null,
+    fileSize: null,
+    isPinned: false,
+    isFavorite: false,
+    updatedAt: new Date(1),
+    type: { slug: "prompt", name: "Prompt", color: "purple" },
+    collections: [],
+    content: "The optimized prompt",
+    url: null,
+    fileName: null,
+    language: null,
+    createdAt: new Date(0),
+    tags: [{ tag: { name: "review" } }, { tag: { name: "ai" } }],
+  };
+
+  beforeEach(() => {
+    update.mockResolvedValue(row);
+  });
+
+  it("writes only the content, on the user's own prompt", async () => {
+    await updatePromptContent(USER, "item_1", "The optimized prompt");
+
+    const [args] = update.mock.calls[0]!;
+    expect(args.where).toEqual({ id: "item_1", userId: USER, type: { slug: "prompt" } });
+    expect(args.data).toEqual({ content: "The optimized prompt" });
+  });
+
+  it("returns the card and the detail, tags sorted", async () => {
+    const { card, detail } = await updatePromptContent(USER, "item_1", "The optimized prompt");
+
+    expect(card).toMatchObject({ id: "item_1", title: "Reviewer" });
+    expect(detail).toMatchObject({ content: "The optimized prompt", tags: ["ai", "review"], createdAt: new Date(0) });
   });
 });
 

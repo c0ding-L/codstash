@@ -72,7 +72,7 @@ interface ItemDetailsProps {
   onDeleted: (itemId: string) => void;
   onFavoriteChanged: (itemId: string, isFavorite: boolean) => void;
   onPinnedChanged: (itemId: string, isPinned: boolean) => void;
-  /** For the AI buttons: the edit form's and the code editor's Explain. */
+  /** For the AI buttons: the edit form's, the code editor's Explain and the prompt's Optimize. */
   aiAllowed: Promise<boolean>;
 }
 
@@ -154,7 +154,14 @@ export function ItemDetails({ card, state, aiAllowed, onSaved, onDeleted, onFavo
       <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
         {card.description ? <p className="text-muted-foreground">{card.description}</p> : null}
 
-        <ItemBody itemId={card.id} fileSize={card.fileSize} state={state} slug={slug} aiAllowed={aiAllowed} />
+        <ItemBody
+          itemId={card.id}
+          fileSize={card.fileSize}
+          state={state}
+          slug={slug}
+          aiAllowed={aiAllowed}
+          onSaved={onSaved}
+        />
 
         <Separator />
 

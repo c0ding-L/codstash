@@ -17,6 +17,7 @@ import {
   setItemFavorite as setItemFavoriteQuery,
   setItemPinned as setItemPinnedQuery,
   updateItem as updateItemQuery,
+  updatePromptContent,
   type DashboardItem,
   type ItemDetailJson,
 } from "@/lib/db/items";
@@ -131,6 +132,41 @@ export async function updateItem(itemId: string, input: UpdateItemInput): Promis
     if (isNotFound(error)) return { success: false, data: null, error: "This item no longer exists." };
     console.error("[items] updateItem failed:", error);
     return { success: false, data: null, error: "Could not save the item. Try again." };
+  }
+}
+
+const applyOptimizedPromptSchema = z.object({
+  itemId: z.string().trim().min(1, "Item not found.").max(100, "Item not found."),
+  content: z
+    .string()
+    .trim()
+    .min(1, "The optimized prompt is empty.")
+    .max(ITEM_LIMITS.content, `Content can be at most ${ITEM_LIMITS.content.toLocaleString("en-US")} characters.`),
+});
+
+/**
+ * Saves an AI-optimized prompt the user accepted in the drawer: only the content changes, and only
+ * on the user's own prompt. Returns the saved item, like `updateItem`, so the drawer shows it.
+ */
+export async function applyOptimizedPrompt(input: { itemId: string; content: string }): Promise<UpdateItemResult> {
+  const parsed = applyOptimizedPromptSchema.safeParse(input);
+  if (!parsed.success) return { success: false, data: null, error: parsed.error.issues[0]?.message ?? "Invalid input." };
+
+  try {
+    const session = await auth();
+    if (!session?.user?.id) return { success: false, data: null, error: "You are not signed in." };
+
+    // The query filters on the owner and the prompt type, so anything else is not found.
+    const { card, detail } = await updatePromptContent(session.user.id, parsed.data.itemId, parsed.data.content);
+    return {
+      success: true,
+      data: { card, detail: { ...detail, createdAt: detail.createdAt.toISOString() } },
+      error: null,
+    };
+  } catch (error) {
+    if (isNotFound(error)) return { success: false, data: null, error: "This item no longer exists." };
+    console.error("[items] applyOptimizedPrompt failed:", error);
+    return { success: false, data: null, error: "Could not save the prompt. Try again." };
   }
 }
 

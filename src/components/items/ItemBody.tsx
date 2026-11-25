@@ -2,6 +2,7 @@
 
 import { CodeEditor } from "@/components/items/CodeEditor";
 import type { ItemDetailState } from "@/components/items/ItemDetails";
+import type { SavedItem } from "@/components/items/ItemEditForm";
 import { ItemFileCard } from "@/components/items/ItemFileCard";
 import { MarkdownEditor } from "@/components/items/MarkdownEditor";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,13 +17,16 @@ export function ItemBody({
   state,
   slug,
   aiAllowed,
+  onSaved,
 }: {
   itemId: string;
   fileSize: number | null;
   state: ItemDetailState;
   slug: ItemTypeSlug | null;
-  /** For the code editor's Explain button. */
+  /** For the code editor's Explain button and the prompt's Optimize button. */
   aiAllowed: Promise<boolean>;
+  /** Gets the prompt once the user accepts its optimized version. */
+  onSaved: (saved: SavedItem) => void;
 }) {
   if (state.status === "loading") {
     return (
@@ -70,7 +74,13 @@ export function ItemBody({
           explain={{ itemId, aiAllowed }}
         />
       ) : content ? (
-        <MarkdownEditor value={content} ariaLabel="Content" />
+        // Keyed by item, so a suggestion never carries over to another item.
+        <MarkdownEditor
+          key={itemId}
+          value={content}
+          ariaLabel="Content"
+          optimize={slug === "prompt" ? { itemId, aiAllowed, onApplied: onSaved } : undefined}
+        />
       ) : null}
 
       {url ? (

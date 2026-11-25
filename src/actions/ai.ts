@@ -7,18 +7,24 @@ import { AiProviderError, aiErrorMessage, complete } from "@/lib/ai-client";
 import {
   NO_DESCRIPTION,
   NO_EXPLANATION,
+  NO_OPTIMIZED_PROMPT,
   NO_TAG_SUGGESTIONS,
   parseDescription,
   parseExplanation,
+  parseOptimizedPrompt,
   parseTagSuggestions,
 } from "@/lib/ai-output";
 import {
   DESCRIPTION_MAX_TOKENS,
   EXPLAIN_MAX_TOKENS,
   EXPLAIN_TIMEOUT_MS,
+  OPTIMIZE_CONTENT_LIMIT,
+  OPTIMIZE_MAX_TOKENS,
+  OPTIMIZE_TIMEOUT_MS,
   TAG_MAX_TOKENS,
   descriptionMessages,
   explainMessages,
+  optimizePromptMessages,
   tagSuggestionMessages,
 } from "@/lib/ai-prompts";
 import { isCodeType } from "@/lib/code-language";
@@ -167,14 +173,14 @@ export async function generateDescription(input: DescriptionInput): Promise<AiRe
   }
 }
 
-const explainSchema = z.object({ itemId: z.string().trim().min(1, "Item not found.").max(100, "Item not found.") });
+const itemIdSchema = z.object({ itemId: z.string().trim().min(1, "Item not found.").max(100, "Item not found.") });
 
 /**
  * A short Markdown explanation of a saved snippet or command. The server reads
  * the item itself, by owner; nothing is saved.
  */
 export async function explainCode(input: { itemId: string }): Promise<AiResult<string>> {
-  const parsed = explainSchema.safeParse(input);
+  const parsed = itemIdSchema.safeParse(input);
   if (!parsed.success) return failure(parsed.error.issues[0]?.message ?? "Invalid input.");
 
   try {
@@ -208,5 +214,56 @@ export async function explainCode(input: { itemId: string }): Promise<AiResult<s
   } catch (error) {
     console.error("[ai] explainCode failed:", error);
     return failure("Could not explain this code. Try again.");
+  }
+}
+
+/**
+ * A refined version of a saved prompt, or null when the model found nothing to improve. The
+ * server reads the item itself, by owner; nothing is saved: the drawer asks the user first, then
+ * calls `applyOptimizedPrompt`.
+ */
+export async function optimizePrompt(input: { itemId: string }): Promise<AiResult<string | null>> {
+  const parsed = itemIdSchema.safeParse(input);
+  if (!parsed.success) return failure(parsed.error.issues[0]?.message ?? "Invalid input.");
+
+  try {
+    const session = await auth();
+    if (!session?.user?.id) return failure("You are not signed in.");
+
+    const blocked = await aiGate(session.user.id);
+    if (blocked) return failure(blocked);
+
+    const item = await getItemForExplain(session.user.id, parsed.data.itemId);
+    if (!item) return failure("Item not found.");
+    if (item.slug !== "prompt") return failure("Only prompts can be optimized.");
+    const content = item.content ?? "";
+    if (!content.trim()) return failure("There is no prompt to optimize.");
+    // Refused rather than truncated: the rewrite replaces the whole prompt, so the tail would be lost.
+    if (content.length > OPTIMIZE_CONTENT_LIMIT) {
+      return failure(
+        `This prompt is too long to optimize (at most ${OPTIMIZE_CONTENT_LIMIT.toLocaleString("en-US")} characters).`,
+      );
+    }
+
+    let answer: string;
+    try {
+      answer = await complete(optimizePromptMessages(content), {
+        maxTokens: OPTIMIZE_MAX_TOKENS,
+        timeoutMs: OPTIMIZE_TIMEOUT_MS,
+        rejectCutOff: true,
+      });
+    } catch (error) {
+      if (!(error instanceof AiProviderError)) {
+        console.error("[ai] optimizePrompt could not call the AI:", error);
+      }
+      return failure(aiErrorMessage(error));
+    }
+
+    const result = parseOptimizedPrompt(answer, content);
+    if (!result) return failure(NO_OPTIMIZED_PROMPT);
+    return { success: true, data: result.changed ? result.prompt : null, error: null };
+  } catch (error) {
+    console.error("[ai] optimizePrompt failed:", error);
+    return failure("Could not optimize this prompt. Try again.");
   }
 }

@@ -85,3 +85,35 @@ export function parseExplanation(answer: string): string {
   const kept = breakAt > 0 ? cut.slice(0, breakAt) : cut;
   return `${kept.trimEnd()}…`;
 }
+
+export const NO_OPTIMIZED_PROMPT = "Could not optimize this prompt.";
+
+/** What the model made of a prompt: a rewrite, or nothing worth changing. Null when unusable. */
+export type OptimizedPrompt = { changed: true; prompt: string } | { changed: false };
+
+/** A fence around the whole answer, with or without a language, closed on the last line. */
+const WRAPPING_ANY_FENCE = /^(`{3,})[\w-]*[ \t]*\r?\n([\s\S]*?)\r?\n\1[ \t]*$/;
+/** A lead-in line such as "Here is the improved prompt:" or "Optimized prompt:". */
+const LEAD_IN = /^(?:here(?:'s| is) (?:the |an |your )?)?(?:improved|optimi[sz]ed|refined|rewritten|revised)(?: version of the)? prompt\s*:?[ \t]*\r?\n/i;
+
+const collapse = (text: string) => text.replace(/\s+/g, " ").trim();
+
+/**
+ * The rewritten prompt in a model's answer, ready to offer: without a lead-in line or a fence
+ * wrapping the whole answer, trimmed. `{ changed: false }` when the model answered `NO_CHANGES`
+ * or returned the original (whitespace aside). Null when nothing usable is left or the rewrite
+ * is over `ITEM_LIMITS.content`: cutting it would save half a prompt.
+ */
+export function parseOptimizedPrompt(answer: string, original: string): OptimizedPrompt | null {
+  let text = answer.trim();
+  if (/^[`"'*]*NO_CHANGES[`"'*.]*$/.test(text)) return { changed: false };
+
+  text = text.replace(LEAD_IN, "").trim();
+  const fenced = WRAPPING_ANY_FENCE.exec(text);
+  // Only when nothing inside opens another block at its level: otherwise it is two code blocks.
+  if (fenced && !new RegExp(`^${fenced[1]}`, "m").test(fenced[2]!)) text = fenced[2]!.trim();
+
+  if (!text || text.length > ITEM_LIMITS.content) return null;
+  if (collapse(text) === collapse(original)) return { changed: false };
+  return { changed: true, prompt: text };
+}

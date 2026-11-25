@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import { revalidatePath } from "next/cache";
 
-import { createItem, deleteItem, setItemFavorite, setItemPinned, updateItem } from "@/actions/items";
+import { applyOptimizedPrompt, createItem, deleteItem, setItemFavorite, setItemPinned, updateItem } from "@/actions/items";
 import { auth } from "@/auth";
 import { getPlanStatus } from "@/lib/db/billing";
 import { ownsCollections } from "@/lib/db/collections";
@@ -13,6 +13,7 @@ import {
   setItemFavorite as setItemFavoriteQuery,
   setItemPinned as setItemPinnedQuery,
   updateItem as updateItemQuery,
+  updatePromptContent,
 } from "@/lib/db/items";
 import { deleteObjectsQuietly, headObject } from "@/lib/r2";
 import { LimitReachedError } from "@/lib/usage-limits";
@@ -21,6 +22,7 @@ vi.mock("@/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/db/items", () => ({
   createItem: vi.fn(),
   updateItem: vi.fn(),
+  updatePromptContent: vi.fn(),
   deleteItem: vi.fn(),
   isFileKeyInUse: vi.fn(),
   setItemFavorite: vi.fn(),
@@ -43,6 +45,7 @@ const favoriteQuery = setItemFavoriteQuery as unknown as Mock;
 const pinQuery = setItemPinnedQuery as unknown as Mock;
 const revalidate = revalidatePath as unknown as Mock;
 const planStatus = getPlanStatus as unknown as Mock;
+const promptQuery = updatePromptContent as unknown as Mock;
 
 const plan = (isPro: boolean, items: number) => ({ proUntil: null, isPro, items, collections: 0 });
 
@@ -692,5 +695,69 @@ describe("createItem when the last Free slot is raced", () => {
 
     expect(result).toEqual({ success: false, data: null, error: "Free accounts can have 50 items. Upgrade to Pro in Settings." });
     expect(createQuery.mock.calls[0]![2]).toEqual({ maxItems: 50 });
+  });
+});
+
+describe("applyOptimizedPrompt", () => {
+  const saved = {
+    card: { id: "item_1", title: "Reviewer" },
+    detail: { content: "Better prompt", url: null, fileName: null, language: null, createdAt: new Date(0), tags: [] },
+  };
+
+  beforeEach(() => {
+    session.mockResolvedValue({ user: { id: USER_ID } });
+    promptQuery.mockResolvedValue(saved);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  it("saves the content and returns the item for the drawer", async () => {
+    expect(await applyOptimizedPrompt({ itemId: "item_1", content: "  Better prompt \n" })).toEqual({
+      success: true,
+      data: { card: saved.card, detail: { ...saved.detail, createdAt: new Date(0).toISOString() } },
+      error: null,
+    });
+    expect(promptQuery).toHaveBeenCalledWith(USER_ID, "item_1", "Better prompt");
+  });
+
+  it("rejects an empty or oversized prompt and a bad id before anything else", async () => {
+    expect(await applyOptimizedPrompt({ itemId: "item_1", content: "   " })).toMatchObject({
+      success: false,
+      error: "The optimized prompt is empty.",
+    });
+    expect(await applyOptimizedPrompt({ itemId: "item_1", content: "a".repeat(100_001) })).toMatchObject({ success: false });
+    expect(await applyOptimizedPrompt({ itemId: " ", content: "x" })).toMatchObject({ success: false });
+    expect(session).not.toHaveBeenCalled();
+    expect(promptQuery).not.toHaveBeenCalled();
+  });
+
+  it("refuses when signed out", async () => {
+    session.mockResolvedValue(null);
+
+    expect(await applyOptimizedPrompt({ itemId: "item_1", content: "x" })).toEqual({
+      success: false,
+      data: null,
+      error: "You are not signed in.",
+    });
+    expect(promptQuery).not.toHaveBeenCalled();
+  });
+
+  it("reports another user's item, a non-prompt or a missing one as gone", async () => {
+    promptQuery.mockRejectedValue(Object.assign(new Error("not found"), { code: "P2025" }));
+
+    expect(await applyOptimizedPrompt({ itemId: "item_1", content: "x" })).toEqual({
+      success: false,
+      data: null,
+      error: "This item no longer exists.",
+    });
+  });
+
+  it("reports any other failure without details", async () => {
+    promptQuery.mockRejectedValue(new Error("db down"));
+
+    expect(await applyOptimizedPrompt({ itemId: "item_1", content: "x" })).toEqual({
+      success: false,
+      data: null,
+      error: "Could not save the prompt. Try again.",
+    });
   });
 });
