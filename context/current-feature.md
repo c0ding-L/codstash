@@ -14,6 +14,12 @@ Not Started
 
 ---
 
+Previous feature (completed) — AI Explain Code: Pro users get an "Explain" button in the code
+editor of the item drawer that explains a snippet or command in Markdown, with Code / Explain tabs.
+Outcome in the History below.
+
+---
+
 Previous feature (completed) — AI Description Generator: Pro users get a "Generate Description"
 button on the Description field that writes 1-2 sentences from the unsaved form. Outcome in the
 History below.
@@ -2311,3 +2317,22 @@ Environment notes that outlive any one feature:
   demo account set Pro temporarily on develop (reset to Free after). 841 tests, build and lint
   green. Merged into `main` (`7312143`, fast-forward); branch deleted (never pushed). Feature
   completed.
+- 2026-11-25 — AI Explain Code (`feature/ai-explain-code`). An "Explain" button (label + icon) in
+  the `CodeEditor` header of the drawer's read view, for snippets and commands only, through an
+  opt-in `explain={{ itemId, aiAllowed }}` prop that only `ItemBody` passes (never in the forms).
+  Pro: violet Sparkles, `Loader2` while pending (`useTransition`, no double request), tooltip with
+  the provider-neutral privacy line. Free: amber crown with the "AI features require Pro
+  subscription" tooltip, a link to `/upgrade` (the drawer closes on the new page) — both choices
+  made by the author after testing. After a result, Code / Explain tabs; switching never
+  re-requests; Monaco is hidden, not unmounted; Markdown via `react-markdown` + `remark-gfm`, no
+  `rehype-raw`, with `MarkdownEditor`'s now-exported `markdownComponents`. `CodeEditor` keyed by
+  item and given `shrink-0`. `explainCode({ itemId })`: Zod, auth, `aiGate` (Pro, then `ai` /
+  `aiDaily` / `aiGlobal`), owner-scoped `getItemForExplain`, refuses other types and empty content.
+  `explainMessages` (12,000-char cap with `[truncated]`, language hint) and `parseExplanation`
+  (strips a fence wrapping the whole answer, keeps inner blocks, 4,000 cap). Measured on the free
+  Nemotron: 27-35 s direct, 42 s in the browser, so `complete()` got an optional `timeoutMs`
+  (default 15 s kept): Explain uses 60 s and 1,500 tokens. Open: Vercel max duration must allow
+  ~60 s; Favorite/Pin wait during an explanation; the streamed route is now the follow-up; light
+  theme of the explanation not checked. Browser-checked with the demo account set Pro temporarily
+  on develop (reset to Free after). 888 tests, build and lint green. Merged into `main` (`b731d3b`,
+  fast-forward); branch deleted (never pushed). Feature completed.
