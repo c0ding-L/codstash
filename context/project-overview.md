@@ -97,7 +97,7 @@ Full‑text search across:
 - Explain Code
 - Prompt optimization
 
-> AI powered by **OpenAI gpt-5-nano**
+> AI powered by **OpenRouter `nvidia/nemotron-3-ultra-550b-a55b:free`** for now, switching to **OpenAI GPT-6 Luna** (`AI_PROVIDER=openai`) once the OpenAI account has credits
 
 ---
 
@@ -238,7 +238,7 @@ model ItemTag {
 | Auth         | NextAuth v5 (email + GitHub) |
 | Email        | Resend                       |
 | Payments     | Bictorys (one-off checkout)  |
-| AI           | OpenAI gpt-5-nano            |
+| AI           | OpenRouter Nemotron 3 Ultra (free) → OpenAI GPT-6 Luna |
 | Deployment   | Vercel (likely)              |
 | Monitoring   | Sentry (later)               |
 | Unit Testing | Vitest                       |
@@ -295,7 +295,7 @@ graph TD;
   Client <--> Next.API
   Next.API --> Postgres[(Neon DB)]
   Next.API --> R2[(File Storage)]
-  Next.API --> OpenAI
+  Next.API --> AI[AI provider: OpenRouter / OpenAI]
   Next.API --> Redis[(Cache)]
 ```
 
@@ -319,8 +319,8 @@ flowchart LR
 ```mermaid
 flowchart TD
   ItemContent --> API
-  API --> OpenAI
-  OpenAI --> Suggestions{{Tags / Summary / Explain Code}}
+  API --> AI[AI provider: OpenRouter / OpenAI]
+  AI --> Suggestions{{Tags / Summary / Explain Code}}
   Suggestions --> UI_Update
 ```
 
