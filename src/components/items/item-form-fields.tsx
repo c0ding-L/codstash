@@ -27,16 +27,29 @@ interface FieldProps {
   /** Shown under the input, in place of `hint`. */
   error?: string;
   hint?: React.ReactNode;
+  /** Shown at the right of the label, e.g. a button acting on the field. */
+  action?: React.ReactNode;
   children: React.ReactNode;
 }
 
 /** A labelled input with its error or hint below, tied to it by `${id}-message`. */
-export function Field({ id, label, error, hint, children }: FieldProps) {
+export function Field({ id, label, error, hint, action, children }: FieldProps) {
+  const labelElement = (
+    <label htmlFor={id} className="text-xs font-medium text-muted-foreground">
+      {label}
+    </label>
+  );
+
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-xs font-medium text-muted-foreground">
-        {label}
-      </label>
+      {action ? (
+        <div className="flex items-center justify-between gap-2">
+          {labelElement}
+          {action}
+        </div>
+      ) : (
+        labelElement
+      )}
       {children}
       {error ? (
         <p id={`${id}-message`} className="text-xs text-destructive">
@@ -157,21 +170,29 @@ interface TagsFieldProps {
   error?: string;
   /** From `fieldProps("tags", …)`. */
   inputProps: React.ComponentProps<typeof Input>;
+  /** At the right of the label: the Suggest Tags button. */
+  action?: React.ReactNode;
+  /** Under the field: the tag suggestions. */
+  below?: React.ReactNode;
 }
 
 /** The comma-separated tags, previewed as badges as they will be saved. */
-export function TagsField({ id, value, error, inputProps }: TagsFieldProps) {
+export function TagsField({ id, value, error, inputProps, action, below }: TagsFieldProps) {
   const tags = toTags(value);
 
   return (
-    <Field
-      id={`${id}-tags`}
-      label="Tags"
-      error={error}
-      hint={tags.length > 0 ? <TagBadges tags={tags} /> : "Separate tags with commas."}
-    >
-      <Input value={value} placeholder="react, hooks" {...inputProps} />
-    </Field>
+    <div className="flex flex-col gap-1.5">
+      <Field
+        id={`${id}-tags`}
+        label="Tags"
+        error={error}
+        action={action}
+        hint={tags.length > 0 ? <TagBadges tags={tags} /> : "Separate tags with commas."}
+      >
+        <Input value={value} placeholder="react, hooks" {...inputProps} />
+      </Field>
+      {below}
+    </div>
   );
 }
 

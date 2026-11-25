@@ -72,9 +72,11 @@ interface ItemDetailsProps {
   onDeleted: (itemId: string) => void;
   onFavoriteChanged: (itemId: string, isFavorite: boolean) => void;
   onPinnedChanged: (itemId: string, isPinned: boolean) => void;
+  /** For the edit form's Suggest Tags button. */
+  aiAllowed: Promise<boolean>;
 }
 
-export function ItemDetails({ card, state, onSaved, onDeleted, onFavoriteChanged, onPinnedChanged }: ItemDetailsProps) {
+export function ItemDetails({ card, state, aiAllowed, onSaved, onDeleted, onFavoriteChanged, onPinnedChanged }: ItemDetailsProps) {
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const slug = toItemTypeSlug(card.type.slug);
@@ -110,6 +112,7 @@ export function ItemDetails({ card, state, onSaved, onDeleted, onFavoriteChanged
           card={card}
           detail={detail}
           slug={slug}
+          aiAllowed={aiAllowed}
           onCancel={() => setEditing(false)}
           onSaved={(saved) => {
             onSaved(saved);

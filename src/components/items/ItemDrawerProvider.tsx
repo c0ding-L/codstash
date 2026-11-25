@@ -24,7 +24,14 @@ export function useOpenItemDrawer() {
  * layout, so the command palette in the top bar can open an item too. The
  * clicked card's data shows at once, and only the rest waits for the fetch.
  */
-export function ItemDrawerProvider({ children }: { children: React.ReactNode }) {
+export function ItemDrawerProvider({
+  aiAllowed,
+  children,
+}: {
+  /** From the server's plan check, for the edit form's Suggest Tags button. */
+  aiAllowed: Promise<boolean>;
+  children: React.ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   // The layout outlives a navigation, so the drawer closes itself when the page
   // changes, e.g. after following a collection link inside it. Adjusted while
@@ -119,6 +126,7 @@ export function ItemDrawerProvider({ children }: { children: React.ReactNode }) 
               key={openCount}
               card={card}
               state={detail}
+              aiAllowed={aiAllowed}
               onSaved={handleSaved}
               onDeleted={handleDeleted}
               onFavoriteChanged={handleFavoriteChanged}

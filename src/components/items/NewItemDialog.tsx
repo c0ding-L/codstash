@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { type CreatableType, createItem, type CreateItemField, type CreateItemInput } from "@/actions/items";
 import { FileUpload } from "@/components/items/FileUpload";
+import { SuggestTagsButton, TagSuggestionList, useTagSuggestions } from "@/components/items/SuggestTags";
 import { CollectionsField, ContentField, Field, LanguageField, TagsField, useFieldErrors } from "@/components/items/item-form-fields";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,7 +33,7 @@ import {
   typeColors,
   typeIcons,
 } from "@/lib/item-type-ui";
-import { toTags } from "@/lib/tags";
+import { addTag, toTags } from "@/lib/tags";
 import { uploadFile } from "@/lib/upload-client";
 import { cn } from "@/lib/utils";
 
@@ -49,6 +50,8 @@ const TYPES: { slug: CreatableType; label: string }[] = [
 interface NewItemDialogProps {
   /** From the server's plan check; File and Image are disabled while it is false. */
   uploadsAllowed: Promise<boolean>;
+  /** From the server's plan check; the Suggest Tags button is hidden while it is false. */
+  aiAllowed: Promise<boolean>;
   /** The button's text. The top bar's is "New Item"; type pages say "New Snippet" and so on. */
   label?: string;
   /** The top bar shows only the icon on narrow screens; the type pages always show the text. */
@@ -59,7 +62,7 @@ interface NewItemDialogProps {
  * A "New Item" button and the dialog it opens: in the top bar, and on the type
  * pages, where the dialog starts on the page's type.
  */
-export function NewItemDialog({ uploadsAllowed, label = "New Item", iconOnlyOnMobile = true }: NewItemDialogProps) {
+export function NewItemDialog({ uploadsAllowed, aiAllowed, label = "New Item", iconOnlyOnMobile = true }: NewItemDialogProps) {
   const [open, setOpen] = useState(false);
   const [saving, startSaving] = useTransition();
 
@@ -84,6 +87,7 @@ export function NewItemDialog({ uploadsAllowed, label = "New Item", iconOnlyOnMo
             startSaving={startSaving}
             onCreated={() => setOpen(false)}
             uploadsAllowed={uploadsAllowed}
+            aiAllowed={aiAllowed}
           />
         </Suspense>
       </DialogContent>
@@ -96,9 +100,10 @@ interface NewItemFormProps {
   startSaving: TransitionStartFunction;
   onCreated: () => void;
   uploadsAllowed: Promise<boolean>;
+  aiAllowed: Promise<boolean>;
 }
 
-function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed }: NewItemFormProps) {
+function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed }: NewItemFormProps) {
   const canUpload = use(uploadsAllowed);
   const router = useRouter();
   const id = useId();
@@ -122,6 +127,15 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed }: NewItem
   const hasContent = hasContentField(type);
   const hasLanguage = hasLanguageField(type);
   const hasUrl = hasUrlField(type);
+  const tagSuggestions = useTagSuggestions({
+    title,
+    content: hasContent ? content : null,
+    tags,
+    onAccept: (tag) => {
+      setTags((current) => addTag(current, tag));
+      clearFor("tags");
+    },
+  });
   const uploadKind = isUploadKind(type) ? type : null;
   const canSubmit = title.trim() !== "" && (!hasUrl || url.trim() !== "") && (!uploadKind || file !== null);
 
@@ -243,7 +257,14 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed }: NewItem
         />
       ) : null}
 
-      <TagsField id={id} value={tags} error={messageFor("tags")} inputProps={fieldProps("tags", setTags)} />
+      <TagsField
+        id={id}
+        value={tags}
+        error={messageFor("tags")}
+        inputProps={fieldProps("tags", setTags)}
+        action={<SuggestTagsButton aiAllowed={aiAllowed} state={tagSuggestions} disabled={saving} />}
+        below={<TagSuggestionList state={tagSuggestions} disabled={saving} />}
+      />
 
       <CollectionsField
         id={id}

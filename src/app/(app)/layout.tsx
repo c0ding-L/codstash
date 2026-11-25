@@ -4,6 +4,7 @@ import { EditorPreferencesProvider } from "@/components/editor/EditorPreferences
 import { ItemDrawerProvider } from "@/components/items/ItemDrawerProvider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { loadAiAllowed } from "@/lib/load-ai-allowed";
 import { loadEditorPreferences } from "@/lib/load-editor-preferences";
 import { loadShowUpgrade } from "@/lib/load-show-upgrade";
 import { loadUploadsAllowed } from "@/lib/load-uploads-allowed";
@@ -30,6 +31,8 @@ export default function AppLayout({
   const editorPreferences = loadEditorPreferences();
   // Free accounts cannot upload; the New Item dialog disables File and Image.
   const uploadsAllowed = loadUploadsAllowed();
+  // Free accounts do not see the item forms' Suggest Tags button.
+  const aiAllowed = loadAiAllowed();
   // Free accounts get an Upgrade link in the top bar.
   const showUpgrade = loadShowUpgrade();
 
@@ -40,8 +43,8 @@ export default function AppLayout({
           <AppSidebar />
           {/* `min-w-0`: a flex item otherwise grows to its widest content, and `truncate` inside never applies. */}
           <SidebarInset className="min-w-0">
-            <ItemDrawerProvider>
-              <TopBar uploadsAllowed={uploadsAllowed} showUpgrade={showUpgrade} />
+            <ItemDrawerProvider aiAllowed={aiAllowed}>
+              <TopBar uploadsAllowed={uploadsAllowed} aiAllowed={aiAllowed} showUpgrade={showUpgrade} />
               <div className="flex-1 p-6">{children}</div>
             </ItemDrawerProvider>
           </SidebarInset>

@@ -17,6 +17,7 @@ import { TypeIconTile } from "@/components/items/TypeIconTile";
 import { getPlanStatus } from "@/lib/db/billing";
 import { getCommandTexts, getItemsByType, getPromptPreviews, getSnippetPreviews } from "@/lib/db/items";
 import { itemTypeFromSegment, itemTypeHref, typeColors, typePluralNames, typeSingularNames } from "@/lib/item-type-ui";
+import { loadAiAllowed } from "@/lib/load-ai-allowed";
 import { loadUploadsAllowed } from "@/lib/load-uploads-allowed";
 import { ITEMS_PER_PAGE, pageCount, pageOffset, parsePageParam } from "@/lib/pagination";
 import { canUploadFiles } from "@/lib/usage-limits";
@@ -67,6 +68,7 @@ export default async function ItemsPage({ params, searchParams }: ItemsPageProps
   // For the New Item dialog's type picker. Only Pro users reach the upload pages;
   // the others read the plan without waiting, as the layout does for the top bar.
   const uploadsAllowed = isUploadType ? Promise.resolve(true) : loadUploadsAllowed();
+  const aiAllowed = loadAiAllowed();
 
   return (
     <div className="flex flex-col gap-6">
@@ -83,6 +85,7 @@ export default async function ItemsPage({ params, searchParams }: ItemsPageProps
           ) : null}
           <NewItemDialog
             uploadsAllowed={uploadsAllowed}
+            aiAllowed={aiAllowed}
             label={`New ${typeSingularNames[slug]}`}
             iconOnlyOnMobile={false}
           />

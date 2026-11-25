@@ -23,11 +23,17 @@ export function canUploadFiles(plan: Pick<PlanUsage, "isPro">) {
   return plan.isPro;
 }
 
+/** The AI features (tag suggestions, …) are Pro-only. */
+export function canUseAi(plan: Pick<PlanUsage, "isPro">) {
+  return plan.isPro;
+}
+
 /** Shared wording for the actions and the upload route. */
 export const LIMIT_MESSAGES = {
   items: `Free accounts can have ${FREE_LIMITS.items} items. Upgrade to Pro in Settings.`,
   collections: `Free accounts can have ${FREE_LIMITS.collections} collections. Upgrade to Pro in Settings.`,
   uploads: "File and image uploads are a Pro feature.",
+  ai: "AI features are a Pro feature.",
 } as const;
 
 /**

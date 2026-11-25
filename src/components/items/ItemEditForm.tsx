@@ -5,6 +5,7 @@ import { useId, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { updateItem, type UpdateItemField, type UpdateItemInput } from "@/actions/items";
+import { SuggestTagsButton, TagSuggestionList, useTagSuggestions } from "@/components/items/SuggestTags";
 import { CollectionsField, ContentField, Field, LanguageField, TagsField, useFieldErrors } from "@/components/items/item-form-fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +15,7 @@ import { useRefreshAfterRemoval } from "@/hooks/use-refresh-after-removal";
 import type { DashboardItem, ItemDetailJson } from "@/lib/db/items";
 import { hasContentField, hasLanguageField, hasUrlField } from "@/lib/item-type-ui";
 import { collectionIdFromPath } from "@/lib/pagination";
-import { toTags } from "@/lib/tags";
+import { addTag, toTags } from "@/lib/tags";
 import type { ItemTypeSlug } from "@/types/item-type";
 
 export interface SavedItem {
@@ -28,11 +29,13 @@ interface ItemEditFormProps {
   slug: ItemTypeSlug | null;
   onCancel: () => void;
   onSaved: (saved: SavedItem) => void;
+  /** From the server's plan check; the Suggest Tags button is hidden while it is false. */
+  aiAllowed: Promise<boolean>;
   /** The fields that stay read-only, shown below the inputs. */
   children: React.ReactNode;
 }
 
-export function ItemEditForm({ card, detail, slug, onCancel, onSaved, children }: ItemEditFormProps) {
+export function ItemEditForm({ card, detail, slug, onCancel, onSaved, aiAllowed, children }: ItemEditFormProps) {
   const pathname = usePathname();
   const refreshAfterRemoval = useRefreshAfterRemoval();
   const id = useId();
@@ -50,6 +53,15 @@ export function ItemEditForm({ card, detail, slug, onCancel, onSaved, children }
   const hasContent = hasContentField(slug);
   const hasLanguage = hasLanguageField(slug);
   const hasUrl = hasUrlField(slug);
+  const tagSuggestions = useTagSuggestions({
+    title,
+    content: hasContent ? content : null,
+    tags,
+    onAccept: (tag) => {
+      setTags((current) => addTag(current, tag));
+      clearFor("tags");
+    },
+  });
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -127,7 +139,14 @@ export function ItemEditForm({ card, detail, slug, onCancel, onSaved, children }
           </Field>
         ) : null}
 
-        <TagsField id={id} value={tags} error={messageFor("tags")} inputProps={fieldProps("tags", setTags)} />
+        <TagsField
+          id={id}
+          value={tags}
+          error={messageFor("tags")}
+          inputProps={fieldProps("tags", setTags)}
+          action={<SuggestTagsButton aiAllowed={aiAllowed} state={tagSuggestions} disabled={saving} />}
+          below={<TagSuggestionList state={tagSuggestions} disabled={saving} />}
+        />
 
         <CollectionsField
           id={id}

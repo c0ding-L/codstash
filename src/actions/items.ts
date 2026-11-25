@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import { getPlanStatus } from "@/lib/db/billing";
 import { ownsCollections } from "@/lib/db/collections";
 import { fromObjectMetadata, isOwnKey } from "@/lib/files";
+import { ITEM_LIMITS } from "@/lib/item-limits";
 import { deleteObjectsQuietly, headObject } from "@/lib/r2";
 import { FREE_LIMITS, LIMIT_MESSAGES, LimitReachedError, canCreateItem, canUploadFiles } from "@/lib/usage-limits";
 import {
@@ -50,20 +51,6 @@ function blankToNullUntrimmed(value: unknown) {
   if (typeof value !== "string") return value;
   return value.trim() ? value : null;
 }
-
-/**
- * Caps on what one item can hold. Without them only the 1 MB action body limits a
- * field, and every tag is its own upsert in the same write.
- */
-const ITEM_LIMITS = {
-  title: 200,
-  description: 2_000,
-  content: 100_000,
-  language: 50,
-  tag: 50,
-  tags: 20,
-  collections: 20,
-} as const;
 
 function optionalText(max: number, label: string) {
   return z.preprocess(

@@ -14,6 +14,12 @@ const LIMITS = {
   reauth: { attempts: 5, window: "15 m" },
   /** Per user: each attempt creates a Bictorys charge and a PENDING payment row. */
   checkout: { attempts: 5, window: "15 m" },
+  /** Per user, shared by every AI feature. */
+  ai: { attempts: 20, window: "1 h" },
+  /** Per user, shared by every AI feature: caps one user's daily cost. */
+  aiDaily: { attempts: 50, window: "1 d" },
+  /** Whole app, identifier "global": OpenRouter's free models allow 20 requests a minute per account. */
+  aiGlobal: { attempts: 18, window: "1 m" },
 } satisfies Record<string, { attempts: number; window: Duration }>;
 
 export type RateLimitName = keyof typeof LIMITS;

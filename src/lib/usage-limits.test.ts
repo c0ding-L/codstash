@@ -6,6 +6,7 @@ import {
   canCreateCollection,
   canCreateItem,
   canUploadFiles,
+  canUseAi,
 } from "@/lib/usage-limits";
 
 const free = (items = 0, collections = 0) => ({ isPro: false, items, collections });
@@ -41,11 +42,19 @@ describe("canUploadFiles", () => {
   });
 });
 
+describe("canUseAi", () => {
+  it("is Pro-only", () => {
+    expect(canUseAi(free())).toBe(false);
+    expect(canUseAi(pro())).toBe(true);
+  });
+});
+
 describe("LIMIT_MESSAGES", () => {
   it("names the limits from FREE_LIMITS", () => {
     expect(LIMIT_MESSAGES.items).toBe(`Free accounts can have ${FREE_LIMITS.items} items. Upgrade to Pro in Settings.`);
     expect(LIMIT_MESSAGES.items).toContain("50 items");
     expect(LIMIT_MESSAGES.collections).toContain("3 collections");
     expect(LIMIT_MESSAGES.uploads).toBe("File and image uploads are a Pro feature.");
+    expect(LIMIT_MESSAGES.ai).toBe("AI features are a Pro feature.");
   });
 });

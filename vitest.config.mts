@@ -29,6 +29,10 @@ export default defineConfig({
       BICTORYS_API_KEY: "",
       BICTORYS_PRIVATE_KEY: "",
       BICTORYS_WEBHOOK_SECRET: "",
+      AI_PROVIDER: "",
+      AI_MODEL: "",
+      OPENROUTER_API_KEY: "",
+      OPENAI_API_KEY: "",
     },
     // Before each test, a mock goes back to the implementation given to `vi.fn(...)`,
     // so a `mockResolvedValue` can't leak into the next test.

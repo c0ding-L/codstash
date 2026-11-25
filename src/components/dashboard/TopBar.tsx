@@ -16,7 +16,15 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
  * before them links to `/favorites`. Free users also get an Upgrade link first,
  * streamed in once the plan is read; the `ml-auto` group pushes them all right.
  */
-export function TopBar({ uploadsAllowed, showUpgrade }: { uploadsAllowed: Promise<boolean>; showUpgrade: Promise<boolean> }) {
+export function TopBar({
+  uploadsAllowed,
+  aiAllowed,
+  showUpgrade,
+}: {
+  uploadsAllowed: Promise<boolean>;
+  aiAllowed: Promise<boolean>;
+  showUpgrade: Promise<boolean>;
+}) {
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-4">
       <SidebarTrigger />
@@ -36,7 +44,7 @@ export function TopBar({ uploadsAllowed, showUpgrade }: { uploadsAllowed: Promis
           <Star aria-hidden />
         </Link>
         <NewCollectionDialog />
-        <NewItemDialog uploadsAllowed={uploadsAllowed} />
+        <NewItemDialog uploadsAllowed={uploadsAllowed} aiAllowed={aiAllowed} />
       </div>
     </header>
   );
