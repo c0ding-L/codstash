@@ -14,6 +14,12 @@ Not Started
 
 ---
 
+Previous feature (completed) — AI Description Generator: Pro users get a "Generate Description"
+button on the Description field that writes 1-2 sentences from the unsaved form. Outcome in the
+History below.
+
+---
+
 Previous feature (completed) — AI Auto-Tagging: Pro users get a "Suggest Tags" button on the tags
 input that proposes 3-5 tags to accept or reject. Outcome in the History below.
 
@@ -2290,3 +2296,18 @@ Environment notes that outlive any one feature:
   Open before production on OpenRouter: free-route data policy and the 50/day account-wide cap
   without $10 of credits. 822 tests, build and lint green. Merged into `main` (`7a31682`,
   fast-forward); branch `feature/ai-auto-tagging` deleted (never pushed). Feature completed.
+- 2026-11-25 — AI Description Generator (`feature/ai-description-generator`). A "Generate
+  Description" button (Sparkles + label) at the right of the Description label, in the create
+  dialog and the drawer edit form, fills the field with 1-2 sentences from the form's current,
+  unsaved fields; it replaces existing text, nothing is saved until the form is. Pro only, hidden
+  for Free (`aiAllowed`). `generateDescription` in `src/actions/ai.ts` reuses `aiGate` (Pro, then
+  the shared `ai` / `aiDaily` / `aiGlobal` limits) and the auto-tag client; it sends whatever the
+  type has (type, title, language, URL, file name, tags, first 3,000 characters of content).
+  `descriptionMessages` in `ai-prompts.ts` (shared `contentBody` escaping), `parseDescription` in
+  `ai-output.ts` (prefix, fences, wrapping quotes, bold, one paragraph, 2,000-character cap at a
+  word), 500-token cap. First built as an icon-only button; the author found it too easy to miss,
+  so it got a label, and both it and Suggest Tags were muted to `text-muted-foreground` on the
+  author's request. Browser-checked on a new snippet, a new link and the edit drawer with the
+  demo account set Pro temporarily on develop (reset to Free after). 841 tests, build and lint
+  green. Merged into `main` (`7312143`, fast-forward); branch deleted (never pushed). Feature
+  completed.
