@@ -1,28 +1,34 @@
-# Current Feature: i18n (French) — Phase 2: App Pages
+# Current Feature: i18n (French) — Phase 3: Errors, Auth and Emails
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- Every signed-in page is in French when FR is chosen: dashboard, item lists, drawer (view and
-  edit), create dialog, collections, favorites, profile, settings, billing, upgrade, Pro upsell
-  cards, empty states.
-- The 42 toasts and the page `metadata` (as `generateMetadata`) are translated.
-- System type names come from `itemTypes` by slug everywhere; custom types keep their name.
-- Dates, numbers and currencies follow the locale (`format.ts`, `billing-plans.ts`, profile,
-  `ItemDetails` with an explicit locale).
-- Plurals use ICU, never concatenation.
-- `format.test.ts` and `billing-plans.test.ts` get `fr` cases; `npm test`, `npm run build` and
-  `npm run lint` pass.
+- zod schemas become factories taking a translator; limits formatted for the locale.
+- Every `error: "…"` in server actions and API routes, and `LIMIT_MESSAGES`, is translated.
+- Auth error codes (`email_not_verified`, `rate_limited`) are mapped to translated messages on
+  the client.
+- Sign-in, register, verify-email, forgot and reset password pages are in French, with an EN / FR
+  toggle (cookie only when signed out).
+- The 3 emails and their subjects follow the requester's cookie (AccountExists: the target
+  `User.locale`).
+- Action tests mock `next-intl/server` with an English translator; existing assertions unchanged.
+- `npm test`, `npm run build` and `npm run lint` pass.
 
 ## Notes
 
-- Spec: `context/features/i18n-phase-2-spec.md`. Plan: `docs/i18n-plan.md`.
-- New client namespaces go in `CLIENT_NAMESPACES` (`src/i18n/client-messages.ts`).
-- Action error messages stay English until Phase 3.
-- Branch: `feature/i18n-phase-2`.
+- Spec: `context/features/i18n-phase-3-spec.md`. Plan: `docs/i18n-plan.md`.
+- Client messages: every namespace except `SERVER_ONLY_NAMESPACES` (`src/i18n/client-messages.ts`);
+  `errors` and `emails` go there if only the server reads them.
+- Draft French with DeepL (`DEEPL_API_KEY` in `.env`, glossary `codstash-ui-en-fr`), then review.
+- Branch: `feature/i18n-phase-3`.
+
+---
+
+Previous feature (completed) — i18n Phase 2: every signed-in page in French, with translated
+toasts, titles, dates, sizes and prices. Outcome in the History below.
 
 ---
 
@@ -2398,3 +2404,20 @@ Environment notes that outlive any one feature:
   sync (0 action calls on the next reload), Accept-Language `fr-FR`/`de-DE`, back to English;
   demo account reset to `en`. 960 tests, build and lint green. Merged into `main` (`7923396`,
   fast-forward); branch deleted. Feature completed.
+- 2026-11-25 — i18n Phase 2 (app pages). Dashboard, item lists, drawer (view, edit, AI buttons),
+  New Item, collections, favorites, profile, settings, billing return, upgrade, pagination and
+  shadcn sr-only strings ("Close", sidebar) translated; page titles via `pageMetadata`
+  (`src/i18n/labels-server.ts`). Client messages switched from an allowlist to a denylist
+  (`SERVER_ONLY_NAMESPACES`). Type labels by slug through `useItemTypeLabel` / `getItemTypeLabel`
+  (`src/i18n/labels.ts`), with whole-sentence keys per type (`new`, `empty`, `edit`,
+  `description`). `src/lib` stays pure: `relativeTime` returns `{ unit, count }`, `fileKind` a
+  key, `formatFileSize` / `formatPrice` / `formatProUntil` take a locale, `PAYMENT_METHODS` and
+  `FAVORITES_SORTS` are keys, clipboard toasts are passed in. French drafted, run through DeepL
+  (glossary `codstash-ui-en-fr` on the author's account, `formality: prefer_more`), merged by
+  hand: « formule » (payment is one-off), infinitive buttons, « Langage » for code, « tokens »,
+  curly apostrophes and no-break spaces. Homepage pricing cards are shared, so they are already
+  French. Not seen in the browser (Free demo account): AI buttons and results, upload zone, empty
+  type pages, payment success. Still English for Phase 3: action/zod errors, upload errors,
+  `LIMIT_MESSAGES`, AI fallbacks. Browser-checked in FR and EN (13 routes, drawer, dialogs; no
+  MISSING_MESSAGE, no hydration error). 968 tests, build and lint green. Merged into `main`
+  (`ebffa37`, fast-forward); branch deleted. Feature completed.
