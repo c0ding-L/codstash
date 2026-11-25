@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import { changePassword, deleteAccount, type ActionResult } from "@/actions/profile";
 import { auth, signIn, signOut } from "@/auth";
+import { setTestLocale } from "@/lib/__fixtures__/i18n-setup";
 import { getItemFileKeys } from "@/lib/db/items";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -85,6 +86,15 @@ describe("changePassword", () => {
     session.mockResolvedValue(null);
 
     expect(await changePassword(INITIAL, form(valid))).toEqual({ success: false, error: "You are not signed in." });
+  });
+
+  it("words a validation error in French, with the minimum filled in", async () => {
+    setTestLocale("fr");
+
+    expect(await changePassword(INITIAL, form({ ...valid, newPassword: "short", confirmPassword: "short" }))).toEqual({
+      success: false,
+      error: "Le nouveau mot de passe doit contenir au moins 8 caractères.",
+    });
   });
 
   it("refuses an account with no password", async () => {

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -11,6 +12,8 @@ import { Input } from "@/components/ui/input";
 const MIN_PASSWORD_LENGTH = 8;
 
 export function ResetPasswordForm({ email, token }: Readonly<{ email: string; token: string }>) {
+  const t = useTranslations("auth");
+  const te = useTranslations("errors.auth");
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -24,9 +27,9 @@ export function ResetPasswordForm({ email, token }: Readonly<{ email: string; to
     const confirmPassword = String(form.get("confirmPassword") ?? "");
 
     if (password.length < MIN_PASSWORD_LENGTH) {
-      return setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+      return setError(te("passwordTooShort", { min: MIN_PASSWORD_LENGTH }));
     }
-    if (password !== confirmPassword) return setError("Passwords do not match.");
+    if (password !== confirmPassword) return setError(te("passwordsDontMatch"));
 
     setError(null);
     setPending(true);
@@ -41,19 +44,19 @@ export function ResetPasswordForm({ email, token }: Readonly<{ email: string; to
         .catch(() => ({}));
 
       if (response.status === 429) {
-        toast.error(body.error ?? "Too many attempts. Try again later.");
+        toast.error(body.error ?? t("tooManyAttempts"));
         return;
       }
       if (!response.ok || !body.success) {
-        setError(body.error ?? "Could not reset the password. Try again.");
+        setError(body.error ?? t("reset.failed"));
         if (body.code === "INVALID_TOKEN") setInvalidToken(true);
         return;
       }
       // The Toaster lives in the root layout, so the toast survives the navigation.
-      toast.success("Password updated. You can sign in now.");
+      toast.success(t("reset.updated"));
       router.push("/sign-in");
     } catch {
-      setError("Could not reach the server. Try again.");
+      setError(t("unreachable"));
     } finally {
       setPending(false);
     }
@@ -62,11 +65,11 @@ export function ResetPasswordForm({ email, token }: Readonly<{ email: string; to
   return (
     <form method="post" onSubmit={onSubmit} className="grid gap-3" noValidate>
       <label className="grid gap-1.5 text-sm font-medium">
-        New password
+        {t("newPassword")}
         <Input name="password" type="password" autoComplete="new-password" required />
       </label>
       <label className="grid gap-1.5 text-sm font-medium">
-        Confirm new password
+        {t("confirmNewPassword")}
         <Input name="confirmPassword" type="password" autoComplete="new-password" required />
       </label>
       {error ? (
@@ -74,13 +77,13 @@ export function ResetPasswordForm({ email, token }: Readonly<{ email: string; to
           {error}{" "}
           {invalidToken ? (
             <Link href="/forgot-password" className="font-medium underline underline-offset-4">
-              Send a new reset link
+              {t("reset.newLink")}
             </Link>
           ) : null}
         </p>
       ) : null}
       <Button type="submit" size="lg" disabled={pending || invalidToken}>
-        {pending ? "Saving…" : "Save new password"}
+        {pending ? t("reset.pending") : t("reset.submit")}
       </Button>
     </form>
   );

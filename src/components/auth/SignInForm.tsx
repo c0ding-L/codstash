@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useActionState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 
@@ -21,6 +22,7 @@ export function SignInForm({
   initialError: string | null;
   verificationEnabled: boolean;
 }>) {
+  const t = useTranslations("auth");
   const [state, formAction, pending] = useActionState(signInWithCredentials, initialState);
   const emailRef = useRef<HTMLInputElement>(null);
   // A rate-limit message is shown as a toast, not inline. Each submission
@@ -36,7 +38,7 @@ export function SignInForm({
       <form action={formAction} className="grid gap-3" noValidate={false}>
         <input type="hidden" name="callbackUrl" value={callbackUrl} />
         <label className="grid gap-1.5 text-sm font-medium">
-          Email
+          {t("email")}
           <Input
             // Remounted with the returned email rather than changing the
             // default value of a mounted field, which Base UI warns about.
@@ -53,13 +55,13 @@ export function SignInForm({
         <div className="grid gap-1.5">
           <div className="flex items-center justify-between text-sm">
             <label htmlFor="sign-in-password" className="font-medium">
-              Password
+              {t("password")}
             </label>
             <Link
               href="/forgot-password"
               className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
             >
-              Forgot password?
+              {t("signIn.forgot")}
             </Link>
           </div>
           <Input
@@ -78,7 +80,7 @@ export function SignInForm({
         ) : null}
         {state.unverified ? <ResendVerificationButton email={state.email} /> : null}
         <Button type="submit" size="lg" disabled={pending}>
-          {pending ? "Signing in…" : "Sign in"}
+          {pending ? t("signIn.pending") : t("signIn.submit")}
         </Button>
       </form>
 
@@ -86,7 +88,7 @@ export function SignInForm({
         <div className="-mt-1 text-center">
           <ResendVerificationButton
             getEmail={() => emailRef.current?.value ?? ""}
-            label="Did not get the verification email? Send it again"
+            label={t("signIn.resendLink")}
             variant="link"
           />
         </div>
@@ -95,14 +97,14 @@ export function SignInForm({
       <form action={signInWithGitHub}>
         <input type="hidden" name="callbackUrl" value={callbackUrl} />
         <Button type="submit" variant="outline" size="lg" className="w-full">
-          Sign in with GitHub
+          {t("signIn.github")}
         </Button>
       </form>
 
       <p className="text-center text-sm text-muted-foreground">
-        No account?{" "}
+        {t("signIn.noAccount")}{" "}
         <Link href="/register" className="font-medium text-foreground underline-offset-4 hover:underline">
-          Register
+          {t("signIn.register")}
         </Link>
       </p>
     </>

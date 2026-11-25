@@ -37,9 +37,14 @@ full build.
 
 ## Testing
 
-Vitest runs in a Node environment and only picks up `src/actions/**/*.test.ts` and
-`src/lib/**/*.test.ts`. **Server actions and utilities only — components are not tested**, so
-there is no jsdom or Testing Library. Tests sit next to the file they cover.
+Vitest runs in a Node environment and only picks up `src/actions/**/*.test.ts`,
+`src/app/api/**/*.test.ts` and `src/lib/**/*.test.ts`. **Server actions, route handlers and
+utilities only — components are not tested**, so there is no jsdom or Testing Library. Tests sit
+next to the file they cover.
+
+- `setupFiles` mocks `next-intl/server` with the real catalogs, in English; call
+  `setTestLocale("fr")` from `@/lib/__fixtures__/i18n-setup` for a French case. A route handler
+  test also mocks `@/i18n/request` (it reads cookies) and `after` from `next/server`.
 
 - Mock `@/auth`, `@/lib/prisma` and `next/navigation` with `vi.mock`. Tests must never reach a
   real service: `vitest.config.mts` blanks `DATABASE_URL`, `RESEND_API_KEY` and the Upstash

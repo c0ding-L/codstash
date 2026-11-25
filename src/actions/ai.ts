@@ -3,12 +3,10 @@
 import { z } from "zod";
 
 import { auth } from "@/auth";
+import { errKey } from "@/i18n/error-keys";
+import { getErrors } from "@/i18n/errors-server";
 import { AiProviderError, aiErrorMessage, complete } from "@/lib/ai-client";
 import {
-  NO_DESCRIPTION,
-  NO_EXPLANATION,
-  NO_OPTIMIZED_PROMPT,
-  NO_TAG_SUGGESTIONS,
   parseDescription,
   parseExplanation,
   parseOptimizedPrompt,
@@ -33,7 +31,7 @@ import { getItemForExplain } from "@/lib/db/items";
 import { toItemTypeSlug } from "@/lib/item-type-ui";
 import { ITEM_LIMITS } from "@/lib/item-limits";
 import { checkRateLimit, tooManyAttemptsMessage } from "@/lib/rate-limit";
-import { LIMIT_MESSAGES, canUseAi } from "@/lib/usage-limits";
+import { canUseAi } from "@/lib/usage-limits";
 
 export type AiResult<T> = { success: true; data: T; error: null } | { success: false; data: null; error: string };
 
@@ -50,11 +48,11 @@ const autoTagsSchema = z.object({
   title: z
     .string()
     .trim()
-    .min(1, "Add a title first.")
-    .max(ITEM_LIMITS.title, `Title can be at most ${ITEM_LIMITS.title} characters.`),
+    .min(1, errKey("ai.addTitleFirst"))
+    .max(ITEM_LIMITS.title, errKey("items.titleTooLong")),
   content: z
     .string()
-    .max(ITEM_LIMITS.content, `Content can be at most ${ITEM_LIMITS.content.toLocaleString("en-US")} characters.`)
+    .max(ITEM_LIMITS.content, errKey("items.contentTooLong"))
     .nullable()
     .optional(),
   tags: z
@@ -62,10 +60,10 @@ const autoTagsSchema = z.object({
       z
         .string()
         .trim()
-        .min(1, "Tags cannot be empty.")
-        .max(ITEM_LIMITS.tag, `Each tag can be at most ${ITEM_LIMITS.tag} characters.`),
+        .min(1, errKey("items.tagEmpty"))
+        .max(ITEM_LIMITS.tag, errKey("items.tagTooLong")),
     )
-    .max(ITEM_LIMITS.tags, `An item can have at most ${ITEM_LIMITS.tags} tags.`),
+    .max(ITEM_LIMITS.tags, errKey("items.tooManyTags")),
 });
 
 const failure = (error: string) => ({ success: false, data: null, error }) as const;
@@ -75,28 +73,29 @@ const failure = (error: string) => ({ success: false, data: null, error }) as co
  * no limiter slots, then the per-user, daily and app-wide limits. The error
  * to show, or null to go ahead.
  */
-async function aiGate(userId: string): Promise<string | null> {
-  if (!canUseAi(await getPlanStatus(userId))) return LIMIT_MESSAGES.ai;
+async function aiGate(userId: string, e: Awaited<ReturnType<typeof getErrors>>): Promise<string | null> {
+  if (!canUseAi(await getPlanStatus(userId))) return e.message("limits.ai");
 
   const hourly = await checkRateLimit("ai", userId);
-  if (!hourly.success) return tooManyAttemptsMessage(hourly.reset);
+  if (!hourly.success) return await tooManyAttemptsMessage(hourly.reset);
   const daily = await checkRateLimit("aiDaily", userId);
-  if (!daily.success) return "You've used today's AI requests. Try again tomorrow.";
+  if (!daily.success) return e.message("ai.dailyLimit");
   const global = await checkRateLimit("aiGlobal", "global");
-  if (!global.success) return "AI is busy, try again in a minute.";
+  if (!global.success) return e.message("ai.busy");
   return null;
 }
 
 /** 3-5 new tags for the item in the form. Nothing is saved: the form adds the ones the user accepts. */
 export async function generateAutoTags(input: AutoTagsInput): Promise<AiResult<string[]>> {
+  const e = await getErrors();
   const parsed = autoTagsSchema.safeParse(input);
-  if (!parsed.success) return failure(parsed.error.issues[0]?.message ?? "Invalid input.");
+  if (!parsed.success) return failure(e.issue(parsed.error.issues[0]));
 
   try {
     const session = await auth();
-    if (!session?.user?.id) return failure("You are not signed in.");
+    if (!session?.user?.id) return failure(e.message("notSignedIn"));
 
-    const blocked = await aiGate(session.user.id);
+    const blocked = await aiGate(session.user.id, e);
     if (blocked) return failure(blocked);
 
     let answer: string;
@@ -107,15 +106,15 @@ export async function generateAutoTags(input: AutoTagsInput): Promise<AiResult<s
       if (!(error instanceof AiProviderError)) {
         console.error("[ai] generateAutoTags could not call the AI:", error);
       }
-      return failure(aiErrorMessage(error));
+      return failure(await aiErrorMessage(error));
     }
 
     const tags = parseTagSuggestions(answer, parsed.data.tags);
-    if (tags.length === 0) return failure(NO_TAG_SUGGESTIONS);
+    if (tags.length === 0) return failure(e.message("ai.noTags"));
     return { success: true, data: tags, error: null };
   } catch (error) {
     console.error("[ai] generateAutoTags failed:", error);
-    return failure("Could not suggest tags. Try again.");
+    return failure(e.message("ai.tagsFailed"));
   }
 }
 
@@ -144,14 +143,15 @@ const descriptionSchema = autoTagsSchema.extend({
 
 /** A 1-2 sentence description of the item in the form. Nothing is saved: the form fills its Description field. */
 export async function generateDescription(input: DescriptionInput): Promise<AiResult<string>> {
+  const e = await getErrors();
   const parsed = descriptionSchema.safeParse(input);
-  if (!parsed.success) return failure(parsed.error.issues[0]?.message ?? "Invalid input.");
+  if (!parsed.success) return failure(e.issue(parsed.error.issues[0]));
 
   try {
     const session = await auth();
-    if (!session?.user?.id) return failure("You are not signed in.");
+    if (!session?.user?.id) return failure(e.message("notSignedIn"));
 
-    const blocked = await aiGate(session.user.id);
+    const blocked = await aiGate(session.user.id, e);
     if (blocked) return failure(blocked);
 
     let answer: string;
@@ -161,39 +161,42 @@ export async function generateDescription(input: DescriptionInput): Promise<AiRe
       if (!(error instanceof AiProviderError)) {
         console.error("[ai] generateDescription could not call the AI:", error);
       }
-      return failure(aiErrorMessage(error));
+      return failure(await aiErrorMessage(error));
     }
 
     const description = parseDescription(answer);
-    if (!description) return failure(NO_DESCRIPTION);
+    if (!description) return failure(e.message("ai.noDescription"));
     return { success: true, data: description, error: null };
   } catch (error) {
     console.error("[ai] generateDescription failed:", error);
-    return failure("Could not write a description. Try again.");
+    return failure(e.message("ai.descriptionFailed"));
   }
 }
 
-const itemIdSchema = z.object({ itemId: z.string().trim().min(1, "Item not found.").max(100, "Item not found.") });
+const itemIdSchema = z.object({
+  itemId: z.string().trim().min(1, errKey("ai.itemNotFound")).max(100, errKey("ai.itemNotFound")),
+});
 
 /**
  * A short Markdown explanation of a saved snippet or command. The server reads
  * the item itself, by owner; nothing is saved.
  */
 export async function explainCode(input: { itemId: string }): Promise<AiResult<string>> {
+  const e = await getErrors();
   const parsed = itemIdSchema.safeParse(input);
-  if (!parsed.success) return failure(parsed.error.issues[0]?.message ?? "Invalid input.");
+  if (!parsed.success) return failure(e.issue(parsed.error.issues[0]));
 
   try {
     const session = await auth();
-    if (!session?.user?.id) return failure("You are not signed in.");
+    if (!session?.user?.id) return failure(e.message("notSignedIn"));
 
-    const blocked = await aiGate(session.user.id);
+    const blocked = await aiGate(session.user.id, e);
     if (blocked) return failure(blocked);
 
     const item = await getItemForExplain(session.user.id, parsed.data.itemId);
-    if (!item) return failure("Item not found.");
-    if (!isCodeType(toItemTypeSlug(item.slug))) return failure("Only snippets and commands can be explained.");
-    if (!item.content?.trim()) return failure("There is no code to explain.");
+    if (!item) return failure(e.message("ai.itemNotFound"));
+    if (!isCodeType(toItemTypeSlug(item.slug))) return failure(e.message("ai.onlyCode"));
+    if (!item.content?.trim()) return failure(e.message("ai.noCode"));
 
     let answer: string;
     try {
@@ -205,15 +208,15 @@ export async function explainCode(input: { itemId: string }): Promise<AiResult<s
       if (!(error instanceof AiProviderError)) {
         console.error("[ai] explainCode could not call the AI:", error);
       }
-      return failure(aiErrorMessage(error));
+      return failure(await aiErrorMessage(error));
     }
 
     const explanation = parseExplanation(answer);
-    if (!explanation) return failure(NO_EXPLANATION);
+    if (!explanation) return failure(e.message("ai.noExplanation"));
     return { success: true, data: explanation, error: null };
   } catch (error) {
     console.error("[ai] explainCode failed:", error);
-    return failure("Could not explain this code. Try again.");
+    return failure(e.message("ai.explainFailed"));
   }
 }
 
@@ -223,26 +226,25 @@ export async function explainCode(input: { itemId: string }): Promise<AiResult<s
  * calls `applyOptimizedPrompt`.
  */
 export async function optimizePrompt(input: { itemId: string }): Promise<AiResult<string | null>> {
+  const e = await getErrors();
   const parsed = itemIdSchema.safeParse(input);
-  if (!parsed.success) return failure(parsed.error.issues[0]?.message ?? "Invalid input.");
+  if (!parsed.success) return failure(e.issue(parsed.error.issues[0]));
 
   try {
     const session = await auth();
-    if (!session?.user?.id) return failure("You are not signed in.");
+    if (!session?.user?.id) return failure(e.message("notSignedIn"));
 
-    const blocked = await aiGate(session.user.id);
+    const blocked = await aiGate(session.user.id, e);
     if (blocked) return failure(blocked);
 
     const item = await getItemForExplain(session.user.id, parsed.data.itemId);
-    if (!item) return failure("Item not found.");
-    if (item.slug !== "prompt") return failure("Only prompts can be optimized.");
+    if (!item) return failure(e.message("ai.itemNotFound"));
+    if (item.slug !== "prompt") return failure(e.message("ai.onlyPrompts"));
     const content = item.content ?? "";
-    if (!content.trim()) return failure("There is no prompt to optimize.");
+    if (!content.trim()) return failure(e.message("ai.noPrompt"));
     // Refused rather than truncated: the rewrite replaces the whole prompt, so the tail would be lost.
     if (content.length > OPTIMIZE_CONTENT_LIMIT) {
-      return failure(
-        `This prompt is too long to optimize (at most ${OPTIMIZE_CONTENT_LIMIT.toLocaleString("en-US")} characters).`,
-      );
+      return failure(e.message("ai.promptTooLong", { max: OPTIMIZE_CONTENT_LIMIT }));
     }
 
     let answer: string;
@@ -256,14 +258,14 @@ export async function optimizePrompt(input: { itemId: string }): Promise<AiResul
       if (!(error instanceof AiProviderError)) {
         console.error("[ai] optimizePrompt could not call the AI:", error);
       }
-      return failure(aiErrorMessage(error));
+      return failure(await aiErrorMessage(error));
     }
 
     const result = parseOptimizedPrompt(answer, content);
-    if (!result) return failure(NO_OPTIMIZED_PROMPT);
+    if (!result) return failure(e.message("ai.noOptimized"));
     return { success: true, data: result.changed ? result.prompt : null, error: null };
   } catch (error) {
     console.error("[ai] optimizePrompt failed:", error);
-    return failure("Could not optimize this prompt. Try again.");
+    return failure(e.message("ai.optimizeFailed"));
   }
 }

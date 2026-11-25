@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 
+import { getErrors } from "@/i18n/errors-server";
 import { resetPassword } from "@/lib/password-reset";
 import { checkRateLimit, getClientIp, tooManyAttemptsResponse } from "@/lib/rate-limit";
 
@@ -13,7 +14,7 @@ function fail(error: string, status: number, code?: string) {
 
 export async function POST(request: Request) {
   const limit = await checkRateLimit("resetPassword", getClientIp(request.headers));
-  if (!limit.success) return tooManyAttemptsResponse(limit.reset);
+  if (!limit.success) return await tooManyAttemptsResponse(limit.reset);
 
   let body: unknown;
   try {
@@ -32,16 +33,17 @@ export async function POST(request: Request) {
   ) {
     return fail("email, token, password and confirmPassword are required.", 400);
   }
+  const e = await getErrors();
   if (password.length < MIN_PASSWORD_LENGTH) {
-    return fail(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`, 400);
+    return fail(e.message("auth.passwordTooShort", { min: MIN_PASSWORD_LENGTH }), 400);
   }
-  if (password !== confirmPassword) return fail("Passwords do not match.", 400);
+  if (password !== confirmPassword) return fail(e.message("auth.passwordsDontMatch"), 400);
 
   // Hashed first, so nothing slow sits between consuming the token and saving
   // the password.
   const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
   if (!(await resetPassword(email, token, passwordHash))) {
-    return fail("This reset link was already used, has expired, or is not valid.", 400, "INVALID_TOKEN");
+    return fail(e.message("auth.resetLinkInvalid"), 400, "INVALID_TOKEN");
   }
 
   return NextResponse.json({ success: true });

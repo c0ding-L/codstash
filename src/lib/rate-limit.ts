@@ -1,5 +1,6 @@
 import { Ratelimit, type Duration } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { getTranslations } from "next-intl/server";
 import { NextResponse } from "next/server";
 
 const LIMITS = {
@@ -95,15 +96,15 @@ export function secondsUntil(reset: number) {
   return Math.max(1, Math.ceil((reset - Date.now()) / 1000));
 }
 
-export function tooManyAttemptsMessage(reset: number) {
-  const minutes = Math.ceil(secondsUntil(reset) / 60);
-  return `Too many attempts. Please try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`;
+export async function tooManyAttemptsMessage(reset: number) {
+  const t = await getTranslations("errors");
+  return t("tooManyAttempts", { minutes: Math.ceil(secondsUntil(reset) / 60) });
 }
 
 /** The 429 the auth API routes answer with once a limit is hit. */
-export function tooManyAttemptsResponse(reset: number) {
+export async function tooManyAttemptsResponse(reset: number) {
   return NextResponse.json(
-    { success: false, error: tooManyAttemptsMessage(reset) },
+    { success: false, error: await tooManyAttemptsMessage(reset) },
     { status: 429, headers: { "Retry-After": String(secondsUntil(reset)) } },
   );
 }

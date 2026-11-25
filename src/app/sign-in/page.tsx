@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { connection } from "next/server";
 
 import { AuthCard } from "@/components/auth/AuthCard";
@@ -12,14 +13,14 @@ export default async function SignInPage({
   // Rendered per request, like every other page.
   await connection();
 
-  const { callbackUrl, error } = await searchParams;
+  const [{ callbackUrl, error }, t] = await Promise.all([searchParams, getTranslations("auth.signIn")]);
 
   return (
-    <AuthCard withNav title="Sign in to Cortex" description="Use your email and password, or GitHub.">
+    <AuthCard withNav title={t("title")} description={t("description")}>
       <SignInForm
         callbackUrl={callbackUrl ?? "/dashboard"}
         verificationEnabled={isEmailVerificationEnabled()}
-        initialError={error ? "Sign in failed. Check your details and try again." : null}
+        initialError={error ? t("failed") : null}
       />
     </AuthCard>
   );

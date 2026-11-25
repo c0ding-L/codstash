@@ -2,7 +2,6 @@ import { ITEM_LIMITS } from "@/lib/item-limits";
 import { toTags } from "@/lib/tags";
 
 export const MAX_TAG_SUGGESTIONS = 5;
-export const NO_TAG_SUGGESTIONS = "No tag suggestions for this item.";
 
 /**
  * The tags in a model's answer, ready to offer: lowercase, valid as item tags,
@@ -31,8 +30,6 @@ export function parseTagSuggestions(answer: string, existing: string[]): string[
   return suggestions.slice(0, room);
 }
 
-export const NO_DESCRIPTION = "Could not write a description for this item.";
-
 /**
  * The description in a model's answer, ready for the form: one paragraph of
  * plain text, at most `ITEM_LIMITS.description` characters. Tolerates code
@@ -60,8 +57,6 @@ export function parseDescription(answer: string): string {
 }
 
 export const EXPLANATION_MAX_LENGTH = 4_000;
-export const NO_EXPLANATION = "Could not explain this code.";
-
 /** A fence around the whole answer: ```` ```markdown ````, ```` ```md ```` or a bare ```` ``` ````, closed on the last line. */
 const WRAPPING_FENCE = /^(`{3,})(markdown|md)?[ \t]*(?:\r?\n([\s\S]*?))?\r?\n\1[ \t]*$/i;
 
@@ -85,8 +80,6 @@ export function parseExplanation(answer: string): string {
   const kept = breakAt > 0 ? cut.slice(0, breakAt) : cut;
   return `${kept.trimEnd()}…`;
 }
-
-export const NO_OPTIMIZED_PROMPT = "Could not optimize this prompt.";
 
 /** What the model made of a prompt: a rewrite, or nothing worth changing. Null when unusable. */
 export type OptimizedPrompt = { changed: true; prompt: string } | { changed: false };

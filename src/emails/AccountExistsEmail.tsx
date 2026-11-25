@@ -13,19 +13,24 @@ import {
 } from "react-email";
 
 import { styles } from "@/emails/styles";
+import { emailTranslator } from "@/emails/translator";
+import type { Locale } from "@/lib/locale";
 
+/** `locale` defaults to English for the react-email preview, which renders without props. */
 interface AccountExistsEmailProps {
+  locale: Locale;
   name: string | null;
   signInUrl: string;
   /** Null for GitHub-only accounts, which have no password to reset. */
   resetUrl: string | null;
 }
 
-export function AccountExistsEmail({ name, signInUrl, resetUrl }: Readonly<AccountExistsEmailProps>) {
+export function AccountExistsEmail({ locale = "en", name, signInUrl, resetUrl }: Readonly<AccountExistsEmailProps>) {
+  const t = emailTranslator(locale);
   return (
-    <Html lang="en">
+    <Html lang={locale}>
       <Head />
-      <Preview>You already have a Cortex account</Preview>
+      <Preview>{t("accountExists.preview")}</Preview>
       <Body style={styles.body}>
         <Container style={styles.card}>
           <Section>
@@ -34,34 +39,34 @@ export function AccountExistsEmail({ name, signInUrl, resetUrl }: Readonly<Accou
           </Section>
 
           <Heading as="h1" style={styles.heading}>
-            You already have an account
+            {t("accountExists.heading")}
           </Heading>
-          <Text style={styles.text}>{name ? `Hi ${name},` : "Hi,"}</Text>
+          <Text style={styles.text}>{name ? t("greetingNamed", { name }) : t("greeting")}</Text>
           <Text style={styles.text}>
-            Someone tried to create a Cortex account with this email address, but it already
-            has one.{" "}
-            {resetUrl
-              ? "Sign in with your password, or reset it if you have forgotten it."
-              : "It signs in with GitHub."}
+            {t("accountExists.body")}{" "}
+            {resetUrl ? t("accountExists.withPassword") : t("accountExists.withGithub")}
           </Text>
 
           <Section style={styles.buttonWrap}>
             <Button href={signInUrl} style={styles.button}>
-              Sign in
+              {t("accountExists.button")}
             </Button>
           </Section>
 
           {resetUrl ? (
             <Text style={styles.small}>
-              Forgot your password? <Link href={resetUrl} style={styles.url}>Reset it here</Link>.
+              {t.rich("accountExists.forgot", {
+                link: (chunks) => (
+                  <Link href={resetUrl} style={styles.url}>
+                    {chunks}
+                  </Link>
+                ),
+              })}
             </Text>
           ) : null}
 
           <Hr style={styles.hr} />
-          <Text style={styles.footer}>
-            If this was not you, you can safely ignore this email. Nothing about your account has
-            changed.
-          </Text>
+          <Text style={styles.footer}>{t("accountExists.footer")}</Text>
         </Container>
       </Body>
     </Html>

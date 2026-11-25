@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { auth, signIn, signOut } from "@/auth";
+import { errKey } from "@/i18n/error-keys";
+import { getErrors } from "@/i18n/errors-server";
 import { DEMO_USER_EMAIL } from "@/lib/db/collections";
 import { getItemFileKeys } from "@/lib/db/items";
 import { prisma } from "@/lib/prisma";
@@ -21,39 +23,38 @@ export interface ActionResult {
 
 const changePasswordSchema = z
   .object({
-    currentPassword: z.string().min(1, "Enter your current password."),
-    newPassword: z
-      .string()
-      .min(MIN_PASSWORD_LENGTH, `New password must be at least ${MIN_PASSWORD_LENGTH} characters.`),
+    currentPassword: z.string().min(1, errKey("profile.currentPasswordRequired")),
+    newPassword: z.string().min(MIN_PASSWORD_LENGTH, errKey("profile.newPasswordTooShort")),
     confirmPassword: z.string(),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
-    message: "Passwords do not match.",
+    message: errKey("profile.passwordsDontMatch"),
     path: ["confirmPassword"],
   });
 
 export async function changePassword(_previous: ActionResult, formData: FormData): Promise<ActionResult> {
+  const e = await getErrors();
   const parsed = changePasswordSchema.safeParse({
     currentPassword: formData.get("currentPassword"),
     newPassword: formData.get("newPassword"),
     confirmPassword: formData.get("confirmPassword"),
   });
-  if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  if (!parsed.success) return { success: false, error: e.issue(parsed.error.issues[0]) };
 
   let email: string;
   try {
     const session = await auth();
-    if (!session?.user?.id) return { success: false, error: "You are not signed in." };
+    if (!session?.user?.id) return { success: false, error: e.message("notSignedIn") };
 
     // Caps password guesses from a session that is not its owner's.
     const limit = await checkRateLimit("reauth", session.user.id);
-    if (!limit.success) return { success: false, error: tooManyAttemptsMessage(limit.reset) };
+    if (!limit.success) return { success: false, error: await tooManyAttemptsMessage(limit.reset) };
 
     const user = await prisma.user.findUnique({ where: { id: session.user.id } });
-    if (!user?.password) return { success: false, error: "This account has no password to change." };
+    if (!user?.password) return { success: false, error: e.message("profile.noPassword") };
 
     if (!(await bcrypt.compare(parsed.data.currentPassword, user.password))) {
-      return { success: false, error: "Current password is incorrect." };
+      return { success: false, error: e.message("profile.currentPasswordWrong") };
     }
 
     await prisma.$transaction([
@@ -71,7 +72,7 @@ export async function changePassword(_previous: ActionResult, formData: FormData
     email = user.email;
   } catch (error) {
     console.error("[profile] changePassword failed:", error);
-    return { success: false, error: "Could not change the password. Try again." };
+    return { success: false, error: e.message("profile.changeFailed") };
   }
 
   // Signs this browser in again, so only the other sessions end. If that
@@ -88,46 +89,47 @@ export async function changePassword(_previous: ActionResult, formData: FormData
 }
 
 const deleteAccountSchema = z.object({
-  confirmEmail: z.string().trim().toLowerCase().min(1, "Type your email to confirm."),
+  confirmEmail: z.string().trim().toLowerCase().min(1, errKey("profile.confirmEmailRequired")),
   // Null when the field is absent, as on the form for GitHub-only accounts.
   password: z.string().nullable(),
 });
 
 export async function deleteAccount(_previous: ActionResult, formData: FormData): Promise<ActionResult> {
+  const e = await getErrors();
   const parsed = deleteAccountSchema.safeParse({
     confirmEmail: formData.get("confirmEmail"),
     password: formData.get("password"),
   });
-  if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  if (!parsed.success) return { success: false, error: e.issue(parsed.error.issues[0]) };
 
   try {
     const session = await auth();
-    if (!session?.user?.id) return { success: false, error: "You are not signed in." };
+    if (!session?.user?.id) return { success: false, error: e.message("notSignedIn") };
 
     // Caps password guesses from a session that is not its owner's.
     const limit = await checkRateLimit("reauth", session.user.id);
-    if (!limit.success) return { success: false, error: tooManyAttemptsMessage(limit.reset) };
+    if (!limit.success) return { success: false, error: await tooManyAttemptsMessage(limit.reset) };
 
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
       select: { id: true, email: true, password: true },
     });
-    if (!user) return { success: false, error: "This account no longer exists." };
+    if (!user) return { success: false, error: e.message("profile.accountGone") };
 
     // The dashboard still reads the demo account's data for everyone.
     if (user.email === DEMO_USER_EMAIL) {
-      return { success: false, error: "The demo account cannot be deleted." };
+      return { success: false, error: e.message("profile.demoNotDeletable") };
     }
     const email = user.email.toLowerCase();
     if (parsed.data.confirmEmail !== email) {
-      return { success: false, error: "The email does not match your account." };
+      return { success: false, error: e.message("profile.emailMismatch") };
     }
     // The email is on the profile page, so on its own it proves nothing about who
     // holds the session. GitHub-only accounts have no password to ask for.
     if (user.password) {
       const { password } = parsed.data;
       if (!password || !(await bcrypt.compare(password, user.password))) {
-        return { success: false, error: "Password is incorrect." };
+        return { success: false, error: e.message("profile.passwordWrong") };
       }
     }
 
@@ -149,7 +151,7 @@ export async function deleteAccount(_previous: ActionResult, formData: FormData)
     await deleteObjectsQuietly(fileKeys);
   } catch (error) {
     console.error("[profile] deleteAccount failed:", error);
-    return { success: false, error: "Could not delete the account. Try again." };
+    return { success: false, error: e.message("profile.deleteFailed") };
   }
 
   // Outside the try: signOut redirects by throwing.

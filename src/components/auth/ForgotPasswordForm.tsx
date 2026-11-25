@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -10,6 +11,7 @@ import { Input } from "@/components/ui/input";
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function ForgotPasswordForm() {
+  const t = useTranslations("auth");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   // The address the link was requested for, once the request went through.
@@ -18,7 +20,7 @@ export function ForgotPasswordForm() {
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const email = String(new FormData(event.currentTarget).get("email") ?? "").trim();
-    if (!EMAIL_PATTERN.test(email)) return setError("Enter a valid email address.");
+    if (!EMAIL_PATTERN.test(email)) return setError(t("invalidEmail"));
 
     setError(null);
     setPending(true);
@@ -30,16 +32,16 @@ export function ForgotPasswordForm() {
       });
       const body: { success?: boolean; error?: string } = await response.json().catch(() => ({}));
       if (response.status === 429) {
-        toast.error(body.error ?? "Too many attempts. Try again later.");
+        toast.error(body.error ?? t("tooManyAttempts"));
         return;
       }
       if (!response.ok || !body.success) {
-        setError(body.error ?? "Could not send the reset link. Try again.");
+        setError(body.error ?? t("forgot.sendFailed"));
         return;
       }
       setSentTo(email);
     } catch {
-      setError("Could not reach the server. Try again.");
+      setError(t("unreachable"));
     } finally {
       setPending(false);
     }
@@ -50,23 +52,25 @@ export function ForgotPasswordForm() {
       {sentTo ? (
         // Worded for any address: the endpoint does not say whether it exists.
         <div role="status" className="grid gap-2 text-sm">
-          <p className="font-medium">Check your inbox</p>
+          <p className="font-medium">{t("forgot.checkInbox")}</p>
           <p className="text-muted-foreground">
-            If <span className="font-medium text-foreground">{sentTo}</span> belongs to an account
-            with a password, a reset link is on its way. It expires in 1 hour.
+            {t.rich("forgot.sent", {
+              email: sentTo,
+              strong: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
+            })}
           </p>
           <button
             type="button"
             onClick={() => setSentTo(null)}
             className="justify-self-start font-medium underline-offset-4 hover:underline"
           >
-            Use a different email
+            {t("forgot.otherEmail")}
           </button>
         </div>
       ) : (
         <form onSubmit={onSubmit} className="grid gap-3" noValidate>
           <label className="grid gap-1.5 text-sm font-medium">
-            Email
+            {t("email")}
             <Input name="email" type="email" autoComplete="email" required />
           </label>
           {error ? (
@@ -75,15 +79,15 @@ export function ForgotPasswordForm() {
             </p>
           ) : null}
           <Button type="submit" size="lg" disabled={pending}>
-            {pending ? "Sending…" : "Send reset link"}
+            {pending ? t("forgot.pending") : t("forgot.submit")}
           </Button>
         </form>
       )}
 
       <p className="text-center text-sm text-muted-foreground">
-        Remembered it?{" "}
+        {t("forgot.remembered")}{" "}
         <Link href="/sign-in" className="font-medium text-foreground underline-offset-4 hover:underline">
-          Sign in
+          {t("forgot.signIn")}
         </Link>
       </p>
     </>

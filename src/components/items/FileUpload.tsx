@@ -38,6 +38,7 @@ export function FileUpload({
   disabled,
 }: FileUploadProps) {
   const t = useTranslations("upload");
+  const te = useTranslations("errors.upload");
   const formatFileSize = useFileSize();
   const [dragging, setDragging] = useState(false);
   const rules = UPLOAD_RULES[kind];
@@ -46,7 +47,7 @@ export function FileUpload({
     if (!candidate) return;
     const check = validateUpload(kind, candidate);
     if (check.ok) onFileChange(candidate);
-    else onReject(check.error);
+    else onReject(te(check.error.key, check.error.values));
   }
 
   // Mounted in both states, so the field's label and error message always point at it.

@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -12,7 +13,7 @@ import { Button } from "@/components/ui/button";
 export function ResendVerificationButton({
   email,
   getEmail,
-  label = "Send a new verification email",
+  label,
   variant = "outline",
 }: Readonly<{
   /** The address to send to, when it is already known. */
@@ -22,12 +23,13 @@ export function ResendVerificationButton({
   label?: string;
   variant?: "outline" | "link";
 }>) {
+  const t = useTranslations("auth");
   const [pending, setPending] = useState(false);
 
   async function onClick() {
     const address = (getEmail ? getEmail() : email ?? "").trim();
     if (!address) {
-      toast.error("Enter your email address first.");
+      toast.error(t("resend.emailFirst"));
       return;
     }
     setPending(true);
@@ -39,14 +41,14 @@ export function ResendVerificationButton({
       });
       if (response.status === 429) {
         const body: { error?: string } = await response.json().catch(() => ({}));
-        toast.error(body.error ?? "Too many attempts. Try again later.");
+        toast.error(body.error ?? t("tooManyAttempts"));
       } else if (response.ok) {
-        toast.success("If this account is waiting for verification, a new email is on its way.");
+        toast.success(t("resend.sent"));
       } else {
-        toast.error("Could not send the email. Try again.");
+        toast.error(t("resend.failed"));
       }
     } catch {
-      toast.error("Could not reach the server. Try again.");
+      toast.error(t("unreachable"));
     } finally {
       setPending(false);
     }
@@ -60,7 +62,7 @@ export function ResendVerificationButton({
       onClick={onClick}
       disabled={pending || (!getEmail && !email)}
     >
-      {pending ? "Sending…" : label}
+      {pending ? t("resend.pending") : (label ?? t("resend.label"))}
     </Button>
   );
 }

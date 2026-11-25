@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { connection } from "next/server";
 
 import { AuthCard } from "@/components/auth/AuthCard";
@@ -15,15 +16,17 @@ export default async function VerifyEmailPage({
   // Rendered per request: this page consumes the token.
   await connection();
 
-  const { token, email } = await searchParams;
+  const [{ token, email }, t] = await Promise.all([searchParams, getTranslations("auth.verify")]);
   const verified =
     typeof token === "string" && typeof email === "string" && (await verifyEmailToken(email, token));
 
   if (verified) {
     return (
-      <AuthCard title="Email verified" description="Your account is active. You can now sign in.">
+      // No language toggle: switching refreshes the page, which would spend the token again and
+      // read as "invalid".
+      <AuthCard title={t("verifiedTitle")} description={t("verifiedDescription")} languageToggle={false}>
         <Link href="/sign-in" className={buttonVariants({ size: "lg" })}>
-          Continue to sign in
+          {t("continue")}
         </Link>
       </AuthCard>
     );
@@ -31,14 +34,15 @@ export default async function VerifyEmailPage({
 
   return (
     <AuthCard
-      title="Link invalid or expired"
-      description="This verification link was already used, has expired, or is not valid."
+      languageToggle={false}
+      title={t("invalidTitle")}
+      description={t("invalidDescription")}
     >
       {isEmailVerificationEnabled() && typeof email === "string" && email ? (
         <ResendVerificationButton email={email} />
       ) : (
         <Link href="/sign-in" className={buttonVariants({ variant: "outline", size: "lg" })}>
-          Go to sign in
+          {t("goToSignIn")}
         </Link>
       )}
     </AuthCard>

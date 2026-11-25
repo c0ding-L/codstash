@@ -270,8 +270,7 @@ describe("assertBelowLimit", () => {
     countCollections.mockResolvedValue(3);
 
     await expect(assertBelowLimit(tx, USER, "items", 50)).rejects.toBeInstanceOf(LimitReachedError);
-    await expect(assertBelowLimit(tx, USER, "collections", 3)).rejects.toThrow(
-      "Free accounts can have 3 collections. Upgrade to Pro in Settings.",
-    );
+    // The action that catches it words the message; the error itself only names the limit.
+    await expect(assertBelowLimit(tx, USER, "collections", 3)).rejects.toMatchObject({ limit: "collections" });
   });
 });

@@ -1,5 +1,7 @@
 import { after, NextResponse } from "next/server";
 
+import { getErrors } from "@/i18n/errors-server";
+import { getRequestLocale } from "@/i18n/request";
 import { issuePasswordResetEmail } from "@/lib/password-reset";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, getClientIp, tooManyAttemptsResponse } from "@/lib/rate-limit";
@@ -13,7 +15,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  */
 export async function POST(request: Request) {
   const limit = await checkRateLimit("forgotPassword", getClientIp(request.headers));
-  if (!limit.success) return tooManyAttemptsResponse(limit.reset);
+  if (!limit.success) return await tooManyAttemptsResponse(limit.reset);
 
   let body: unknown;
   try {
@@ -24,15 +26,17 @@ export async function POST(request: Request) {
 
   const email = (body as { email?: unknown } | null)?.email;
   if (typeof email !== "string" || !EMAIL_PATTERN.test(email.trim())) {
-    return NextResponse.json({ success: false, error: "Email is not valid." }, { status: 400 });
+    return NextResponse.json({ success: false, error: (await getErrors()).message("auth.emailInvalid") }, { status: 400 });
   }
   const normalizedEmail = email.trim().toLowerCase();
 
+  // Read now: the request's cookies are not available inside `after`.
+  const { locale } = await getRequestLocale();
   after(async () => {
     try {
       const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
       // GitHub-only users have no password to reset.
-      if (user?.password) await issuePasswordResetEmail(user);
+      if (user?.password) await issuePasswordResetEmail(user, locale);
     } catch (error) {
       console.error("[forgot-password] failed:", error);
     }

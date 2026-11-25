@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { setTestLocale } from "@/lib/__fixtures__/i18n-setup";
 import { AiProviderError, aiErrorMessage, complete, parseRetryAfter, type AiMessage } from "@/lib/ai-client";
 
 const fetchMock = vi.fn();
@@ -217,42 +218,51 @@ describe("parseRetryAfter", () => {
   });
 });
 
-describe("aiErrorMessage", () => {
+describe("aiErrorMessage", async () => {
   const error = (status: number | null, code: string | null = null, retryAfter: number | null = null) =>
     new AiProviderError({ provider: "openrouter", status, code, retryAfter, message: "x" });
 
-  it("maps each status to its message", () => {
-    expect(aiErrorMessage(error(400))).toBe("AI request failed.");
-    expect(aiErrorMessage(error(401))).toBe("AI is unavailable right now.");
-    expect(aiErrorMessage(error(402))).toBe("AI is unavailable right now.");
-    expect(aiErrorMessage(error(403))).toBe("The AI declined this content.");
-    expect(aiErrorMessage(error(404))).toBe("AI is unavailable right now.");
-    expect(aiErrorMessage(error(408))).toBe("AI took too long. Try again.");
-    expect(aiErrorMessage(error(504))).toBe("AI took too long. Try again.");
+  it("maps each status to its message", async () => {
+    expect(await aiErrorMessage(error(400))).toBe("AI request failed.");
+    expect(await aiErrorMessage(error(401))).toBe("AI is unavailable right now.");
+    expect(await aiErrorMessage(error(402))).toBe("AI is unavailable right now.");
+    expect(await aiErrorMessage(error(403))).toBe("The AI declined this content.");
+    expect(await aiErrorMessage(error(404))).toBe("AI is unavailable right now.");
+    expect(await aiErrorMessage(error(408))).toBe("AI took too long. Try again.");
+    expect(await aiErrorMessage(error(504))).toBe("AI took too long. Try again.");
     for (const status of [500, 502, 503]) {
-      expect(aiErrorMessage(error(status))).toBe("AI is unavailable right now. Try again.");
+      expect(await aiErrorMessage(error(status))).toBe("AI is unavailable right now. Try again.");
     }
   });
 
-  it("says how long to wait on a rate-limit 429", () => {
-    expect(aiErrorMessage(error(429, null, 1))).toBe("AI is busy. Try again in 1 second.");
-    expect(aiErrorMessage(error(429, null, 20))).toBe("AI is busy. Try again in 20 seconds.");
-    expect(aiErrorMessage(error(429, null, 90))).toBe("AI is busy. Try again in 2 minutes.");
-    expect(aiErrorMessage(error(429))).toBe("AI is busy. Try again in a minute.");
+  it("says how long to wait on a rate-limit 429", async () => {
+    expect(await aiErrorMessage(error(429, null, 1))).toBe("AI is busy. Try again in 1 second.");
+    expect(await aiErrorMessage(error(429, null, 20))).toBe("AI is busy. Try again in 20 seconds.");
+    expect(await aiErrorMessage(error(429, null, 90))).toBe("AI is busy. Try again in 2 minutes.");
+    expect(await aiErrorMessage(error(429))).toBe("AI is busy. Try again in a minute.");
   });
 
-  it("never says try again on a spend-limit or out-of-credits 429", () => {
+  it("words the wait in French", async () => {
+    setTestLocale("fr");
+
+    expect(await aiErrorMessage(error(429, null, 1))).toBe("L’IA est occupée. Réessayez dans 1 seconde.");
+    expect(await aiErrorMessage(error(429, null, 20))).toBe("L’IA est occupée. Réessayez dans 20 secondes.");
+    expect(await aiErrorMessage(error(429, null, 90))).toBe("L’IA est occupée. Réessayez dans 2 minutes.");
+    expect(await aiErrorMessage(error(403))).toBe("L’IA a refusé ce contenu.");
+  });
+
+  it("never says try again on a spend-limit or out-of-credits 429", async () => {
     for (const code of ["project_spend_limit_exceeded", "organization_spend_limit_exceeded", "insufficient_quota"]) {
-      expect(aiErrorMessage(error(429, code, 30))).toBe("AI is unavailable right now.");
+      expect(await aiErrorMessage(error(429, code, 30))).toBe("AI is unavailable right now.");
     }
   });
 
-  it("says a cut-off answer was cut short", () => {
-    expect(aiErrorMessage(error(null, "cut_off"))).toBe("The AI's answer was cut short. Try again.");
+  it("says a cut-off answer was cut short", async () => {
+    expect(await aiErrorMessage(error(null, "cut_off"))).toBe("The AI's answer was cut short. Try again.");
   });
 
-  it("reads an empty answer, a network failure or any other error as unavailable", () => {
-    expect(aiErrorMessage(error(null, "length"))).toBe("AI is unavailable right now. Try again.");
-    expect(aiErrorMessage(new Error("OPENROUTER_API_KEY is not set"))).toBe("AI is unavailable right now.");
+  it("reads an empty answer, a network failure or any other error as unavailable", async () => {
+    expect(await aiErrorMessage(error(null, "length"))).toBe("AI is unavailable right now. Try again.");
+    expect(await aiErrorMessage(new Error("OPENROUTER_API_KEY is not set"))).toBe("AI is unavailable right now.");
   });
 });

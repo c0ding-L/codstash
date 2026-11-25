@@ -111,6 +111,7 @@ interface NewItemFormProps {
 
 function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed }: NewItemFormProps) {
   const t = useTranslations("newItem");
+  const te = useTranslations("errors.upload");
   const tf = useTranslations("itemForm");
   const tc = useTranslations("common");
   const tTypes = useTranslations("itemTypes");
@@ -169,7 +170,7 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed
       if (uploadKind && file) {
         setProgress(0);
         try {
-          input.fileKey = await uploadFile(uploadKind, file, setProgress);
+          input.fileKey = await uploadFile(uploadKind, file, setProgress, { failed: te("failed"), network: te("network") });
         } catch (uploadError) {
           setProgress(null);
           const message = uploadError instanceof Error ? uploadError.message : t("uploadFailed");

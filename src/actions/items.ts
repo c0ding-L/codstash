@@ -4,12 +4,14 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { auth } from "@/auth";
+import { errKey, type ErrorKey } from "@/i18n/error-keys";
+import { getErrors } from "@/i18n/errors-server";
 import { getPlanStatus } from "@/lib/db/billing";
 import { ownsCollections } from "@/lib/db/collections";
 import { fromObjectMetadata, isOwnKey } from "@/lib/files";
 import { ITEM_LIMITS } from "@/lib/item-limits";
 import { deleteObjectsQuietly, headObject } from "@/lib/r2";
-import { FREE_LIMITS, LIMIT_MESSAGES, LimitReachedError, canCreateItem, canUploadFiles } from "@/lib/usage-limits";
+import { FREE_LIMITS, LimitReachedError, canCreateItem, canUploadFiles } from "@/lib/usage-limits";
 import {
   createItem as createItemQuery,
   deleteItem as deleteItemQuery,
@@ -53,53 +55,50 @@ function blankToNullUntrimmed(value: unknown) {
   return value.trim() ? value : null;
 }
 
-function optionalText(max: number, label: string) {
-  return z.preprocess(
-    blankToNull,
-    z.string().max(max, `${label} can be at most ${max.toLocaleString("en-US")} characters.`).nullable().optional(),
-  );
+/** `tooLong` is a whole sentence per field: French agrees it with the field's gender. */
+function optionalText(max: number, tooLong: ErrorKey) {
+  return z.preprocess(blankToNull, z.string().max(max, tooLong).nullable().optional());
 }
 
 const updateItemSchema = z.object({
   title: z
     .string()
     .trim()
-    .min(1, "Title is required.")
-    .max(ITEM_LIMITS.title, `Title can be at most ${ITEM_LIMITS.title} characters.`),
-  description: optionalText(ITEM_LIMITS.description, "Description"),
+    .min(1, errKey("items.titleRequired"))
+    .max(ITEM_LIMITS.title, errKey("items.titleTooLong")),
+  description: optionalText(ITEM_LIMITS.description, "items.descriptionTooLong"),
   content: z.preprocess(
     blankToNullUntrimmed,
     z
       .string()
-      .max(ITEM_LIMITS.content, `Content can be at most ${ITEM_LIMITS.content.toLocaleString("en-US")} characters.`)
+      .max(ITEM_LIMITS.content, errKey("items.contentTooLong"))
       .nullable()
       .optional(),
   ),
-  language: optionalText(ITEM_LIMITS.language, "Language"),
-  url: z.preprocess(blankToNull, z.url("Enter a valid URL.").nullable().optional()),
+  language: optionalText(ITEM_LIMITS.language, "items.languageTooLong"),
+  url: z.preprocess(blankToNull, z.url(errKey("items.invalidUrl")).nullable().optional()),
   tags: z
     .array(
       z
         .string()
         .trim()
-        .min(1, "Tags cannot be empty.")
-        .max(ITEM_LIMITS.tag, `Each tag can be at most ${ITEM_LIMITS.tag} characters.`),
+        .min(1, errKey("items.tagEmpty"))
+        .max(ITEM_LIMITS.tag, errKey("items.tagTooLong")),
     )
-    .max(ITEM_LIMITS.tags, `An item can have at most ${ITEM_LIMITS.tags} tags.`),
+    .max(ITEM_LIMITS.tags, errKey("items.tooManyTags")),
   collectionIds: z
-    .array(z.string().min(1, "Choose a collection from the list."))
-    .max(ITEM_LIMITS.collections, `An item can be in at most ${ITEM_LIMITS.collections} collections.`)
+    .array(z.string().min(1, errKey("items.collectionInvalid")))
+    .max(ITEM_LIMITS.collections, errKey("items.tooManyCollections"))
     // Deduplicated here, so the cap and the ownership check count each one once.
     .transform((ids) => [...new Set(ids)]),
 });
-
-const UNKNOWN_COLLECTION = "One of the chosen collections no longer exists. Choose again.";
 
 function isNotFound(error: unknown) {
   return typeof error === "object" && error !== null && "code" in error && error.code === "P2025";
 }
 
 export async function updateItem(itemId: string, input: UpdateItemInput): Promise<UpdateItemResult> {
+  const e = await getErrors();
   const parsed = updateItemSchema.safeParse(input);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
@@ -107,18 +106,18 @@ export async function updateItem(itemId: string, input: UpdateItemInput): Promis
     return {
       success: false,
       data: null,
-      error: issue?.message ?? "Invalid input.",
+      error: e.issue(issue),
       ...(typeof field === "string" && field in updateItemSchema.shape && { field: field as UpdateItemField }),
     };
   }
 
   try {
     const session = await auth();
-    if (!session?.user?.id) return { success: false, data: null, error: "You are not signed in." };
+    if (!session?.user?.id) return { success: false, data: null, error: e.message("notSignedIn") };
 
     // `connect` does not filter on the owner, so the ids are checked here.
     if (!(await ownsCollections(session.user.id, parsed.data.collectionIds))) {
-      return { success: false, data: null, error: UNKNOWN_COLLECTION, field: "collectionIds" };
+      return { success: false, data: null, error: e.message("items.unknownCollection"), field: "collectionIds" };
     }
 
     // The query filters on the owner, so another user's item is not found either.
@@ -129,19 +128,19 @@ export async function updateItem(itemId: string, input: UpdateItemInput): Promis
       error: null,
     };
   } catch (error) {
-    if (isNotFound(error)) return { success: false, data: null, error: "This item no longer exists." };
+    if (isNotFound(error)) return { success: false, data: null, error: e.message("items.notFound") };
     console.error("[items] updateItem failed:", error);
-    return { success: false, data: null, error: "Could not save the item. Try again." };
+    return { success: false, data: null, error: e.message("items.saveFailed") };
   }
 }
 
 const applyOptimizedPromptSchema = z.object({
-  itemId: z.string().trim().min(1, "Item not found.").max(100, "Item not found."),
+  itemId: z.string().trim().min(1, errKey("items.itemNotFound")).max(100, errKey("items.itemNotFound")),
   content: z
     .string()
     .trim()
-    .min(1, "The optimized prompt is empty.")
-    .max(ITEM_LIMITS.content, `Content can be at most ${ITEM_LIMITS.content.toLocaleString("en-US")} characters.`),
+    .min(1, errKey("items.optimizedEmpty"))
+    .max(ITEM_LIMITS.content, errKey("items.contentTooLong")),
 });
 
 /**
@@ -149,12 +148,13 @@ const applyOptimizedPromptSchema = z.object({
  * on the user's own prompt. Returns the saved item, like `updateItem`, so the drawer shows it.
  */
 export async function applyOptimizedPrompt(input: { itemId: string; content: string }): Promise<UpdateItemResult> {
+  const e = await getErrors();
   const parsed = applyOptimizedPromptSchema.safeParse(input);
-  if (!parsed.success) return { success: false, data: null, error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  if (!parsed.success) return { success: false, data: null, error: e.issue(parsed.error.issues[0]) };
 
   try {
     const session = await auth();
-    if (!session?.user?.id) return { success: false, data: null, error: "You are not signed in." };
+    if (!session?.user?.id) return { success: false, data: null, error: e.message("notSignedIn") };
 
     // The query filters on the owner and the prompt type, so anything else is not found.
     const { card, detail } = await updatePromptContent(session.user.id, parsed.data.itemId, parsed.data.content);
@@ -164,9 +164,9 @@ export async function applyOptimizedPrompt(input: { itemId: string; content: str
       error: null,
     };
   } catch (error) {
-    if (isNotFound(error)) return { success: false, data: null, error: "This item no longer exists." };
+    if (isNotFound(error)) return { success: false, data: null, error: e.message("items.notFound") };
     console.error("[items] applyOptimizedPrompt failed:", error);
-    return { success: false, data: null, error: "Could not save the prompt. Try again." };
+    return { success: false, data: null, error: e.message("items.promptSaveFailed") };
   }
 }
 
@@ -215,9 +215,7 @@ const baseFields = {
 };
 const contentField = updateItemSchema.shape.content;
 const languageField = updateItemSchema.shape.language;
-const fileKeyField = z.string({ error: "Choose a file to upload." }).min(1, "Choose a file to upload.");
-
-const UPLOAD_NOT_FOUND = "The uploaded file was not found. Upload it again.";
+const fileKeyField = z.string({ error: errKey("items.chooseFile") }).min(1, errKey("items.chooseFile"));
 
 /**
  * One shape per type, so a field the type does not use is stripped rather than
@@ -234,15 +232,19 @@ const createItemSchema = z.discriminatedUnion(
       type: z.literal("link"),
       ...baseFields,
       // Blank becomes null, which fails as "required" rather than as a bad URL.
-      url: z.preprocess(blankToNull, z.url({ error: (issue) => (issue.input == null ? "URL is required." : "Enter a valid URL.") })),
+      url: z.preprocess(
+        blankToNull,
+        z.url({ error: (issue) => (issue.input == null ? errKey("items.urlRequired") : errKey("items.invalidUrl")) }),
+      ),
     }),
     z.object({ type: z.literal("file"), ...baseFields, fileKey: fileKeyField }),
     z.object({ type: z.literal("image"), ...baseFields, fileKey: fileKeyField }),
   ],
-  { error: "Choose a type." },
+  { error: errKey("items.chooseType") },
 );
 
 export async function createItem(input: CreateItemInput): Promise<CreateItemResult> {
+  const e = await getErrors();
   const parsed = createItemSchema.safeParse(input);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
@@ -250,14 +252,14 @@ export async function createItem(input: CreateItemInput): Promise<CreateItemResu
     return {
       success: false,
       data: null,
-      error: issue?.message ?? "Invalid input.",
+      error: e.issue(issue),
       ...(typeof field === "string" && CREATE_ITEM_FIELDS.has(field) && { field: field as CreateItemField }),
     };
   }
 
   try {
     const session = await auth();
-    if (!session?.user?.id) return { success: false, data: null, error: "You are not signed in." };
+    if (!session?.user?.id) return { success: false, data: null, error: e.message("notSignedIn") };
 
     const userId = session.user.id;
 
@@ -274,11 +276,11 @@ export async function createItem(input: CreateItemInput): Promise<CreateItemResu
     const isUpload = parsed.data.type === "file" || parsed.data.type === "image";
     if (isUpload && !canUploadFiles(plan)) {
       await discardUpload();
-      return { success: false, data: null, error: LIMIT_MESSAGES.uploads };
+      return { success: false, data: null, error: e.message("limits.uploads") };
     }
     if (!canCreateItem(plan)) {
       await discardUpload();
-      return { success: false, data: null, error: LIMIT_MESSAGES.items };
+      return { success: false, data: null, error: e.message("limits.items", { max: FREE_LIMITS.items }) };
     }
     // Re-checked under a lock in the insert, so parallel requests cannot all pass the count above.
     const limits = { maxItems: plan.isPro ? undefined : FREE_LIMITS.items };
@@ -286,7 +288,7 @@ export async function createItem(input: CreateItemInput): Promise<CreateItemResu
     // `connect` does not filter on the owner, so the ids are checked here.
     if (!(await ownsCollections(userId, parsed.data.collectionIds))) {
       await discardUpload();
-      return { success: false, data: null, error: UNKNOWN_COLLECTION, field: "collectionIds" };
+      return { success: false, data: null, error: e.message("items.unknownCollection"), field: "collectionIds" };
     }
 
     if (parsed.data.type !== "file" && parsed.data.type !== "image") {
@@ -304,7 +306,7 @@ export async function createItem(input: CreateItemInput): Promise<CreateItemResu
       // Uploaded as the other kind: nothing will point at it, unless the key is an
       // existing item's, sent again. Only an unused object is removed.
       if (head && !(await isFileKeyInUse(userId, fileKey))) await deleteObjectsQuietly([fileKey]);
-      return { success: false, data: null, error: UPLOAD_NOT_FOUND, field: "fileKey" };
+      return { success: false, data: null, error: e.message("items.uploadNotFound"), field: "fileKey" };
     }
 
     try {
@@ -321,18 +323,19 @@ export async function createItem(input: CreateItemInput): Promise<CreateItemResu
     }
   } catch (error) {
     // Lost the race for the last Free slot; an upload was already removed above.
-    if (error instanceof LimitReachedError) return { success: false, data: null, error: LIMIT_MESSAGES.items };
+    if (error instanceof LimitReachedError) return { success: false, data: null, error: e.message("limits.items", { max: FREE_LIMITS.items }) };
     console.error("[items] createItem failed:", error);
-    return { success: false, data: null, error: "Could not create the item. Try again." };
+    return { success: false, data: null, error: e.message("items.createFailed") };
   }
 }
 
 export type DeleteItemResult = { success: true; data: null; error: null } | { success: false; data: null; error: string };
 
 export async function deleteItem(itemId: string): Promise<DeleteItemResult> {
+  const e = await getErrors();
   try {
     const session = await auth();
-    if (!session?.user?.id) return { success: false, data: null, error: "You are not signed in." };
+    if (!session?.user?.id) return { success: false, data: null, error: e.message("notSignedIn") };
 
     // The query filters on the owner, so another user's item is not found either.
     const { fileUrl } = await deleteItemQuery(session.user.id, itemId);
@@ -340,9 +343,9 @@ export async function deleteItem(itemId: string): Promise<DeleteItemResult> {
     if (fileUrl) await deleteObjectsQuietly([fileUrl]);
     return { success: true, data: null, error: null };
   } catch (error) {
-    if (isNotFound(error)) return { success: false, data: null, error: "This item no longer exists." };
+    if (isNotFound(error)) return { success: false, data: null, error: e.message("items.notFound") };
     console.error("[items] deleteItem failed:", error);
-    return { success: false, data: null, error: "Could not delete the item. Try again." };
+    return { success: false, data: null, error: e.message("items.deleteFailed") };
   }
 }
 
@@ -352,18 +355,19 @@ export type SetFavoriteResult =
 
 /** Takes the state to set, not a flip, so a repeated click cannot leave the row out of step. */
 export async function setItemFavorite(itemId: string, isFavorite: boolean): Promise<SetFavoriteResult> {
-  if (typeof isFavorite !== "boolean") return { success: false, data: null, error: "Invalid favorite value." };
+  const e = await getErrors();
+  if (typeof isFavorite !== "boolean") return { success: false, data: null, error: e.message("items.invalidFavorite") };
 
   try {
     const session = await auth();
-    if (!session?.user?.id) return { success: false, data: null, error: "You are not signed in." };
+    if (!session?.user?.id) return { success: false, data: null, error: e.message("notSignedIn") };
 
     // The query filters on the owner, so another user's item is not found either.
     const found = await setItemFavoriteQuery(session.user.id, itemId, isFavorite);
-    if (!found) return { success: false, data: null, error: "This item no longer exists." };
+    if (!found) return { success: false, data: null, error: e.message("items.notFound") };
   } catch (error) {
     console.error("[items] setItemFavorite failed:", error);
-    return { success: false, data: null, error: "Could not update the favorite. Try again." };
+    return { success: false, data: null, error: e.message("items.favoriteFailed") };
   }
 
   // The layout too: the sidebar, stats and top bar count favorites.
@@ -377,18 +381,19 @@ export type SetPinnedResult =
 
 /** Like `setItemFavorite`: takes the state to set, not a flip. */
 export async function setItemPinned(itemId: string, isPinned: boolean): Promise<SetPinnedResult> {
-  if (typeof isPinned !== "boolean") return { success: false, data: null, error: "Invalid pin value." };
+  const e = await getErrors();
+  if (typeof isPinned !== "boolean") return { success: false, data: null, error: e.message("items.invalidPin") };
 
   try {
     const session = await auth();
-    if (!session?.user?.id) return { success: false, data: null, error: "You are not signed in." };
+    if (!session?.user?.id) return { success: false, data: null, error: e.message("notSignedIn") };
 
     // The query filters on the owner, so another user's item is not found either.
     const found = await setItemPinnedQuery(session.user.id, itemId, isPinned);
-    if (!found) return { success: false, data: null, error: "This item no longer exists." };
+    if (!found) return { success: false, data: null, error: e.message("items.notFound") };
   } catch (error) {
     console.error("[items] setItemPinned failed:", error);
-    return { success: false, data: null, error: "Could not update the pin. Try again." };
+    return { success: false, data: null, error: e.message("items.pinFailed") };
   }
 
   // The layout too: the dashboard's Pinned section and every list's order change.

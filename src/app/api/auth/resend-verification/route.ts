@@ -1,5 +1,7 @@
 import { after, NextResponse } from "next/server";
 
+import { getErrors } from "@/i18n/errors-server";
+import { getRequestLocale } from "@/i18n/request";
 import { isEmailVerificationEnabled } from "@/lib/email-verification-flag";
 import { issueVerificationEmail } from "@/lib/verification";
 import { prisma } from "@/lib/prisma";
@@ -22,21 +24,23 @@ export async function POST(request: Request) {
 
   const email = (body as { email?: unknown } | null)?.email;
   if (typeof email !== "string" || !EMAIL_PATTERN.test(email.trim())) {
-    return NextResponse.json({ success: false, error: "Email is not valid." }, { status: 400 });
+    return NextResponse.json({ success: false, error: (await getErrors()).message("auth.emailInvalid") }, { status: 400 });
   }
   const normalizedEmail = email.trim().toLowerCase();
 
   const limit = await checkRateLimit("resendVerification", `${getClientIp(request.headers)}:${normalizedEmail}`);
-  if (!limit.success) return tooManyAttemptsResponse(limit.reset);
+  if (!limit.success) return await tooManyAttemptsResponse(limit.reset);
 
   if (!isEmailVerificationEnabled()) return NextResponse.json({ success: true });
 
+  // Read now: the request's cookies are not available inside `after`.
+  const { locale } = await getRequestLocale();
   after(async () => {
     try {
       const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
       // GitHub-only users have no password and nothing to verify.
       if (user?.password && !user.emailVerified) {
-        await issueVerificationEmail(user, { throttle: true });
+        await issueVerificationEmail(user, { throttle: true, locale });
       }
     } catch (error) {
       console.error("[resend-verification] failed:", error);

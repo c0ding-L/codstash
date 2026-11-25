@@ -28,21 +28,14 @@ export function canUseAi(plan: Pick<PlanUsage, "isPro">) {
   return plan.isPro;
 }
 
-/** Shared wording for the actions and the upload route. */
-export const LIMIT_MESSAGES = {
-  items: `Free accounts can have ${FREE_LIMITS.items} items. Upgrade to Pro in Settings.`,
-  collections: `Free accounts can have ${FREE_LIMITS.collections} collections. Upgrade to Pro in Settings.`,
-  uploads: "File and image uploads are a Pro feature.",
-  ai: "AI features are a Pro feature.",
-} as const;
-
 /**
  * Thrown by the create queries when, re-counted under a lock, the Free limit
  * is already reached: two requests racing past the action's early check.
  */
 export class LimitReachedError extends Error {
   constructor(readonly limit: "items" | "collections") {
-    super(LIMIT_MESSAGES[limit]);
+    // Internal: the action that catches it answers with the `errors.limits` message.
+    super(`${limit} limit reached`);
     this.name = "LimitReachedError";
   }
 }

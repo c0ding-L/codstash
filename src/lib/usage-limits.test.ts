@@ -1,8 +1,10 @@
+import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
 
+import enMessages from "../../messages/en.json";
+import frMessages from "../../messages/fr.json";
 import {
   FREE_LIMITS,
-  LIMIT_MESSAGES,
   canCreateCollection,
   canCreateItem,
   canUploadFiles,
@@ -49,12 +51,20 @@ describe("canUseAi", () => {
   });
 });
 
-describe("LIMIT_MESSAGES", () => {
+describe("limit messages", () => {
+  // The wording lives in the `errors.limits` messages; the actions fill in FREE_LIMITS.
+  const en = createTranslator({ locale: "en", messages: enMessages, namespace: "errors.limits" });
+  const fr = createTranslator({ locale: "fr", messages: frMessages, namespace: "errors.limits" });
+
   it("names the limits from FREE_LIMITS", () => {
-    expect(LIMIT_MESSAGES.items).toBe(`Free accounts can have ${FREE_LIMITS.items} items. Upgrade to Pro in Settings.`);
-    expect(LIMIT_MESSAGES.items).toContain("50 items");
-    expect(LIMIT_MESSAGES.collections).toContain("3 collections");
-    expect(LIMIT_MESSAGES.uploads).toBe("File and image uploads are a Pro feature.");
-    expect(LIMIT_MESSAGES.ai).toBe("AI features are a Pro feature.");
+    expect(en("items", { max: FREE_LIMITS.items })).toBe("Free accounts can have 50 items. Upgrade to Pro in Settings.");
+    expect(en("collections", { max: FREE_LIMITS.collections })).toContain("3 collections");
+    expect(en("uploads")).toBe("File and image uploads are a Pro feature.");
+    expect(en("ai")).toBe("AI features are a Pro feature.");
+  });
+
+  it("has them in French", () => {
+    expect(fr("items", { max: FREE_LIMITS.items })).toContain("50 éléments");
+    expect(fr("ai")).toBe("Les fonctionnalités d’IA sont réservées à la formule Pro.");
   });
 });

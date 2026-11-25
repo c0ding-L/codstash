@@ -1,3 +1,4 @@
+import { createTranslator } from "next-intl";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -13,6 +14,9 @@ import {
   UPLOAD_RULES,
   validateUpload,
 } from "@/lib/files";
+
+import enMessages from "../../messages/en.json";
+import frMessages from "../../messages/fr.json";
 
 const MB = 1024 * 1024;
 const UUID = "0f8fad5b-d9cb-469f-a165-70867728950e";
@@ -87,7 +91,7 @@ describe("validateUpload", () => {
   it("refuses an extension outside the kind's list", () => {
     expect(validateUpload("image", file("doc.pdf"))).toEqual({
       ok: false,
-      error: "Images must be one of: .png, .jpg, .jpeg, .gif, .webp, .svg.",
+      error: { key: "imageExtension", values: { extensions: ".png, .jpg, .jpeg, .gif, .webp, .svg" } },
     });
     expect(validateUpload("file", file("tool.exe"))).toMatchObject({ ok: false });
     expect(validateUpload("file", file("noextension"))).toMatchObject({ ok: false });
@@ -96,20 +100,20 @@ describe("validateUpload", () => {
   it("refuses a specific type that contradicts the extension", () => {
     expect(validateUpload("image", file("photo.png", 1000, "text/html"))).toEqual({
       ok: false,
-      error: "The file's type does not match its extension.",
+      error: { key: "typeMismatch" },
     });
   });
 
   it("caps images at 5 MB and files at 10 MB", () => {
     expect(validateUpload("image", file("a.png", 5 * MB))).toMatchObject({ ok: true });
-    expect(validateUpload("image", file("a.png", 5 * MB + 1))).toEqual({ ok: false, error: "Images can be at most 5 MB." });
+    expect(validateUpload("image", file("a.png", 5 * MB + 1))).toEqual({ ok: false, error: { key: "imageTooLarge", values: { max: 5 } } });
     expect(validateUpload("file", file("a.pdf", 10 * MB))).toMatchObject({ ok: true });
-    expect(validateUpload("file", file("a.pdf", 10 * MB + 1))).toEqual({ ok: false, error: "Files can be at most 10 MB." });
+    expect(validateUpload("file", file("a.pdf", 10 * MB + 1))).toEqual({ ok: false, error: { key: "fileTooLarge", values: { max: 10 } } });
   });
 
   it("refuses an empty file and a missing or overlong name", () => {
-    expect(validateUpload("file", file("a.txt", 0))).toEqual({ ok: false, error: "The file is empty." });
-    expect(validateUpload("file", file("  "))).toEqual({ ok: false, error: "The file has no name." });
+    expect(validateUpload("file", file("a.txt", 0))).toEqual({ ok: false, error: { key: "empty" } });
+    expect(validateUpload("file", file("  "))).toEqual({ ok: false, error: { key: "noName" } });
     expect(validateUpload("file", file(`${"a".repeat(260)}.txt`))).toMatchObject({ ok: false });
   });
 });
@@ -178,5 +182,17 @@ describe("object metadata", () => {
     expect(fromObjectMetadata(undefined)).toBeNull();
     expect(fromObjectMetadata({ kind: "video", name: "a" })).toBeNull();
     expect(fromObjectMetadata({ kind: "file", name: "%E0%A4%A" })).toBeNull();
+  });
+});
+
+describe("upload error messages", () => {
+  // `validateUpload` returns a key; the browser and the upload route word it from `errors.upload`.
+  it("word a refusal in English and in French", () => {
+    const check = validateUpload("image", { name: "a.png", size: 5 * MB + 1, type: "image/png" });
+    if (check.ok) throw new Error("expected a refusal");
+    const en = createTranslator({ locale: "en", messages: enMessages, namespace: "errors.upload" });
+    const fr = createTranslator({ locale: "fr", messages: frMessages, namespace: "errors.upload" });
+    expect(en(check.error.key, check.error.values)).toBe("Images can be at most 5 MB.");
+    expect(fr(check.error.key, check.error.values)).toBe("Les images ne peuvent pas dépasser 5 Mo.");
   });
 });

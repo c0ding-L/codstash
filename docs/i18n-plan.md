@@ -134,6 +134,8 @@ hand-written `Accept-Language` parser is enough for two locales. `negotiator` an
 - `User.locale` is also the source for emails sent **to someone other than the requester**. Today
   that is `AccountExistsEmail`: someone registers with an existing address, and the owner of that
   address gets the email.
+- Registration also saves `User.locale` (the request's language), set in Phase 3. Without it, an
+  owner who never used the switcher stays null and gets that email in English.
 
 ### 4.3 Where the switcher goes
 - `/settings`: a "Language" section next to the editor preferences. This is the main control.
@@ -173,7 +175,10 @@ Counts measured with grep on `src/` at `b201b16`. They are estimates, ±20 %.
 ### 5.2 Errors in server actions and zod
 - Schemas are declared at module level with English messages. Examples: `items.ts:59` builds
   `` `${label} can be at most …` `` and `ai.ts:57` has `Content can be at most …`.
-- Recommended: turn each schema into a factory, for example
+- **Done in Phase 3 differently:** the schemas keep keys of the `errors` messages as their zod
+  messages (typed with `errKey()`), and the action translates the first issue. See
+  `context/features/i18n-phase-3-spec.md`.
+- First recommendation (not used): turn each schema into a factory, for example
   `itemSchema(t: Translator) => z.object(...)`. The action calls
   `const t = await getTranslations('errors')` and then `itemSchema(t).safeParse(...)`.
   The alternative is to keep the schemas and return **keys** that the client translates. That is

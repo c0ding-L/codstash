@@ -1,6 +1,7 @@
 "use server";
 
 import { auth } from "@/auth";
+import { getErrors } from "@/i18n/errors-server";
 import { editorPreferencesSchema, type EditorPreferences } from "@/lib/editor-preferences";
 import { prisma } from "@/lib/prisma";
 
@@ -11,12 +12,13 @@ export interface ActionResult {
 
 /** Saves the whole set, so the last change sent wins and no field is left half-updated. */
 export async function updateEditorPreferences(preferences: EditorPreferences): Promise<ActionResult> {
+  const e = await getErrors();
   const parsed = editorPreferencesSchema.safeParse(preferences);
-  if (!parsed.success) return { success: false, error: "Invalid editor preferences." };
+  if (!parsed.success) return { success: false, error: e.message("editorPreferences.invalid") };
 
   try {
     const session = await auth();
-    if (!session?.user?.id) return { success: false, error: "You are not signed in." };
+    if (!session?.user?.id) return { success: false, error: e.message("notSignedIn") };
 
     await prisma.user.update({
       where: { id: session.user.id },
@@ -24,7 +26,7 @@ export async function updateEditorPreferences(preferences: EditorPreferences): P
     });
   } catch (error) {
     console.error("[editor-preferences] update failed:", error);
-    return { success: false, error: "Could not save your editor preferences. Try again." };
+    return { success: false, error: e.message("editorPreferences.saveFailed") };
   }
 
   return { success: true, error: null };

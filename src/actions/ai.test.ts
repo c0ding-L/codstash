@@ -6,7 +6,8 @@ import { AiProviderError, complete } from "@/lib/ai-client";
 import { getPlanStatus } from "@/lib/db/billing";
 import { getItemForExplain } from "@/lib/db/items";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { LIMIT_MESSAGES } from "@/lib/usage-limits";
+
+const PRO_ONLY = "AI features are a Pro feature.";
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
 vi.mock("@/lib/db/billing", () => ({ getPlanStatus: vi.fn() }));
@@ -91,7 +92,7 @@ describe("generateAutoTags", () => {
   it("refuses Free users before the rate limits", async () => {
     planStatus.mockResolvedValue({ proUntil: null, isPro: false, items: 0, collections: 0 });
 
-    expect(await generateAutoTags(INPUT)).toEqual({ success: false, data: null, error: LIMIT_MESSAGES.ai });
+    expect(await generateAutoTags(INPUT)).toEqual({ success: false, data: null, error: PRO_ONLY });
     expect(planStatus).toHaveBeenCalledWith(USER_ID);
     expect(rateLimit).not.toHaveBeenCalled();
     expect(ai).not.toHaveBeenCalled();
@@ -212,7 +213,7 @@ describe("generateDescription", () => {
   it("refuses Free users before the rate limits", async () => {
     planStatus.mockResolvedValue({ proUntil: null, isPro: false, items: 0, collections: 0 });
 
-    expect(await generateDescription(LINK)).toMatchObject({ success: false, error: LIMIT_MESSAGES.ai });
+    expect(await generateDescription(LINK)).toMatchObject({ success: false, error: PRO_ONLY });
     expect(rateLimit).not.toHaveBeenCalled();
     expect(ai).not.toHaveBeenCalled();
   });
@@ -314,7 +315,7 @@ describe("explainCode", () => {
   it("refuses Free users before the rate limits and the item", async () => {
     planStatus.mockResolvedValue({ proUntil: null, isPro: false, items: 0, collections: 0 });
 
-    expect(await explainCode({ itemId: "item_1" })).toEqual({ success: false, data: null, error: LIMIT_MESSAGES.ai });
+    expect(await explainCode({ itemId: "item_1" })).toEqual({ success: false, data: null, error: PRO_ONLY });
     expect(rateLimit).not.toHaveBeenCalled();
     expect(itemForExplain).not.toHaveBeenCalled();
     expect(ai).not.toHaveBeenCalled();
@@ -460,7 +461,7 @@ describe("optimizePrompt", () => {
   it("refuses Free users before the rate limits and the item", async () => {
     planStatus.mockResolvedValue({ proUntil: null, isPro: false, items: 0, collections: 0 });
 
-    expect(await optimizePrompt({ itemId: "item_1" })).toEqual({ success: false, data: null, error: LIMIT_MESSAGES.ai });
+    expect(await optimizePrompt({ itemId: "item_1" })).toEqual({ success: false, data: null, error: PRO_ONLY });
     expect(rateLimit).not.toHaveBeenCalled();
     expect(itemForExplain).not.toHaveBeenCalled();
   });

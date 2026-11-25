@@ -16,6 +16,7 @@ import {
   updatePromptContent,
 } from "@/lib/db/items";
 import { deleteObjectsQuietly, headObject } from "@/lib/r2";
+import { setTestLocale } from "@/lib/__fixtures__/i18n-setup";
 import { LimitReachedError } from "@/lib/usage-limits";
 
 vi.mock("@/auth", () => ({ auth: vi.fn() }));
@@ -759,5 +760,43 @@ describe("applyOptimizedPrompt", () => {
       data: null,
       error: "Could not save the prompt. Try again.",
     });
+  });
+});
+
+describe("errors in French", () => {
+  // The request's language comes from `next-intl/server`, mocked in `i18n-setup.ts`.
+  beforeEach(() => setTestLocale("fr"));
+
+  it("words a validation error, with the limit formatted for French", async () => {
+    const tooLong = await updateItem("item_1", {
+      title: "Title",
+      content: "a".repeat(100_001),
+      tags: [],
+      collectionIds: [],
+    });
+
+    expect(tooLong).toMatchObject({
+      success: false,
+      error: "Le contenu ne peut pas dépasser 100\u202f000 caractères.",
+      field: "content",
+    });
+  });
+
+  it("words the Free plan limit", async () => {
+    planStatus.mockResolvedValue(plan(false, 50));
+
+    const result = await createItem({ type: "snippet", title: "Title", content: "x", tags: [], collectionIds: [] });
+
+    expect(result).toEqual({
+      success: false,
+      data: null,
+      error: "Les comptes gratuits sont limités à 50 éléments. Passez à Pro dans les Paramètres.",
+    });
+  });
+
+  it("words a missing item", async () => {
+    deleteQuery.mockRejectedValue(Object.assign(new Error("not found"), { code: "P2025" }));
+
+    expect(await deleteItem("gone")).toEqual({ success: false, data: null, error: "Cet élément n’existe plus." });
   });
 });

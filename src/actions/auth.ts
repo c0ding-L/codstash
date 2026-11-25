@@ -3,6 +3,7 @@
 import { AuthError, CredentialsSignin } from "next-auth";
 
 import { signIn, signOut } from "@/auth";
+import { getErrors } from "@/i18n/errors-server";
 import { EMAIL_NOT_VERIFIED_CODE, RateLimitedError } from "@/lib/auth-errors";
 import { tooManyAttemptsMessage } from "@/lib/rate-limit";
 
@@ -34,12 +35,13 @@ export async function signInWithCredentials(
   _previous: SignInState,
   formData: FormData,
 ): Promise<SignInState> {
+  const e = await getErrors();
   const email = formData.get("email");
   const password = formData.get("password");
 
   if (typeof email !== "string" || typeof password !== "string" || !email || !password) {
     return {
-      error: "Enter your email and password.",
+      error: e.message("auth.credentialsRequired"),
       email: typeof email === "string" ? email : "",
       unverified: false,
     };
@@ -54,11 +56,11 @@ export async function signInWithCredentials(
   } catch (error) {
     // Before the generic branch: this is a `CredentialsSignin` too.
     if (error instanceof RateLimitedError) {
-      return { error: tooManyAttemptsMessage(error.reset), email, unverified: false, rateLimited: true };
+      return { error: await tooManyAttemptsMessage(error.reset), email, unverified: false, rateLimited: true };
     }
     if (error instanceof CredentialsSignin && error.code === EMAIL_NOT_VERIFIED_CODE) {
       return {
-        error: "Verify your email first. Check your inbox for the link, or send a new one.",
+        error: e.message("auth.emailNotVerified"),
         email,
         unverified: true,
       };
@@ -67,8 +69,8 @@ export async function signInWithCredentials(
       return {
         error:
           error.type === "CredentialsSignin"
-            ? "Invalid email or password."
-            : "Something went wrong. Try again.",
+            ? e.message("auth.invalidCredentials")
+            : e.message("somethingWrong"),
         email,
         unverified: false,
       };

@@ -13,17 +13,22 @@ import {
 } from "react-email";
 
 import { styles } from "@/emails/styles";
+import { emailTranslator } from "@/emails/translator";
+import type { Locale } from "@/lib/locale";
 
+/** `locale` defaults to English for the react-email preview, which renders without props. */
 interface VerificationEmailProps {
+  locale: Locale;
   name: string | null;
   url: string;
 }
 
-export function VerificationEmail({ name, url }: Readonly<VerificationEmailProps>) {
+export function VerificationEmail({ locale = "en", name, url }: Readonly<VerificationEmailProps>) {
+  const t = emailTranslator(locale);
   return (
-    <Html lang="en">
+    <Html lang={locale}>
       <Head />
-      <Preview>Confirm your email to activate your Cortex account</Preview>
+      <Preview>{t("verification.preview")}</Preview>
       <Body style={styles.body}>
         <Container style={styles.card}>
           <Section>
@@ -32,32 +37,24 @@ export function VerificationEmail({ name, url }: Readonly<VerificationEmailProps
           </Section>
 
           <Heading as="h1" style={styles.heading}>
-            Verify your email
+            {t("verification.heading")}
           </Heading>
-          <Text style={styles.text}>{name ? `Hi ${name},` : "Hi,"}</Text>
-          <Text style={styles.text}>
-            Thanks for signing up. Confirm your email address to activate your account and start
-            saving snippets, prompts, commands and notes.
-          </Text>
+          <Text style={styles.text}>{name ? t("greetingNamed", { name }) : t("greeting")}</Text>
+          <Text style={styles.text}>{t("verification.body")}</Text>
 
           <Section style={styles.buttonWrap}>
             <Button href={url} style={styles.button}>
-              Verify my email
+              {t("verification.button")}
             </Button>
           </Section>
 
-          <Text style={styles.small}>
-            This link works once and expires in 24 hours. If the button does not work, copy this
-            address into your browser:
-          </Text>
+          <Text style={styles.small}>{t("verification.linkHelp")}</Text>
           <Link href={url} style={styles.url}>
             {url}
           </Link>
 
           <Hr style={styles.hr} />
-          <Text style={styles.footer}>
-            If you did not create a Cortex account, you can safely ignore this email.
-          </Text>
+          <Text style={styles.footer}>{t("verification.footer")}</Text>
         </Container>
       </Body>
     </Html>

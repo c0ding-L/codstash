@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 
 import { sendPasswordResetEmail } from "@/lib/email";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/locale";
 import { prisma } from "@/lib/prisma";
 import { hashToken, type IssueResult } from "@/lib/verification";
 
@@ -20,9 +21,13 @@ function resetIdentifier(email: string) {
 /**
  * Replaces any earlier reset token for this email and sends the link. A token
  * issued in the last minute blocks a new one; with no `createdAt` column, the
- * issue time is `expires - TTL`.
+ * issue time is `expires - TTL`. `locale` is the language of the email: the requester's, from the
+ * forgot-password request.
  */
-export async function issuePasswordResetEmail(user: { email: string; name: string | null }): Promise<IssueResult> {
+export async function issuePasswordResetEmail(
+  user: { email: string; name: string | null },
+  locale: Locale = DEFAULT_LOCALE,
+): Promise<IssueResult> {
   const baseUrl = process.env.APP_URL?.replace(/\/+$/, "");
   if (!baseUrl) {
     console.error("[password-reset] APP_URL is not set.");
@@ -49,7 +54,7 @@ export async function issuePasswordResetEmail(user: { email: string; name: strin
   ]);
 
   const url = `${baseUrl}/reset-password?${new URLSearchParams({ token, email })}`;
-  const sent = await sendPasswordResetEmail({ to: email, name: user.name, url });
+  const sent = await sendPasswordResetEmail({ to: email, locale, name: user.name, url });
 
   if (!sent) {
     // Otherwise the throttle would block a retry for a link nobody received.

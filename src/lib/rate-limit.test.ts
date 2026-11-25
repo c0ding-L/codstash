@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { setTestLocale } from "@/lib/__fixtures__/i18n-setup";
 import { checkRateLimit, getClientIp, secondsUntil, tooManyAttemptsMessage } from "@/lib/rate-limit";
 
 describe("getClientIp", () => {
@@ -36,12 +37,19 @@ describe("time until the limit resets", () => {
     expect(secondsUntil(NOW - 5_000)).toBe(1);
   });
 
-  it("uses the singular for one minute", () => {
-    expect(tooManyAttemptsMessage(NOW + 60_000)).toBe("Too many attempts. Please try again in 1 minute.");
+  it("uses the singular for one minute", async () => {
+    expect(await tooManyAttemptsMessage(NOW + 60_000)).toBe("Too many attempts. Please try again in 1 minute.");
   });
 
-  it("rounds a partial minute up and pluralises", () => {
-    expect(tooManyAttemptsMessage(NOW + 61_000)).toBe("Too many attempts. Please try again in 2 minutes.");
+  it("rounds a partial minute up and pluralises", async () => {
+    expect(await tooManyAttemptsMessage(NOW + 61_000)).toBe("Too many attempts. Please try again in 2 minutes.");
+  });
+
+  it("words it in French, singular and plural", async () => {
+    setTestLocale("fr");
+
+    expect(await tooManyAttemptsMessage(NOW + 60_000)).toBe("Trop de tentatives. Réessayez dans 1 minute.");
+    expect(await tooManyAttemptsMessage(NOW + 61_000)).toBe("Trop de tentatives. Réessayez dans 2 minutes.");
   });
 });
 

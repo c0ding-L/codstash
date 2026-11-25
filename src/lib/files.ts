@@ -55,9 +55,9 @@ const EXTRA_FILE_MIMES = ["text/yaml", "text/xml"];
 /** Types that say nothing about the file, so they are not held against it. */
 const GENERIC_MIMES = new Set(["", "application/octet-stream"]);
 
-export const UPLOAD_RULES: Record<UploadKind, { maxBytes: number; types: Record<string, string>; noun: string }> = {
-  image: { maxBytes: 5 * MB, types: IMAGE_TYPES, noun: "Images" },
-  file: { maxBytes: 10 * MB, types: FILE_TYPES, noun: "Files" },
+export const UPLOAD_RULES: Record<UploadKind, { maxBytes: number; types: Record<string, string> }> = {
+  image: { maxBytes: 5 * MB, types: IMAGE_TYPES },
+  file: { maxBytes: 10 * MB, types: FILE_TYPES },
 };
 
 /** The longest original file name kept. */
@@ -93,31 +93,43 @@ export function acceptAttribute(kind: UploadKind) {
   return [...allowedExtensions(kind), ...acceptedMimes(kind)].join(",");
 }
 
-export type UploadCheck = { ok: true; contentType: string } | { ok: false; error: string };
+/**
+ * Why a file was refused, as a key of the `errors.upload` messages and its values. This runs in
+ * the browser and on the server, so each side words it in its own language.
+ */
+export type UploadError =
+  | { key: "noName" | "typeMismatch" | "empty"; values?: undefined }
+  | { key: "nameTooLong" | "imageTooLarge" | "fileTooLarge"; values: { max: number } }
+  | { key: "imageExtension" | "fileExtension"; values: { extensions: string } };
+
+export type UploadCheck = { ok: true; contentType: string } | { ok: false; error: UploadError };
 
 /** Whether a file can be uploaded as this kind, and the content type to store it with. */
 export function validateUpload(kind: UploadKind, file: { name: string; size: number; type: string }): UploadCheck {
   const rules = UPLOAD_RULES[kind];
   const name = file.name.trim();
 
-  if (!name) return { ok: false, error: "The file has no name." };
+  if (!name) return { ok: false, error: { key: "noName" } };
   if (name.length > MAX_FILE_NAME_LENGTH) {
-    return { ok: false, error: `The file name is longer than ${MAX_FILE_NAME_LENGTH} characters.` };
+    return { ok: false, error: { key: "nameTooLong", values: { max: MAX_FILE_NAME_LENGTH } } };
   }
 
   const contentType = rules.types[extensionOf(name)];
   if (!contentType) {
-    return { ok: false, error: `${rules.noun} must be one of: ${allowedExtensions(kind).join(", ")}.` };
+    return {
+      ok: false,
+      error: { key: `${kind}Extension`, values: { extensions: allowedExtensions(kind).join(", ") } },
+    };
   }
 
   const reported = file.type.toLowerCase();
   if (!GENERIC_MIMES.has(reported) && !acceptedMimes(kind).has(reported)) {
-    return { ok: false, error: "The file's type does not match its extension." };
+    return { ok: false, error: { key: "typeMismatch" } };
   }
 
-  if (file.size <= 0) return { ok: false, error: "The file is empty." };
+  if (file.size <= 0) return { ok: false, error: { key: "empty" } };
   if (file.size > rules.maxBytes) {
-    return { ok: false, error: `${rules.noun} can be at most ${rules.maxBytes / MB} MB.` };
+    return { ok: false, error: { key: `${kind}TooLarge`, values: { max: rules.maxBytes / MB } } };
   }
 
   return { ok: true, contentType };

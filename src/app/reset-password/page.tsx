@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { connection } from "next/server";
 
 import { AuthCard } from "@/components/auth/AuthCard";
@@ -14,25 +15,25 @@ export default async function ResetPasswordPage({
   // Rendered per request: the token is checked on every visit.
   await connection();
 
-  const { token, email } = await searchParams;
+  const [{ token, email }, t] = await Promise.all([searchParams, getTranslations("auth.reset")]);
   const valid =
     typeof token === "string" && typeof email === "string" && (await isPasswordResetTokenValid(email, token));
 
   if (!valid) {
     return (
       <AuthCard
-        title="Link invalid or expired"
-        description="This reset link was already used, has expired, or is not valid."
+        title={t("invalidTitle")}
+        description={t("invalidDescription")}
       >
         <Link href="/forgot-password" className={buttonVariants({ size: "lg" })}>
-          Send a new reset link
+          {t("newLink")}
         </Link>
       </AuthCard>
     );
   }
 
   return (
-    <AuthCard title="Choose a new password" description={`For ${email}`}>
+    <AuthCard title={t("title")} description={t("forEmail", { email })}>
       <ResetPasswordForm email={email} token={token} />
     </AuthCard>
   );

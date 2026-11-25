@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 
 import { sendVerificationEmail } from "@/lib/email";
+import { DEFAULT_LOCALE, type Locale } from "@/lib/locale";
 import { prisma } from "@/lib/prisma";
 
 const TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
@@ -20,7 +21,7 @@ export type IssueResult = "sent" | "failed" | "throttled";
  */
 export async function issueVerificationEmail(
   user: { email: string; name: string | null },
-  { throttle = false }: { throttle?: boolean } = {},
+  { throttle = false, locale = DEFAULT_LOCALE }: { throttle?: boolean; locale?: Locale } = {},
 ): Promise<IssueResult> {
   const baseUrl = process.env.APP_URL?.replace(/\/+$/, "");
   if (!baseUrl) {
@@ -49,7 +50,7 @@ export async function issueVerificationEmail(
   ]);
 
   const url = `${baseUrl}/verify-email?${new URLSearchParams({ token, email: identifier })}`;
-  const sent = await sendVerificationEmail({ to: identifier, name: user.name, url });
+  const sent = await sendVerificationEmail({ to: identifier, locale, name: user.name, url });
 
   if (!sent) {
     // Otherwise the throttle would block a retry for a link nobody received.

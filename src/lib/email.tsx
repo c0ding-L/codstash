@@ -4,10 +4,14 @@ import { Resend } from "resend";
 
 import { AccountExistsEmail } from "@/emails/AccountExistsEmail";
 import { PasswordResetEmail } from "@/emails/PasswordResetEmail";
+import { emailTranslator } from "@/emails/translator";
 import { VerificationEmail } from "@/emails/VerificationEmail";
+import type { Locale } from "@/lib/locale";
 
 interface LinkEmailParams {
   to: string;
+  /** The language to write in: the requester's for links they asked for, the owner's otherwise. */
+  locale: Locale;
   name: string | null;
   url: string;
 }
@@ -43,36 +47,38 @@ async function sendEmail({ to, subject, email }: { to: string; subject: string; 
   }
 }
 
-export function sendVerificationEmail({ to, name, url }: LinkEmailParams) {
+export function sendVerificationEmail({ to, locale, name, url }: LinkEmailParams) {
   return sendEmail({
     to,
-    subject: "Verify your Cortex email",
-    email: <VerificationEmail name={name} url={url} />,
+    subject: emailTranslator(locale)("verification.subject"),
+    email: <VerificationEmail locale={locale} name={name} url={url} />,
   });
 }
 
-export function sendPasswordResetEmail({ to, name, url }: LinkEmailParams) {
+export function sendPasswordResetEmail({ to, locale, name, url }: LinkEmailParams) {
   return sendEmail({
     to,
-    subject: "Reset your Cortex password",
-    email: <PasswordResetEmail name={name} url={url} />,
+    subject: emailTranslator(locale)("passwordReset.subject"),
+    email: <PasswordResetEmail locale={locale} name={name} url={url} />,
   });
 }
 
 export function sendAccountExistsEmail({
   to,
+  locale,
   name,
   signInUrl,
   resetUrl,
 }: {
   to: string;
+  locale: Locale;
   name: string | null;
   signInUrl: string;
   resetUrl: string | null;
 }) {
   return sendEmail({
     to,
-    subject: "You already have a Cortex account",
-    email: <AccountExistsEmail name={name} signInUrl={signInUrl} resetUrl={resetUrl} />,
+    subject: emailTranslator(locale)("accountExists.subject"),
+    email: <AccountExistsEmail locale={locale} name={name} signInUrl={signInUrl} resetUrl={resetUrl} />,
   });
 }

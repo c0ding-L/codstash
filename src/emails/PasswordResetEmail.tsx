@@ -13,17 +13,22 @@ import {
 } from "react-email";
 
 import { styles } from "@/emails/styles";
+import { emailTranslator } from "@/emails/translator";
+import type { Locale } from "@/lib/locale";
 
+/** `locale` defaults to English for the react-email preview, which renders without props. */
 interface PasswordResetEmailProps {
+  locale: Locale;
   name: string | null;
   url: string;
 }
 
-export function PasswordResetEmail({ name, url }: Readonly<PasswordResetEmailProps>) {
+export function PasswordResetEmail({ locale = "en", name, url }: Readonly<PasswordResetEmailProps>) {
+  const t = emailTranslator(locale);
   return (
-    <Html lang="en">
+    <Html lang={locale}>
       <Head />
-      <Preview>Reset your Cortex password</Preview>
+      <Preview>{t("passwordReset.preview")}</Preview>
       <Body style={styles.body}>
         <Container style={styles.card}>
           <Section>
@@ -32,33 +37,24 @@ export function PasswordResetEmail({ name, url }: Readonly<PasswordResetEmailPro
           </Section>
 
           <Heading as="h1" style={styles.heading}>
-            Reset your password
+            {t("passwordReset.heading")}
           </Heading>
-          <Text style={styles.text}>{name ? `Hi ${name},` : "Hi,"}</Text>
-          <Text style={styles.text}>
-            Someone asked to reset the password for your Cortex account. Choose a new one with
-            the button below.
-          </Text>
+          <Text style={styles.text}>{name ? t("greetingNamed", { name }) : t("greeting")}</Text>
+          <Text style={styles.text}>{t("passwordReset.body")}</Text>
 
           <Section style={styles.buttonWrap}>
             <Button href={url} style={styles.button}>
-              Choose a new password
+              {t("passwordReset.button")}
             </Button>
           </Section>
 
-          <Text style={styles.small}>
-            This link works once and expires in 1 hour. If the button does not work, copy this
-            address into your browser:
-          </Text>
+          <Text style={styles.small}>{t("passwordReset.linkHelp")}</Text>
           <Link href={url} style={styles.url}>
             {url}
           </Link>
 
           <Hr style={styles.hr} />
-          <Text style={styles.footer}>
-            If you did not ask for this, you can safely ignore this email. Your password stays the
-            same.
-          </Text>
+          <Text style={styles.footer}>{t("passwordReset.footer")}</Text>
         </Container>
       </Body>
     </Html>

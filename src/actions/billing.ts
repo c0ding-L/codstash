@@ -3,6 +3,8 @@
 import { z } from "zod";
 
 import { auth } from "@/auth";
+import { errKey } from "@/i18n/error-keys";
+import { getErrors } from "@/i18n/errors-server";
 import { createCharge } from "@/lib/bictorys";
 import { BILLING_PLANS, CURRENCIES, PLANS } from "@/lib/billing-plans";
 import {
@@ -20,11 +22,9 @@ export type CheckoutResult =
   | { success: false; redirectUrl: null; error: string };
 
 const checkoutSchema = z.object({
-  plan: z.enum(PLANS, { error: "Choose a plan." }),
-  currency: z.enum(CURRENCIES, { error: "Choose a currency." }),
+  plan: z.enum(PLANS, { error: errKey("billing.choosePlan") }),
+  currency: z.enum(CURRENCIES, { error: errKey("billing.chooseCurrency") }),
 });
-
-const CHECKOUT_FAILED = "Could not start the payment. Try again.";
 
 const failure = (error: string): CheckoutResult => ({ success: false, redirectUrl: null, error });
 
@@ -42,32 +42,33 @@ function cardOnly(link: string) {
  * else in the input is ignored.
  */
 export async function startCheckout(input: unknown): Promise<CheckoutResult> {
+  const e = await getErrors();
   const parsed = checkoutSchema.safeParse(input);
-  if (!parsed.success) return failure(parsed.error.issues[0]?.message ?? "Invalid input.");
+  if (!parsed.success) return failure(e.issue(parsed.error.issues[0]));
   const { plan, currency } = parsed.data;
 
   try {
     const session = await auth();
-    if (!session?.user?.id) return failure("You are not signed in.");
+    if (!session?.user?.id) return failure(e.message("notSignedIn"));
 
     const limit = await checkRateLimit("checkout", session.user.id);
-    if (!limit.success) return failure(tooManyAttemptsMessage(limit.reset));
+    if (!limit.success) return failure(await tooManyAttemptsMessage(limit.reset));
 
     const appUrl = process.env.APP_URL?.replace(/\/+$/, "");
     if (!appUrl) {
       console.error("[billing] APP_URL is not set.");
-      return failure(CHECKOUT_FAILED);
+      return failure(e.message("billing.checkoutFailed"));
     }
 
     const user = await getProfile(session.user.id);
-    if (!user) return failure("This account no longer exists.");
+    if (!user) return failure(e.message("billing.accountGone"));
 
     let charge: Awaited<ReturnType<typeof chargeFor>>;
     try {
       charge = await chargeFor(plan, currency);
     } catch (error) {
       console.error("[billing] could not price the charge:", error);
-      return failure(`${currency} payments are unavailable right now. Try another currency.`);
+      return failure(e.message("billing.currencyUnavailable", { currency }));
     }
 
     const payment = await createPendingPayment(user.id, plan, charge);
@@ -96,7 +97,7 @@ export async function startCheckout(input: unknown): Promise<CheckoutResult> {
     return { success: true, redirectUrl: charge.cardOnly ? cardOnly(created.redirectUrl) : created.redirectUrl, error: null };
   } catch (error) {
     console.error("[billing] startCheckout failed:", error);
-    return failure(CHECKOUT_FAILED);
+    return failure(e.message("billing.checkoutFailed"));
   }
 }
 

@@ -46,6 +46,22 @@ afterEach(() => {
 });
 
 describe("issuePasswordResetEmail", () => {
+  it("writes in the requester's language", async () => {
+    send.mockResolvedValue(true);
+
+    await issuePasswordResetEmail(user, "fr");
+
+    expect(send.mock.calls[0]![0]).toMatchObject({ locale: "fr" });
+  });
+
+  it("writes in English by default", async () => {
+    send.mockResolvedValue(true);
+
+    await issuePasswordResetEmail(user);
+
+    expect(send.mock.calls[0]![0]).toMatchObject({ locale: "en" });
+  });
+
   const user = { email: "Ada@Example.com", name: "Ada" };
 
   it("fails without APP_URL, before writing anything", async () => {

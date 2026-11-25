@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -14,6 +15,8 @@ const MIN_PASSWORD_LENGTH = 8;
 const MAX_NAME_LENGTH = 100;
 
 export function RegisterForm() {
+  const t = useTranslations("auth");
+  const te = useTranslations("errors.auth");
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -28,13 +31,13 @@ export function RegisterForm() {
     const password = String(form.get("password") ?? "");
     const confirmPassword = String(form.get("confirmPassword") ?? "");
 
-    if (!name) return setError("Name is required.");
-    if (name.length > MAX_NAME_LENGTH) return setError(`Name can be at most ${MAX_NAME_LENGTH} characters.`);
-    if (!EMAIL_PATTERN.test(email)) return setError("Enter a valid email address.");
+    if (!name) return setError(te("nameRequired"));
+    if (name.length > MAX_NAME_LENGTH) return setError(te("nameTooLong", { max: MAX_NAME_LENGTH }));
+    if (!EMAIL_PATTERN.test(email)) return setError(t("invalidEmail"));
     if (password.length < MIN_PASSWORD_LENGTH) {
-      return setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
+      return setError(te("passwordTooShort", { min: MIN_PASSWORD_LENGTH }));
     }
-    if (password !== confirmPassword) return setError("Passwords do not match.");
+    if (password !== confirmPassword) return setError(te("passwordsDontMatch"));
 
     setError(null);
     setUnverifiedEmail(null);
@@ -53,29 +56,29 @@ export function RegisterForm() {
       } = await response.json().catch(() => ({}));
 
       if (response.status === 429) {
-        toast.error(body.error ?? "Too many attempts. Try again later.");
+        toast.error(body.error ?? t("tooManyAttempts"));
         return;
       }
       if (!response.ok || !body.success) {
-        setError(body.error ?? "Could not create the account. Try again.");
+        setError(body.error ?? t("register.createFailed"));
         return;
       }
       if (body.verificationRequired === false) {
-        toast.success("Account created. You can sign in now.");
+        toast.success(t("register.createdSignIn"));
         router.push("/sign-in");
         return;
       }
       if (body.emailSent === false) {
         // Stay here: the account exists, and the fix is one click away.
-        setError("Your account was created, but we could not send the verification email.");
+        setError(t("register.emailNotSent"));
         setUnverifiedEmail(email);
         return;
       }
       // The Toaster lives in the root layout, so the toast survives the navigation.
-      toast.success("Account created. Check your email to verify your account.");
+      toast.success(t("register.createdCheckEmail"));
       router.push("/sign-in");
     } catch {
-      setError("Could not reach the server. Try again.");
+      setError(t("unreachable"));
     } finally {
       setPending(false);
     }
@@ -85,19 +88,19 @@ export function RegisterForm() {
     <>
       <form method="post" onSubmit={onSubmit} className="grid gap-3" noValidate>
         <label className="grid gap-1.5 text-sm font-medium">
-          Name
+          {t("name")}
           <Input name="name" autoComplete="name" maxLength={MAX_NAME_LENGTH} required />
         </label>
         <label className="grid gap-1.5 text-sm font-medium">
-          Email
+          {t("email")}
           <Input name="email" type="email" autoComplete="email" required />
         </label>
         <label className="grid gap-1.5 text-sm font-medium">
-          Password
+          {t("password")}
           <Input name="password" type="password" autoComplete="new-password" required />
         </label>
         <label className="grid gap-1.5 text-sm font-medium">
-          Confirm password
+          {t("confirmPassword")}
           <Input name="confirmPassword" type="password" autoComplete="new-password" required />
         </label>
         {error ? (
@@ -107,14 +110,14 @@ export function RegisterForm() {
         ) : null}
         {unverifiedEmail ? <ResendVerificationButton email={unverifiedEmail} /> : null}
         <Button type="submit" size="lg" disabled={pending}>
-          {pending ? "Creating account…" : "Create account"}
+          {pending ? t("register.pending") : t("register.submit")}
         </Button>
       </form>
 
       <p className="text-center text-sm text-muted-foreground">
-        Already registered?{" "}
+        {t("register.already")}{" "}
         <Link href="/sign-in" className="font-medium text-foreground underline-offset-4 hover:underline">
-          Sign in
+          {t("register.signIn")}
         </Link>
       </p>
     </>

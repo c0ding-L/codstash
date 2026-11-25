@@ -1,3 +1,12 @@
+import {
+  isLiteralElement,
+  isPluralElement,
+  isPoundElement,
+  isSelectElement,
+  isTagElement,
+  parse,
+  type MessageFormatElement,
+} from "@formatjs/icu-messageformat-parser";
 import { describe, expect, it } from "vitest";
 
 import en from "../../messages/en.json";
@@ -16,10 +25,27 @@ function flatten(catalog: Catalog, prefix = ""): Map<string, string> {
   return entries;
 }
 
-/** The ICU argument names a message uses: `{count, plural, …}` and `{name}` give count and name. */
-function placeholders(message: string): string[] {
-  const names = [...message.matchAll(/\{\s*([A-Za-z_]\w*)\s*[,}]/g)].map((match) => match[1]!);
-  return [...new Set(names)].sort();
+/** The ICU argument names and rich-text tags a message uses, each sorted: `{count, plural, …}` gives count. */
+function signature(message: string): { args: string[]; tags: string[] } {
+  const args = new Set<string>();
+  const tags: string[] = [];
+  const walk = (elements: MessageFormatElement[]) => {
+    for (const element of elements) {
+      if (isTagElement(element)) {
+        tags.push(element.value);
+        walk(element.children);
+      } else if (isLiteralElement(element) || isPoundElement(element)) {
+        continue;
+      } else {
+        args.add(element.value);
+        if (isSelectElement(element) || isPluralElement(element)) {
+          for (const option of Object.values(element.options)) walk(option.value);
+        }
+      }
+    }
+  };
+  walk(parse(message));
+  return { args: [...args].sort(), tags: tags.sort() };
 }
 
 const english = flatten(en as Catalog);
@@ -38,7 +64,13 @@ describe("message catalogs", () => {
 
   it("use the same placeholders in both languages", () => {
     for (const [path, message] of english) {
-      expect(placeholders(french.get(path) ?? ""), path).toEqual(placeholders(message));
+      expect(signature(french.get(path) ?? "").args, path).toEqual(signature(message).args);
+    }
+  });
+
+  it("use the same rich-text tags in both languages", () => {
+    for (const [path, message] of english) {
+      expect(signature(french.get(path) ?? "").tags, path).toEqual(signature(message).tags);
     }
   });
 });

@@ -3,6 +3,8 @@
 // picked by `AI_PROVIDER`, so moving from OpenRouter to OpenAI is a change of
 // env vars, not of code. Everything provider-specific is in `ADAPTERS`.
 
+import { getTranslations } from "next-intl/server";
+
 /** How long a call may take unless the caller allows more. */
 export const DEFAULT_TIMEOUT_MS = 15_000;
 /** Error bodies can be whole HTML pages; keep only an excerpt. */
@@ -211,9 +213,6 @@ export async function complete(
 /** The `AiProviderError` code of an answer cut off by `rejectCutOff`. */
 export const CUT_OFF_CODE = "cut_off";
 
-const UNAVAILABLE = "AI is unavailable right now.";
-const UNAVAILABLE_TRY_AGAIN = "AI is unavailable right now. Try again.";
-
 /** 429s that waiting a few seconds does not fix: spend limits and an empty balance. */
 const OUT_OF_BUDGET_CODES: ReadonlySet<string> = new Set([
   "project_spend_limit_exceeded",
@@ -221,32 +220,36 @@ const OUT_OF_BUDGET_CODES: ReadonlySet<string> = new Set([
   "insufficient_quota",
 ]);
 
-function busyMessage(retryAfter: number | null) {
-  if (retryAfter === null) return "AI is busy. Try again in a minute.";
-  if (retryAfter < 60) return `AI is busy. Try again in ${retryAfter} second${retryAfter === 1 ? "" : "s"}.`;
-  const minutes = Math.ceil(retryAfter / 60);
-  return `AI is busy. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`;
-}
+/**
+ * What the user is told when an AI call fails, in the request's language. Anything that is not an
+ * `AiProviderError` reads as unavailable.
+ */
+export async function aiErrorMessage(error: unknown): Promise<string> {
+  const t = await getTranslations("errors.ai");
+  if (!(error instanceof AiProviderError)) return t("unavailable");
+  if (error.code === CUT_OFF_CODE) return t("cutOff");
 
-/** What the user is told when an AI call fails. Anything that is not an `AiProviderError` reads as unavailable. */
-export function aiErrorMessage(error: unknown): string {
-  if (!(error instanceof AiProviderError)) return UNAVAILABLE;
-  if (error.code === CUT_OFF_CODE) return "The AI's answer was cut short. Try again.";
+  const busy = (retryAfter: number | null) => {
+    if (retryAfter === null) return t("busyMinute");
+    if (retryAfter < 60) return t("busySeconds", { seconds: retryAfter });
+    return t("busyMinutes", { minutes: Math.ceil(retryAfter / 60) });
+  };
+
   switch (error.status) {
     case 400:
-      return "AI request failed.";
+      return t("requestFailed");
     case 401:
     case 402:
     case 404:
-      return UNAVAILABLE;
+      return t("unavailable");
     case 403:
-      return "The AI declined this content.";
+      return t("declined");
     case 408:
     case 504:
-      return "AI took too long. Try again.";
+      return t("timeout");
     case 429:
-      return error.code !== null && OUT_OF_BUDGET_CODES.has(error.code) ? UNAVAILABLE : busyMessage(error.retryAfter);
+      return error.code !== null && OUT_OF_BUDGET_CODES.has(error.code) ? t("unavailable") : busy(error.retryAfter);
     default:
-      return UNAVAILABLE_TRY_AGAIN;
+      return t("unavailableTryAgain");
   }
 }
