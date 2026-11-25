@@ -8,6 +8,7 @@ import {
   getItemDetail,
   getItemFile,
   getItemFileKeys,
+  getItemForExplain,
   getItemsByCollection,
   getItemsByType,
   getFavoriteItems,
@@ -293,6 +294,31 @@ describe("getItemDetail", () => {
       fileName: true,
       language: true,
       createdAt: true,
+    });
+  });
+});
+
+describe("getItemForExplain", () => {
+  it("reads the item only for that owner, with its type's slug", async () => {
+    await getItemForExplain(USER, "item_1");
+
+    expect(findFirst.mock.calls[0]![0]).toEqual({
+      where: { id: "item_1", userId: USER },
+      select: { content: true, language: true, type: { select: { slug: true } } },
+    });
+  });
+
+  it("is null when no item matches, which includes another user's item", async () => {
+    await expect(getItemForExplain(USER, "someone_elses")).resolves.toBeNull();
+  });
+
+  it("flattens the type to its slug", async () => {
+    findFirst.mockResolvedValue({ content: "ls -la", language: "bash", type: { slug: "command" } });
+
+    await expect(getItemForExplain(USER, "item_1")).resolves.toEqual({
+      content: "ls -la",
+      language: "bash",
+      slug: "command",
     });
   });
 });

@@ -4,9 +4,27 @@ import { z } from "zod";
 
 import { auth } from "@/auth";
 import { AiProviderError, aiErrorMessage, complete } from "@/lib/ai-client";
-import { NO_DESCRIPTION, NO_TAG_SUGGESTIONS, parseDescription, parseTagSuggestions } from "@/lib/ai-output";
-import { DESCRIPTION_MAX_TOKENS, TAG_MAX_TOKENS, descriptionMessages, tagSuggestionMessages } from "@/lib/ai-prompts";
+import {
+  NO_DESCRIPTION,
+  NO_EXPLANATION,
+  NO_TAG_SUGGESTIONS,
+  parseDescription,
+  parseExplanation,
+  parseTagSuggestions,
+} from "@/lib/ai-output";
+import {
+  DESCRIPTION_MAX_TOKENS,
+  EXPLAIN_MAX_TOKENS,
+  EXPLAIN_TIMEOUT_MS,
+  TAG_MAX_TOKENS,
+  descriptionMessages,
+  explainMessages,
+  tagSuggestionMessages,
+} from "@/lib/ai-prompts";
+import { isCodeType } from "@/lib/code-language";
 import { getPlanStatus } from "@/lib/db/billing";
+import { getItemForExplain } from "@/lib/db/items";
+import { toItemTypeSlug } from "@/lib/item-type-ui";
 import { ITEM_LIMITS } from "@/lib/item-limits";
 import { checkRateLimit, tooManyAttemptsMessage } from "@/lib/rate-limit";
 import { LIMIT_MESSAGES, canUseAi } from "@/lib/usage-limits";
@@ -146,5 +164,49 @@ export async function generateDescription(input: DescriptionInput): Promise<AiRe
   } catch (error) {
     console.error("[ai] generateDescription failed:", error);
     return failure("Could not write a description. Try again.");
+  }
+}
+
+const explainSchema = z.object({ itemId: z.string().trim().min(1, "Item not found.").max(100, "Item not found.") });
+
+/**
+ * A short Markdown explanation of a saved snippet or command. The server reads
+ * the item itself, by owner; nothing is saved.
+ */
+export async function explainCode(input: { itemId: string }): Promise<AiResult<string>> {
+  const parsed = explainSchema.safeParse(input);
+  if (!parsed.success) return failure(parsed.error.issues[0]?.message ?? "Invalid input.");
+
+  try {
+    const session = await auth();
+    if (!session?.user?.id) return failure("You are not signed in.");
+
+    const blocked = await aiGate(session.user.id);
+    if (blocked) return failure(blocked);
+
+    const item = await getItemForExplain(session.user.id, parsed.data.itemId);
+    if (!item) return failure("Item not found.");
+    if (!isCodeType(toItemTypeSlug(item.slug))) return failure("Only snippets and commands can be explained.");
+    if (!item.content?.trim()) return failure("There is no code to explain.");
+
+    let answer: string;
+    try {
+      answer = await complete(explainMessages({ content: item.content, language: item.language }), {
+        maxTokens: EXPLAIN_MAX_TOKENS,
+        timeoutMs: EXPLAIN_TIMEOUT_MS,
+      });
+    } catch (error) {
+      if (!(error instanceof AiProviderError)) {
+        console.error("[ai] explainCode could not call the AI:", error);
+      }
+      return failure(aiErrorMessage(error));
+    }
+
+    const explanation = parseExplanation(answer);
+    if (!explanation) return failure(NO_EXPLANATION);
+    return { success: true, data: explanation, error: null };
+  } catch (error) {
+    console.error("[ai] explainCode failed:", error);
+    return failure("Could not explain this code. Try again.");
   }
 }

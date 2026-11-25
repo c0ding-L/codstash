@@ -379,6 +379,24 @@ export async function getItemDetail(userId: string, id: string): Promise<ItemDet
   return { ...item, tags: tags.map(({ name }) => name) };
 }
 
+/** What `explainCode` reads: the item's code and its type, or null when it is not this user's. */
+export interface ItemForExplain {
+  content: string | null;
+  language: string | null;
+  /** The item type's slug, e.g. `snippet`. */
+  slug: string;
+}
+
+/** The content, language and type slug of one of the user's items, for the AI explanation. */
+export async function getItemForExplain(userId: string, id: string): Promise<ItemForExplain | null> {
+  const item = await prisma.item.findFirst({
+    where: { id, userId },
+    select: { content: true, language: true, type: { select: { slug: true } } },
+  });
+  if (!item) return null;
+  return { content: item.content, language: item.language, slug: item.type.slug };
+}
+
 /**
  * The fields the drawer edits. An absent field is left as it is, while null
  * clears it, so a caller sends only the fields the item's type uses.

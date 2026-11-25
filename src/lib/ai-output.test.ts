@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseDescription, parseTagSuggestions } from "@/lib/ai-output";
+import { EXPLANATION_MAX_LENGTH, parseDescription, parseExplanation, parseTagSuggestions } from "@/lib/ai-output";
 
 describe("parseTagSuggestions", () => {
   it("reads a comma-separated line", () => {
@@ -80,5 +80,56 @@ describe("parseDescription", () => {
     expect(parseDescription("")).toBe("");
     expect(parseDescription("```\n```")).toBe("");
     expect(parseDescription('""')).toBe("");
+  });
+});
+
+describe("parseExplanation", () => {
+  it("keeps Markdown as it is, trimmed", () => {
+    expect(parseExplanation("\n  It **lists** files.\n\n- `-l`: long format\n  ")).toBe(
+      "It **lists** files.\n\n- `-l`: long format",
+    );
+  });
+
+  it.each([
+    ["```markdown\nIt lists files.\n```", "It lists files."],
+    ["```md\nIt lists files.\n```", "It lists files."],
+    ["```\nIt lists files.\n```", "It lists files."],
+    ["````markdown\nIt lists files.\n```bash\nls -la\n```\n````", "It lists files.\n```bash\nls -la\n```"],
+  ])("strips a fence wrapping the whole answer: %j", (answer, expected) => {
+    expect(parseExplanation(answer)).toBe(expected);
+  });
+
+  it("keeps a code block inside a wrapping markdown fence", () => {
+    expect(parseExplanation("```markdown\nRun:\n\n    ls\n\nDone.\n```")).toBe("Run:\n\n    ls\n\nDone.");
+  });
+
+  it("strips a markdown fence around an answer with fenced code blocks of the same length", () => {
+    expect(parseExplanation("```markdown\nRun:\n```bash\nls\n```\nDone.\n```")).toBe("Run:\n```bash\nls\n```\nDone.");
+  });
+
+  it("keeps inner code blocks when the answer is not wrapped", () => {
+    const answer = "It lists files.\n\n```bash\nls -la\n```\n\nThe `-a` flag shows hidden files.";
+    expect(parseExplanation(answer)).toBe(answer);
+  });
+
+  it("does not take two code blocks for a wrapping fence", () => {
+    const answer = "```\nls\n```\nlists files, while\n```\nls -a\n```";
+    expect(parseExplanation(answer)).toBe(answer);
+  });
+
+  it("does not strip a fence around a single code block in another language", () => {
+    const answer = "```bash\nls -la\n```";
+    expect(parseExplanation(answer)).toBe(answer);
+  });
+
+  it(`caps the text at ${EXPLANATION_MAX_LENGTH} characters, never mid-word`, () => {
+    const text = parseExplanation("word ".repeat(1_500));
+    expect(text.length).toBeLessThanOrEqual(EXPLANATION_MAX_LENGTH);
+    expect(text.endsWith("word…")).toBe(true);
+  });
+
+  it("is empty when nothing usable is left", () => {
+    expect(parseExplanation("   ")).toBe("");
+    expect(parseExplanation("```markdown\n\n```")).toBe("");
   });
 });

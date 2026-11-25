@@ -3,7 +3,8 @@
 // picked by `AI_PROVIDER`, so moving from OpenRouter to OpenAI is a change of
 // env vars, not of code. Everything provider-specific is in `ADAPTERS`.
 
-const TIMEOUT_MS = 15_000;
+/** How long a call may take unless the caller allows more. */
+export const DEFAULT_TIMEOUT_MS = 15_000;
 /** Error bodies can be whole HTML pages; keep only an excerpt. */
 const MAX_ERROR_BODY = 300;
 
@@ -125,7 +126,10 @@ function readError(body: unknown) {
 }
 
 /** The answer's text, trimmed. Throws `AiProviderError` on any failure, including an empty answer. */
-export async function complete(messages: AiMessage[], { maxTokens }: { maxTokens: number }): Promise<string> {
+export async function complete(
+  messages: AiMessage[],
+  { maxTokens, timeoutMs = DEFAULT_TIMEOUT_MS }: { maxTokens: number; timeoutMs?: number },
+): Promise<string> {
   const { provider, adapter, apiKey, model } = config();
 
   let response: Response;
@@ -135,7 +139,7 @@ export async function complete(messages: AiMessage[], { maxTokens }: { maxTokens
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify(adapter.body(model, messages, maxTokens)),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     text = await response.text();
   } catch (error) {

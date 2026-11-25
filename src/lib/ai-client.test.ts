@@ -122,6 +122,17 @@ describe("complete on OpenRouter (the default)", () => {
     expect(await failure()).toMatchObject({ status: null, code: "length" });
   });
 
+  it("gives up after 15 s by default, or after the caller's timeout", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    // A new response per call: a body can be read only once.
+    fetchMock.mockImplementation(async () => answer("ok"));
+
+    await complete(MESSAGES, { maxTokens: 300 });
+    await complete(MESSAGES, { maxTokens: 300, timeoutMs: 60_000 });
+
+    expect(timeout.mock.calls).toEqual([[15_000], [60_000]]);
+  });
+
   it("maps a timeout to 408 and a network failure to no status", async () => {
     fetchMock.mockRejectedValue(new DOMException("timed out", "TimeoutError"));
     expect(await failure()).toMatchObject({ status: 408, code: "timeout" });

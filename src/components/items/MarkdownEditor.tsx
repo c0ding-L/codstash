@@ -11,8 +11,8 @@ import { cn } from "@/lib/utils";
 
 type Tab = "write" | "preview";
 
-/** Links leave the app, so they open in a new tab. */
-const components: Components = {
+/** Links leave the app, so they open in a new tab. Shared with the AI explanation in `CodeEditor`. */
+export const markdownComponents: Components = {
   a: ({ href, title, children }) => (
     <a href={href} title={title} target="_blank" rel="noopener noreferrer">
       {children}
@@ -112,7 +112,7 @@ export function MarkdownEditor({
         >
           {value.trim() ? (
             <div className="markdown-preview">
-              <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                 {value}
               </ReactMarkdown>
             </div>

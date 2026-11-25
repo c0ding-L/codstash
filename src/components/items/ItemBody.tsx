@@ -15,11 +15,14 @@ export function ItemBody({
   fileSize,
   state,
   slug,
+  aiAllowed,
 }: {
   itemId: string;
   fileSize: number | null;
   state: ItemDetailState;
   slug: ItemTypeSlug | null;
+  /** For the code editor's Explain button. */
+  aiAllowed: Promise<boolean>;
 }) {
   if (state.status === "loading") {
     return (
@@ -58,7 +61,14 @@ export function ItemBody({
       ) : null}
 
       {content && isCodeType(slug) ? (
-        <CodeEditor value={content} language={language} ariaLabel="Content" />
+        // Keyed by item, so an explanation never carries over to another item.
+        <CodeEditor
+          key={itemId}
+          value={content}
+          language={language}
+          ariaLabel="Content"
+          explain={{ itemId, aiAllowed }}
+        />
       ) : content ? (
         <MarkdownEditor value={content} ariaLabel="Content" />
       ) : null}

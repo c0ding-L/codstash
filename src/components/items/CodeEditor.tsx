@@ -1,11 +1,18 @@
 "use client";
 
 import Editor, { type BeforeMount, type OnMount } from "@monaco-editor/react";
-import { Copy } from "lucide-react";
-import { Suspense, useState } from "react";
+import { Copy, Crown, Loader2, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { Suspense, use, useState, useTransition } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import { toast } from "sonner";
 
+import { explainCode } from "@/actions/ai";
 import { useEditorPreferences } from "@/components/editor/EditorPreferencesContext";
-import { Button } from "@/components/ui/button";
+import { markdownComponents } from "@/components/items/MarkdownEditor";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { copyToClipboard } from "@/lib/clipboard";
 import { languageLabel, toMonacoLanguage } from "@/lib/code-language";
 import { DEFAULT_EDITOR_PREFERENCES } from "@/lib/editor-preferences";
@@ -58,23 +65,80 @@ interface CodeEditorProps {
   /** The accessible name of the text area. */
   ariaLabel?: string;
   className?: string;
+  /**
+   * Turns on the AI Explain button. Only the drawer's read view passes it, for a
+   * saved snippet or command: the server reads the item by its id.
+   */
+  explain?: { itemId: string; aiAllowed: Promise<boolean> };
 }
 
+type View = "code" | "explain";
+
 /** Monaco in a macOS-style window: traffic-light dots, the language and a copy button on top. */
-export function CodeEditor({ value, language, onChange, ariaLabel = "Code", className }: CodeEditorProps) {
+export function CodeEditor({ value, language, onChange, ariaLabel = "Code", className, explain }: CodeEditorProps) {
   const readOnly = !onChange;
   const minHeight = readOnly ? 0 : MIN_EDIT_HEIGHT;
   const label = languageLabel(language?.trim());
+  const [explanation, setExplanation] = useState<string | null>(null);
+  const [view, setView] = useState<View>("code");
+  // Disables the button while a request runs, so a double click does not spend two.
+  const [pending, startTransition] = useTransition();
+  const shown: View = explanation === null ? "code" : view;
+
+  function runExplain() {
+    if (!explain) return;
+    startTransition(async () => {
+      const result = await explainCode({ itemId: explain.itemId });
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      setExplanation(result.data);
+      setView("explain");
+    });
+  }
 
   return (
-    <div className={cn("overflow-hidden rounded-lg border border-border bg-card", className)}>
+    // shrink-0: in the drawer's flex column, overflow-hidden would let flex squash the box and clip it.
+    <div className={cn("shrink-0 overflow-hidden rounded-lg border border-border bg-card", className)}>
       <div className="flex items-center gap-3 border-b border-border bg-muted/40 py-1.5 pr-1.5 pl-3">
         <span className="flex gap-1.5" aria-hidden>
           <span className="size-3 rounded-full bg-[#ff5f57]" />
           <span className="size-3 rounded-full bg-[#febc2e]" />
           <span className="size-3 rounded-full bg-[#28c840]" />
         </span>
+        {explanation !== null ? (
+          <div role="tablist" aria-label={`${ariaLabel} view`} className="flex gap-1">
+            {(["code", "explain"] as const).map((name) => (
+              <button
+                key={name}
+                type="button"
+                role="tab"
+                aria-selected={shown === name}
+                onClick={() => setView(name)}
+                className={cn(
+                  "rounded-md px-2.5 py-1 text-xs font-medium capitalize transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                  shown === name
+                    ? "bg-foreground/10 text-foreground"
+                    : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
+                )}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        ) : null}
         <span className="ml-auto font-mono text-xs text-muted-foreground">{label}</span>
+        {explain ? (
+          <Suspense fallback={null}>
+            <ExplainButton
+              aiAllowed={explain.aiAllowed}
+              pending={pending}
+              disabled={!value.trim()}
+              onClick={runExplain}
+            />
+          </Suspense>
+        ) : null}
         <Button
           type="button"
           variant="ghost"
@@ -87,18 +151,82 @@ export function CodeEditor({ value, language, onChange, ariaLabel = "Code", clas
         </Button>
       </div>
 
-      {/* The preferences stream in from the layout; until then, a box of the default height. */}
-      <Suspense fallback={<EditorPlaceholder value={value} minHeight={minHeight} />}>
-        <MonacoPane
-          value={value}
-          language={language}
-          onChange={onChange}
-          ariaLabel={ariaLabel}
-          readOnly={readOnly}
-          minHeight={minHeight}
-        />
-      </Suspense>
+      {/* Hidden rather than unmounted on the Explain tab, so Monaco does not start over on Code. */}
+      <div hidden={shown !== "code"}>
+        {/* The preferences stream in from the layout; until then, a box of the default height. */}
+        <Suspense fallback={<EditorPlaceholder value={value} minHeight={minHeight} />}>
+          <MonacoPane
+            value={value}
+            language={language}
+            onChange={onChange}
+            ariaLabel={ariaLabel}
+            readOnly={readOnly}
+            minHeight={minHeight}
+          />
+        </Suspense>
+      </div>
+
+      {shown === "explain" && explanation !== null ? (
+        <div
+          role="tabpanel"
+          aria-label="Explanation"
+          className="markdown-scroll max-h-[400px] overflow-y-auto px-4 py-3"
+        >
+          {/* No rehype-raw: raw HTML in the model's answer is shown as text, never rendered. */}
+          <div className="markdown-preview">
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+              {explanation}
+            </ReactMarkdown>
+          </div>
+        </div>
+      ) : null}
     </div>
+  );
+}
+
+const PRO_ONLY_HINT = "AI features require Pro subscription";
+const EXPLAIN_HINT = "Explain this code with AI. Sends the code to a third-party AI provider.";
+
+interface ExplainButtonProps {
+  /** From the server's plan check. */
+  aiAllowed: Promise<boolean>;
+  pending: boolean;
+  disabled: boolean;
+  onClick: () => void;
+}
+
+/**
+ * The Explain button for Pro users; for Free users, a crown linking to `/upgrade` (the drawer
+ * closes on the new page). The tooltip hangs on a wrapper because a disabled button takes no
+ * pointer events. The action checks the plan again.
+ */
+function ExplainButton({ aiAllowed, pending, disabled, onClick }: ExplainButtonProps) {
+  const allowed = use(aiAllowed);
+  return (
+    <Tooltip>
+      <TooltipTrigger render={<span className="inline-flex" />}>
+        {allowed ? (
+          <Button type="button" variant="ghost" size="xs" disabled={pending || disabled} onClick={onClick}>
+            {pending ? (
+              <Loader2 className="animate-spin text-violet-400" aria-hidden />
+            ) : (
+              <Sparkles className="text-violet-400" aria-hidden />
+            )}
+            {pending ? "Explaining…" : "Explain"}
+          </Button>
+        ) : (
+          <Link
+            href="/upgrade"
+            aria-label={`Explain: ${PRO_ONLY_HINT}. Upgrade`}
+            className={buttonVariants({ variant: "ghost", size: "xs" })}
+          >
+            <Crown className="text-amber-400" aria-hidden />
+            Explain
+          </Link>
+        )}
+      </TooltipTrigger>
+      <TooltipContent side="bottom">{allowed ? EXPLAIN_HINT : PRO_ONLY_HINT}</TooltipContent>
+    </Tooltip>
   );
 }
 
