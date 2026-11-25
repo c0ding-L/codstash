@@ -1,39 +1,33 @@
-# Current Feature: i18n (French) — Phase 1: Infrastructure and App Shell
+# Current Feature: i18n (French) — Phase 2: App Pages
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- next-intl is installed with no locale prefix in the URLs. `proxy.ts` does not change.
-- The locale is chosen in this order: the `NEXT_LOCALE` cookie, then `User.locale`, then
-  `Accept-Language`, then `en`. The pure function `resolveLocale` lives in `src/lib/locale.ts`.
-- The `User.locale` column exists, added with `prisma migrate dev` on the develop DB.
-- The `setLocale` action writes the cookie and `User.locale`. `LocaleCookieSync` writes the
-  cookie again on a new device.
-- `messages/en.json` and `messages/fr.json` exist and their keys are typed.
-- `<html lang>` is dynamic, and `NextIntlClientProvider` only receives the namespaces the client
-  needs.
-- The app shell is translated: sidebar, top bar, user menu, and type labels (Snippet, Prompt,
-  Note, Commande, Fichier, Image, Lien).
-- There is a language switcher in `/settings` and in the user menu.
-- Tests cover `resolveLocale`, key parity and `setLocale`. `npm test`, `npm run build` and
+- Every signed-in page is in French when FR is chosen: dashboard, item lists, drawer (view and
+  edit), create dialog, collections, favorites, profile, settings, billing, upgrade, Pro upsell
+  cards, empty states.
+- The 42 toasts and the page `metadata` (as `generateMetadata`) are translated.
+- System type names come from `itemTypes` by slug everywhere; custom types keep their name.
+- Dates, numbers and currencies follow the locale (`format.ts`, `billing-plans.ts`, profile,
+  `ItemDetails` with an explicit locale).
+- Plurals use ICU, never concatenation.
+- `format.test.ts` and `billing-plans.test.ts` get `fr` cases; `npm test`, `npm run build` and
   `npm run lint` pass.
 
 ## Notes
 
-- Spec: `context/features/i18n-phase-1-spec.md`. Plan: `docs/i18n-plan.md`.
-- Decided on 2026-11-25:
-  - no prefix
-  - `Accept-Language` on a first visit
-  - vous
-  - mixed type names
-- Install `next-intl` through Windows npm. Before migrating, check that `DATABASE_URL` points to
-  develop. Production is off-limits.
-- The pages stay in English until Phase 2 (`i18n-phase-2-spec.md`). Phase 3 covers errors, auth
-  and emails, and Phase 4 the homepage and the AI.
-- Branch: `feature/i18n-phase-1`.
+- Spec: `context/features/i18n-phase-2-spec.md`. Plan: `docs/i18n-plan.md`.
+- New client namespaces go in `CLIENT_NAMESPACES` (`src/i18n/client-messages.ts`).
+- Action error messages stay English until Phase 3.
+- Branch: `feature/i18n-phase-2`.
+
+---
+
+Previous feature (completed) — i18n Phase 1: next-intl without a locale prefix, the language
+switcher in Settings and the user menu, and the app shell in French. Outcome in the History below.
 
 ---
 
@@ -2389,3 +2383,18 @@ Environment notes that outlive any one feature:
   2026-11-25 (content restored). Browser-checked with the demo account set Pro temporarily on
   develop (reset to Free after). 921 tests, build and lint green. Merged into `main` (`a9b37cf`,
   fast-forward); branch deleted (never pushed). Feature completed.
+- 2026-11-25 — i18n Phase 1 (French). Research and plan in `docs/i18n-plan.md`, specs for 4
+  phases in `context/features/i18n-phase-{1..4}-spec.md` (`bc5b686`). Author's choices: no URL
+  prefix, `Accept-Language` on a first visit, vous, mixed type names (Snippet, Prompt, Note,
+  Commande, Fichier, Image, Lien). next-intl 4.16.2 with no locale routing; `src/i18n/request.ts`
+  resolves cookie → `User.locale` (only without a cookie, signed in) → `Accept-Language` → `en`
+  via the pure `resolveLocale` (`src/lib/locale.ts`). New `User.locale` column (migration
+  `user_locale`, develop only). `setLocale` writes the row then the `NEXT_LOCALE` cookie;
+  `LocaleCookieSync` writes the cookie once on a new device, since a cookie cannot be set while
+  rendering. Translated: sidebar, top bar, user menu (Language submenu), command palette, the New
+  Item / New Collection triggers; `/settings` has a Language section. Not done on purpose: root
+  title "Cortex", no `common` namespace yet, "Toggle Sidebar" in shadcn's `ui/sidebar.tsx`.
+  `/_not-found` is now rendered per request. Browser-checked: switch, reload, new-device cookie
+  sync (0 action calls on the next reload), Accept-Language `fr-FR`/`de-DE`, back to English;
+  demo account reset to `en`. 960 tests, build and lint green. Merged into `main` (`7923396`,
+  fast-forward); branch deleted. Feature completed.
