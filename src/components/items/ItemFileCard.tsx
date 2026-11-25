@@ -1,12 +1,15 @@
 import { Download, FileText, ImageIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { buttonVariants } from "@/components/ui/button";
 import { extensionOf } from "@/lib/files";
-import { formatFileSize } from "@/lib/format";
+import { useFileSize } from "@/i18n/labels";
 import { cn } from "@/lib/utils";
 
 /** The uploaded file: its icon, name and extension, with the download button, in a light frame. */
 export function ItemFileCard({ href, fileName, fileSize, isImage }: { href: string; fileName: string; fileSize: number | null; isImage: boolean }) {
+  const tc = useTranslations("common");
+  const formatFileSize = useFileSize();
   const Icon = isImage ? ImageIcon : FileText;
   const extension = extensionOf(fileName);
 
@@ -27,7 +30,7 @@ export function ItemFileCard({ href, fileName, fileSize, isImage }: { href: stri
       </div>
       <a href={href} download={fileName} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "shrink-0")}>
         <Download aria-hidden />
-        Download
+        {tc("download")}
       </a>
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Sparkles, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Suspense, use, useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -60,6 +61,7 @@ interface SuggestTagsProps {
  * its own Suspense boundary, so waiting for the plan never holds the form back.
  */
 export function SuggestTagsButton({ aiAllowed, state, disabled }: SuggestTagsProps) {
+  const t = useTranslations("ai");
   return (
     <Suspense fallback={null}>
       <ShownIf allowed={aiAllowed}>
@@ -69,11 +71,11 @@ export function SuggestTagsButton({ aiAllowed, state, disabled }: SuggestTagsPro
           size="xs"
           className="text-muted-foreground"
           disabled={state.pending || disabled || !state.canSuggest}
-          title={state.canSuggest ? undefined : "Add a title first."}
+          title={state.canSuggest ? undefined : t("addTitleFirst")}
           onClick={state.suggest}
         >
           <Sparkles aria-hidden />
-          {state.pending ? "Suggesting…" : "Suggest Tags"}
+          {state.pending ? t("suggesting") : t("suggestTags")}
         </Button>
       </ShownIf>
     </Suspense>
@@ -87,9 +89,10 @@ export function ShownIf({ allowed, children }: { allowed: Promise<boolean>; chil
 
 /** Under the tags input: the suggestions, to accept or dismiss one by one. Empty until the button is used. */
 export function TagSuggestionList({ state, disabled }: Omit<SuggestTagsProps, "aiAllowed">) {
+  const t = useTranslations("ai");
   if (state.suggestions.length === 0) return null;
   return (
-    <ul aria-label="Suggested tags" className="flex flex-wrap gap-1">
+    <ul aria-label={t("suggestedTags")} className="flex flex-wrap gap-1">
       {state.suggestions.map((tag) => (
         <li key={tag}>
           <Badge variant="outline" className="pr-0.5 text-blue-400">
@@ -97,7 +100,7 @@ export function TagSuggestionList({ state, disabled }: Omit<SuggestTagsProps, "a
             <button
               type="button"
               className="rounded-full p-0.5 text-emerald-400 hover:bg-foreground/10 disabled:pointer-events-none"
-              aria-label={`Add tag ${tag}`}
+              aria-label={t("addTag", { tag })}
               disabled={disabled}
               onClick={() => state.accept(tag)}
             >
@@ -106,7 +109,7 @@ export function TagSuggestionList({ state, disabled }: Omit<SuggestTagsProps, "a
             <button
               type="button"
               className="rounded-full p-0.5 text-red-400 hover:bg-foreground/10 disabled:pointer-events-none"
-              aria-label={`Dismiss tag ${tag}`}
+              aria-label={t("dismissTag", { tag })}
               disabled={disabled}
               onClick={() => state.dismiss(tag)}
             >

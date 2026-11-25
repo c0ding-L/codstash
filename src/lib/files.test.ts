@@ -6,7 +6,7 @@ import {
   buildFileKey,
   contentTypeFor,
   extensionOf,
-  fileKindLabel,
+  fileKind,
   fromObjectMetadata,
   isOwnKey,
   toObjectMetadata,
@@ -28,32 +28,37 @@ describe("extensionOf", () => {
   });
 });
 
-describe("fileKindLabel", () => {
-  it("names the common kinds in plain language", () => {
-    expect(fileKindLabel("spec.pdf")).toBe("PDF document");
-    expect(fileKindLabel("README.md")).toBe("Markdown");
-    expect(fileKindLabel("data.csv")).toBe("CSV spreadsheet");
-    expect(fileKindLabel("notes.txt")).toBe("Plain text");
+describe("fileKind", () => {
+  it("names the common kinds", () => {
+    expect(fileKind("spec.pdf")).toBe("pdf");
+    expect(fileKind("README.md")).toBe("markdown");
+    expect(fileKind("data.csv")).toBe("csv");
+    expect(fileKind("notes.txt")).toBe("text");
   });
 
-  it("gives every allowed file extension a label of its own", () => {
+  it("gives every allowed file extension a kind of its own", () => {
     for (const extension of Object.keys(UPLOAD_RULES.file.types)) {
-      expect(fileKindLabel(`a.${extension}`), extension).not.toBe("File");
+      expect(fileKind(`a.${extension}`), extension).not.toBe("file");
     }
   });
 
-  it("gives .yml and .yaml the same label", () => {
-    expect(fileKindLabel("a.yml")).toBe(fileKindLabel("a.yaml"));
+  it("falls back to file for an unknown or inherited extension", () => {
+    expect(fileKind("a.exe")).toBe("file");
+    expect(fileKind("a.constructor")).toBe("file");
+  });
+
+  it("gives .yml and .yaml the same kind", () => {
+    expect(fileKind("a.yml")).toBe(fileKind("a.yaml"));
   });
 
   it("ignores the extension's case", () => {
-    expect(fileKindLabel("SPEC.PDF")).toBe("PDF document");
+    expect(fileKind("SPEC.PDF")).toBe("pdf");
   });
 
-  it("falls back to File for an unknown or missing extension", () => {
-    expect(fileKindLabel("archive.zip")).toBe("File");
-    expect(fileKindLabel("Makefile")).toBe("File");
-    expect(fileKindLabel("")).toBe("File");
+  it("falls back to file for a missing extension", () => {
+    expect(fileKind("archive.zip")).toBe("file");
+    expect(fileKind("Makefile")).toBe("file");
+    expect(fileKind("")).toBe("file");
   });
 });
 

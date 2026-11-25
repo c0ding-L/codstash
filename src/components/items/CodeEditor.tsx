@@ -2,6 +2,7 @@
 
 import Editor, { type BeforeMount, type OnMount } from "@monaco-editor/react";
 import { Copy } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Suspense, useState, useTransition } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -12,7 +13,7 @@ import { useEditorPreferences } from "@/components/editor/EditorPreferencesConte
 import { AiHeaderButton } from "@/components/items/AiHeaderButton";
 import { markdownComponents } from "@/components/items/MarkdownEditor";
 import { Button } from "@/components/ui/button";
-import { copyToClipboard } from "@/lib/clipboard";
+import { useClipboard } from "@/i18n/labels";
 import { languageLabel, toMonacoLanguage } from "@/lib/code-language";
 import { DEFAULT_EDITOR_PREFERENCES } from "@/lib/editor-preferences";
 import { CUSTOM_MONACO_THEMES } from "@/lib/monaco-themes";
@@ -74,10 +75,16 @@ interface CodeEditorProps {
 type View = "code" | "explain";
 
 /** Monaco in a macOS-style window: traffic-light dots, the language and a copy button on top. */
-export function CodeEditor({ value, language, onChange, ariaLabel = "Code", className, explain }: CodeEditorProps) {
+export function CodeEditor({ value, language, onChange, ariaLabel: ariaLabelProp, className, explain }: CodeEditorProps) {
+  const t = useTranslations("editor");
+  const ta = useTranslations("ai");
+  const { copyToClipboard } = useClipboard();
+  const ariaLabel = ariaLabelProp ?? t("code");
   const readOnly = !onChange;
   const minHeight = readOnly ? 0 : MIN_EDIT_HEIGHT;
-  const label = languageLabel(language?.trim());
+  const tf = useTranslations("itemForm");
+  // No language is "Plain text", the one label that is not a language name.
+  const label = language?.trim() ? languageLabel(language.trim()) : tf("plainText");
   const [explanation, setExplanation] = useState<string | null>(null);
   const [view, setView] = useState<View>("code");
   // Disables the button while a request runs, so a double click does not spend two.
@@ -107,7 +114,7 @@ export function CodeEditor({ value, language, onChange, ariaLabel = "Code", clas
           <span className="size-3 rounded-full bg-[#28c840]" />
         </span>
         {explanation !== null ? (
-          <div role="tablist" aria-label={`${ariaLabel} view`} className="flex gap-1">
+          <div role="tablist" aria-label={t("viewTabs", { name: ariaLabel })} className="flex gap-1">
             {(["code", "explain"] as const).map((name) => (
               <button
                 key={name}
@@ -122,7 +129,7 @@ export function CodeEditor({ value, language, onChange, ariaLabel = "Code", clas
                     : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground",
                 )}
               >
-                {name}
+                {t(`tabs.${name}`)}
               </button>
             ))}
           </div>
@@ -132,9 +139,9 @@ export function CodeEditor({ value, language, onChange, ariaLabel = "Code", clas
           <Suspense fallback={null}>
             <AiHeaderButton
               aiAllowed={explain.aiAllowed}
-              label="Explain"
-              pendingLabel="Explaining…"
-              hint={EXPLAIN_HINT}
+              label={ta("explain")}
+              pendingLabel={ta("explaining")}
+              hint={ta("explainHint")}
               pending={pending}
               disabled={!value.trim()}
               onClick={runExplain}
@@ -145,7 +152,7 @@ export function CodeEditor({ value, language, onChange, ariaLabel = "Code", clas
           type="button"
           variant="ghost"
           size="icon-sm"
-          aria-label="Copy code"
+          aria-label={t("copyCode")}
           disabled={!value}
           onClick={() => void copyToClipboard(value)}
         >
@@ -171,7 +178,7 @@ export function CodeEditor({ value, language, onChange, ariaLabel = "Code", clas
       {shown === "explain" && explanation !== null ? (
         <div
           role="tabpanel"
-          aria-label="Explanation"
+          aria-label={t("explanation")}
           className="markdown-scroll max-h-[400px] overflow-y-auto px-4 py-3"
         >
           {/* No rehype-raw: raw HTML in the model's answer is shown as text, never rendered. */}
@@ -186,7 +193,6 @@ export function CodeEditor({ value, language, onChange, ariaLabel = "Code", clas
   );
 }
 
-const EXPLAIN_HINT = "Explain this code with AI. Sends the code to a third-party AI provider.";
 
 function EditorPlaceholder({ value, minHeight }: { value: string; minHeight: number }) {
   const height = estimateHeight(value, minHeight, lineHeightFor(DEFAULT_EDITOR_PREFERENCES.fontSize));

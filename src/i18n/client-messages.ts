@@ -1,14 +1,17 @@
 import type { Messages } from "next-intl";
 
 /**
- * The namespaces client components read with `useTranslations`. Server-only text stays on the
- * server; add a namespace here when a client component starts using it.
+ * Namespaces only the server reads (page titles today; emails and action errors in Phase 3).
+ * Everything else reaches the browser: an allowlist would let a client component that uses a
+ * forgotten namespace build fine and then render raw keys.
  */
-export const CLIENT_NAMESPACES = ["locales", "itemTypes", "search", "userMenu", "nav", "settings"] as const;
+export const SERVER_ONLY_NAMESPACES = ["metadata"] as const;
 
-export function pickMessages(messages: Messages): Pick<Messages, (typeof CLIENT_NAMESPACES)[number]> {
-  return Object.fromEntries(CLIENT_NAMESPACES.map((namespace) => [namespace, messages[namespace]])) as Pick<
-    Messages,
-    (typeof CLIENT_NAMESPACES)[number]
-  >;
+type ServerOnly = (typeof SERVER_ONLY_NAMESPACES)[number];
+
+export function pickMessages(messages: Messages): Omit<Messages, ServerOnly> {
+  const serverOnly: readonly string[] = SERVER_ONLY_NAMESPACES;
+  return Object.fromEntries(
+    Object.entries(messages).filter(([namespace]) => !serverOnly.includes(namespace)),
+  ) as Omit<Messages, ServerOnly>;
 }

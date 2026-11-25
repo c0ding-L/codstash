@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 import { useId, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -37,6 +38,8 @@ interface ItemEditFormProps {
 }
 
 export function ItemEditForm({ card, detail, slug, onCancel, onSaved, aiAllowed, children }: ItemEditFormProps) {
+  const t = useTranslations("itemForm");
+  const tc = useTranslations("common");
   const pathname = usePathname();
   const refreshAfterRemoval = useRefreshAfterRemoval();
   const id = useId();
@@ -87,7 +90,7 @@ export function ItemEditForm({ card, detail, slug, onCancel, onSaved, aiAllowed,
         return;
       }
 
-      toast.success("Changes saved.");
+      toast.success(t("saved"));
       onSaved(result.data);
       // Taken out of the collection this page lists, the item leaves the listing.
       const listed = collectionIdFromPath(pathname);
@@ -100,13 +103,13 @@ export function ItemEditForm({ card, detail, slug, onCancel, onSaved, aiAllowed,
   return (
     <form onSubmit={handleSubmit} noValidate className="flex min-h-0 flex-1 flex-col">
       <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto border-t border-border p-4">
-        <Field id={`${id}-title`} label="Title" error={messageFor("title")}>
+        <Field id={`${id}-title`} label={t("title")} error={messageFor("title")}>
           <Input value={title} {...fieldProps("title", setTitle)} />
         </Field>
 
         <Field
           id={`${id}-description`}
-          label="Description"
+          label={t("description")}
           error={messageFor("description")}
           action={
             <GenerateDescriptionButton
@@ -158,7 +161,7 @@ export function ItemEditForm({ card, detail, slug, onCancel, onSaved, aiAllowed,
         ) : null}
 
         {hasUrl ? (
-          <Field id={`${id}-url`} label="URL" error={messageFor("url")}>
+          <Field id={`${id}-url`} label={t("url")} error={messageFor("url")}>
             <Input value={url} inputMode="url" placeholder="https://" {...fieldProps("url", setUrl)} />
           </Field>
         ) : null}
@@ -191,10 +194,10 @@ export function ItemEditForm({ card, detail, slug, onCancel, onSaved, aiAllowed,
 
       <div className="flex justify-end gap-2 border-t border-border p-4">
         <Button type="button" variant="ghost" onClick={onCancel} disabled={saving}>
-          Cancel
+          {tc("cancel")}
         </Button>
         <Button type="submit" disabled={saving || !title.trim()}>
-          {saving ? "Saving…" : "Save changes"}
+          {saving ? t("saving") : t("saveChanges")}
         </Button>
       </div>
     </form>

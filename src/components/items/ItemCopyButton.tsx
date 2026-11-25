@@ -1,9 +1,10 @@
 "use client";
 
 import { Copy } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { buttonVariants } from "@/components/ui/button";
-import { copyFromPromise } from "@/lib/clipboard";
+import { useClipboard } from "@/i18n/labels";
 import type { ItemDetailJson } from "@/lib/db/items";
 import { cn } from "@/lib/utils";
 
@@ -25,10 +26,12 @@ interface ItemCopyButtonProps {
 
 /** Copies an item's content from a list, fetching it in the click so Safari still allows the write. */
 export function ItemCopyButton({ itemId, title, label, className }: ItemCopyButtonProps) {
+  const tc = useTranslations("common");
+  const { copyFromPromise } = useClipboard();
   return (
     <button
       type="button"
-      aria-label={`Copy ${title}`}
+      aria-label={tc("copyItem", { name: title })}
       onClick={() => copyFromPromise(fetchItemContent(itemId))}
       className={cn(buttonVariants({ variant: "outline", size: "sm" }), "relative z-20", className)}
     >

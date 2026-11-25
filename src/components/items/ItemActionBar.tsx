@@ -1,12 +1,13 @@
 "use client";
 
 import { Copy, Pencil, Pin, Star, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useFavoriteToggle } from "@/hooks/use-favorite-toggle";
 import { usePinToggle } from "@/hooks/use-pin-toggle";
-import { copyToClipboard } from "@/lib/clipboard";
+import { useClipboard } from "@/i18n/labels";
 import type { DashboardItem, ItemDetailJson } from "@/lib/db/items";
 import { cn } from "@/lib/utils";
 
@@ -61,6 +62,9 @@ interface ItemActionBarProps {
  * they still report the item's current state.
  */
 export function ItemActionBar({ card, detail, onEdit, onDelete, onFavoriteChanged, onPinnedChanged }: ItemActionBarProps) {
+  const t = useTranslations("drawer.actions");
+  const tc = useTranslations("common");
+  const { copyToClipboard } = useClipboard();
   const copyText = detail ? detail.content || detail.url : null;
   const favorite = useFavoriteToggle("item", card.id, card.isFavorite, onFavoriteChanged);
   const pin = usePinToggle(card.id, card.isPinned, onPinnedChanged);
@@ -68,8 +72,8 @@ export function ItemActionBar({ card, detail, onEdit, onDelete, onFavoriteChange
   return (
     <div className="flex items-center gap-1 border-y border-border px-4 py-2">
       <IconAction
-        label="Favorite"
-        hint={favorite.isFavorite ? "Remove from favorites" : "Add to favorites"}
+        label={t("favorite")}
+        hint={favorite.isFavorite ? t("removeFavorite") : t("addFavorite")}
         disabled={favorite.pending}
         aria-pressed={favorite.isFavorite}
         onClick={favorite.toggle}
@@ -78,8 +82,8 @@ export function ItemActionBar({ card, detail, onEdit, onDelete, onFavoriteChange
         <Star className={cn(favorite.isFavorite && "fill-amber-400 text-amber-400")} aria-hidden />
       </IconAction>
       <IconAction
-        label="Pin"
-        hint={pin.isPinned ? "Unpin" : "Pin to top"}
+        label={t("pin")}
+        hint={pin.isPinned ? t("unpin") : t("pinToTop")}
         disabled={pin.pending}
         aria-pressed={pin.isPinned}
         onClick={pin.toggle}
@@ -88,8 +92,8 @@ export function ItemActionBar({ card, detail, onEdit, onDelete, onFavoriteChange
         <Pin className={cn(pin.isPinned && "fill-current")} aria-hidden />
       </IconAction>
       <IconAction
-        label="Copy"
-        hint={!copyText ? "Nothing to copy" : detail?.content ? "Copy content" : "Copy URL"}
+        label={t("copy")}
+        hint={!copyText ? t("nothingToCopy") : detail?.content ? t("copyContent") : t("copyUrl")}
         disabled={!copyText}
         onClick={() => {
           if (copyText) void copyToClipboard(copyText);
@@ -97,12 +101,12 @@ export function ItemActionBar({ card, detail, onEdit, onDelete, onFavoriteChange
       >
         <Copy aria-hidden />
       </IconAction>
-      <IconAction label="Edit" hint="Edit" disabled={!onEdit} onClick={() => onEdit?.()}>
+      <IconAction label={tc("edit")} hint={tc("edit")} disabled={!onEdit} onClick={() => onEdit?.()}>
         <Pencil aria-hidden />
       </IconAction>
       <IconAction
-        label="Delete"
-        hint="Delete"
+        label={tc("delete")}
+        hint={tc("delete")}
         iconOnly
         disabled={!onDelete}
         onClick={() => onDelete?.()}

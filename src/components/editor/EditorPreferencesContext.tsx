@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, use, useCallback, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { updateEditorPreferences } from "@/actions/editor-preferences";
@@ -26,6 +27,7 @@ export function EditorPreferencesProvider({
   children: React.ReactNode;
 }) {
   const [current, setCurrent] = useState<EditorPreferences | null>(null);
+  const t = useTranslations("settings.editor");
   // Only the latest save may roll back: an older one failing must not undo a newer change.
   const latestSave = useRef(0);
 
@@ -38,16 +40,16 @@ export function EditorPreferencesProvider({
     });
 
     void updateEditorPreferences(next)
-      .catch(() => ({ success: false, error: "Could not save your editor preferences. Try again." }))
+      .catch(() => ({ success: false, error: t("saveFailed") }))
       .then((result) => {
         if (result.success) {
-          toast.success("Editor preferences saved.", { id: TOAST_ID });
+          toast.success(t("saved"), { id: TOAST_ID });
           return;
         }
         if (saveId === latestSave.current) setCurrent(previous);
-        toast.error(result.error ?? "Could not save your editor preferences.", { id: TOAST_ID });
+        toast.error(result.error ?? t("saveFailed"), { id: TOAST_ID });
       });
-  }, []);
+  }, [t]);
 
   const value = useMemo(() => ({ loaded: preferences, current, save }), [preferences, current, save]);
 

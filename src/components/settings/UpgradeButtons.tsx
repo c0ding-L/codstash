@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 
 import { startCheckout } from "@/actions/billing";
@@ -14,10 +15,10 @@ interface UpgradeButtonsProps {
   isPro: boolean;
 }
 
-const PLAN_PERIOD: Record<Plan, string> = { MONTHLY: "month", YEARLY: "year" };
-
 /** Currency switch plus one checkout button per plan. */
 export function UpgradeButtons({ initialCurrency, isPro }: UpgradeButtonsProps) {
+  const t = useTranslations("billing");
+  const locale = useLocale();
   const [currency, setCurrency] = useState<Currency>(initialCurrency);
   const [pendingPlan, setPendingPlan] = useState<Plan | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -38,13 +39,11 @@ export function UpgradeButtons({ initialCurrency, isPro }: UpgradeButtonsProps) 
     });
   }
 
-  const verb = isPro ? "Extend by" : "Upgrade for";
-
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
         <CurrencySwitch value={currency} onChange={setCurrency} />
-        <span className="text-sm text-muted-foreground">{PAYMENT_METHODS[currency]}</span>
+        <span className="text-sm text-muted-foreground">{t(`paymentMethods.${PAYMENT_METHODS[currency]}`)}</span>
       </div>
 
       <div className="flex flex-col gap-2 sm:flex-row">
@@ -56,8 +55,11 @@ export function UpgradeButtons({ initialCurrency, isPro }: UpgradeButtonsProps) 
             onClick={() => checkout(plan)}
           >
             {pendingPlan === plan
-              ? "Opening checkout…"
-              : `${verb} 1 ${PLAN_PERIOD[plan]} · ${formatPrice(BILLING_PLANS[plan].price[currency], currency)}`}
+              ? t("openingCheckout")
+              : t(isPro ? "extendBy" : "upgradeFor", {
+                  plan,
+                  price: formatPrice(BILLING_PLANS[plan].price[currency], currency, locale),
+                })}
           </Button>
         ))}
       </div>

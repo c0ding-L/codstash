@@ -1,5 +1,6 @@
 "use client";
 
+import { useLocale, useTranslations } from "next-intl";
 import { useState, useTransition } from "react";
 
 import { startCheckout } from "@/actions/billing";
@@ -14,6 +15,8 @@ import { BILLING_PLANS, PAYMENT_METHODS, formatPrice, type Currency, type Plan }
  * and one button that opens the Bictorys checkout for that choice.
  */
 export function UpgradePlans({ initialCurrency }: { initialCurrency: Currency }) {
+  const t = useTranslations("billing");
+  const locale = useLocale();
   const [plan, setPlan] = useState<Plan>("YEARLY");
   const [currency, setCurrency] = useState<Currency>(initialCurrency);
   const [error, setError] = useState<string | null>(null);
@@ -32,8 +35,7 @@ export function UpgradePlans({ initialCurrency }: { initialCurrency: Currency })
     });
   }
 
-  const price = formatPrice(BILLING_PLANS[plan].price[currency], currency);
-  const period = plan === "MONTHLY" ? "month" : "year";
+  const price = formatPrice(BILLING_PLANS[plan].price[currency], currency, locale);
 
   return (
     <div>
@@ -42,8 +44,8 @@ export function UpgradePlans({ initialCurrency }: { initialCurrency: Currency })
         <CurrencySwitch value={currency} onChange={setCurrency} />
       </div>
       <p className="mt-3 text-center text-xs text-muted-foreground">
-        {PAYMENT_METHODS[currency]}
-        {currency === "XOF" ? " (West Africa)" : null}
+        {t(`paymentMethods.${PAYMENT_METHODS[currency]}`)}
+        {currency === "XOF" ? t("westAfrica") : null}
       </p>
 
       <div className="mx-auto mt-10 grid max-w-4xl gap-5 md:grid-cols-2">
@@ -51,7 +53,7 @@ export function UpgradePlans({ initialCurrency }: { initialCurrency: Currency })
           currency={currency}
           action={
             <Button variant="outline" size="lg" className="mt-8 h-9" disabled>
-              Current plan
+              {t("currentPlan")}
             </Button>
           }
         />
@@ -61,7 +63,9 @@ export function UpgradePlans({ initialCurrency }: { initialCurrency: Currency })
           action={
             <div className="mt-8 flex flex-col gap-2">
               <Button size="lg" className="h-9" disabled={isPending} onClick={checkout}>
-                {isPending ? "Opening checkout…" : `Upgrade · ${price}/${period}`}
+                {isPending
+                  ? t("openingCheckout")
+                  : t(plan === "MONTHLY" ? "upgradeMonthly" : "upgradeYearly", { price })}
               </Button>
               {error ? (
                 <p role="alert" className="text-sm text-destructive">

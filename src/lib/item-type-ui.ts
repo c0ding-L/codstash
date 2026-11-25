@@ -105,28 +105,6 @@ export const typePluralNames: Record<ItemTypeSlug, string> = {
   link: "Links",
 };
 
-/** Singular labels, for the type pages' "New Snippet" button. */
-export const typeSingularNames: Record<ItemTypeSlug, string> = {
-  snippet: "Snippet",
-  prompt: "Prompt",
-  note: "Note",
-  command: "Command",
-  file: "File",
-  image: "Image",
-  link: "Link",
-};
-
-/** One line on what each type is for, shown on an empty type page. */
-export const typeDescriptions: Record<ItemTypeSlug, string> = {
-  snippet: "Save the code you reuse, tagged and easy to find.",
-  prompt: "Keep the AI prompts that work, ready to copy.",
-  note: "Write down ideas, docs and anything worth remembering.",
-  command: "Store the terminal commands you never remember.",
-  file: "Upload documents and other files to keep with your work.",
-  image: "Upload screenshots, diagrams and other images.",
-  link: "Bookmark the docs, articles and tools you come back to.",
-};
-
 /** Item types gated behind the Pro plan — surfaced with a "PRO" badge. */
 export const proTypeSlugs: ReadonlySet<ItemTypeSlug> = new Set(["file", "image"]);
 

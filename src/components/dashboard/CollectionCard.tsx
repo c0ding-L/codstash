@@ -1,17 +1,21 @@
 import { Clock } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 import { CollectionCardMenu } from "@/components/collections/CollectionCardMenu";
 import { FavoriteButton } from "@/components/favorites/FavoriteButton";
 import { TypeIconTile } from "@/components/items/TypeIconTile";
 import { Card, CardContent } from "@/components/ui/card";
 import type { CollectionType, RecentCollection } from "@/lib/db/collections";
-import { formatRelativeTime } from "@/lib/format";
+import { useItemTypeLabel, useRelativeTime } from "@/i18n/labels";
 import { colorClasses, primaryTypeOf, ringClasses, toColorToken, toItemTypeSlug, washClasses } from "@/lib/item-type-ui";
 import { cn } from "@/lib/utils";
 
 /** A collection card linking to its page, accented by its most used type. `now` is the page's moment. */
 export function CollectionCard({ collection, now }: { collection: RecentCollection; now: string }) {
+  const t = useTranslations("common");
+  const typeLabel = useItemTypeLabel();
+  const relativeTime = useRelativeTime();
   // Most-used type first, so it sets the card's accent.
   const primary = primaryTypeOf(collection);
   const primaryColor = primary?.color ?? null;
@@ -31,7 +35,7 @@ export function CollectionCard({ collection, now }: { collection: RecentCollecti
       {/* An overlay, like `ItemDrawerTrigger`, so the whole card is the link. */}
       <Link
         href={`/collections/${collection.id}`}
-        aria-label={`Open ${collection.name}`}
+        aria-label={t("open", { name: collection.name })}
         className="absolute inset-0 z-10 rounded-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
       />
 
@@ -75,15 +79,15 @@ export function CollectionCard({ collection, now }: { collection: RecentCollecti
 
         <div className="mt-auto flex items-center justify-between border-t border-border pt-3 text-xs">
           <span className="flex items-center gap-1.5">
-            {primary ? <span className={cn(primaryColor && colorClasses[primaryColor])}>{primary.name}</span> : null}
+            {primary ? <span className={cn(primaryColor && colorClasses[primaryColor])}>{typeLabel(primary)}</span> : null}
             <span className="text-muted-foreground">
               {primary ? "· " : null}
-              {collection.itemCount} items
+              {t("itemCount", { count: collection.itemCount })}
             </span>
           </span>
           <span className="flex items-center gap-1 text-muted-foreground">
             <Clock className="size-3" aria-hidden />
-            {formatRelativeTime(collection.updatedAt.toISOString(), now)}
+            {relativeTime(collection.updatedAt.toISOString(), now)}
           </span>
         </div>
       </CardContent>
@@ -93,6 +97,8 @@ export function CollectionCard({ collection, now }: { collection: RecentCollecti
 
 /** One small tile per type in the collection, with its count for screen readers. */
 function CollectionTypeChips({ types }: { types: CollectionType[] }) {
+  const typeLabel = useItemTypeLabel();
+
   return (
     <ul className="flex flex-wrap items-center gap-1.5">
       {types.map((type) => (
@@ -104,7 +110,7 @@ function CollectionTypeChips({ types }: { types: CollectionType[] }) {
             iconClassName="size-3"
           />
           <span className="sr-only">
-            {type.count} {type.name}
+            {type.count} {typeLabel(type, type.count === 1 ? "one" : "other")}
           </span>
         </li>
       ))}

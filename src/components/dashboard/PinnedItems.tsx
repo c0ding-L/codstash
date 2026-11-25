@@ -1,4 +1,5 @@
 import { Pin } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { connection } from "next/server";
 
 import { ItemRow } from "@/components/dashboard/ItemRow";
@@ -15,12 +16,13 @@ export async function PinnedItems({ userId }: { userId: string }) {
   if (items.length === 0) return null;
 
   const now = new Date().toISOString();
+  const t = await getTranslations("dashboard");
 
   return (
     <section className="flex flex-col gap-3">
       <h2 className="flex items-center gap-2 text-lg font-semibold">
         <Pin className="size-4 text-muted-foreground" aria-hidden />
-        Pinned items
+        {t("pinnedItems")}
       </h2>
 
       <ul className="flex flex-col gap-2">

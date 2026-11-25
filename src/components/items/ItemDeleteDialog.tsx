@@ -1,6 +1,7 @@
 "use client";
 
 import { TriangleAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useTransition } from "react";
 import { toast } from "sonner";
 
@@ -28,6 +29,8 @@ interface ItemDeleteDialogProps {
 
 /** Asks before deleting the item. On failure it stays open, so the user can retry or cancel. */
 export function ItemDeleteDialog({ card, open, onOpenChange, onDeleted }: ItemDeleteDialogProps) {
+  const t = useTranslations("drawer.delete");
+  const tc = useTranslations("common");
   const refreshAfterRemoval = useRefreshAfterRemoval();
   const [pending, startDeleting] = useTransition();
 
@@ -39,7 +42,7 @@ export function ItemDeleteDialog({ card, open, onOpenChange, onDeleted }: ItemDe
         return;
       }
 
-      toast.success("Item deleted.");
+      toast.success(t("deleted"));
       onOpenChange(false);
       onDeleted(card.id);
       refreshAfterRemoval(card.id);
@@ -54,14 +57,16 @@ export function ItemDeleteDialog({ card, open, onOpenChange, onDeleted }: ItemDe
           <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20">
             <TriangleAlert aria-hidden />
           </AlertDialogMedia>
-          <AlertDialogTitle>Delete this item?</AlertDialogTitle>
+          <AlertDialogTitle>{t("title")}</AlertDialogTitle>
           <AlertDialogDescription>
-            <span className="font-medium break-words text-foreground">{card.title}</span> will be deleted for
-            good. This cannot be undone.
+            {t.rich("body", {
+              title: card.title,
+              name: (chunks) => <span className="font-medium break-words text-foreground">{chunks}</span>,
+            })}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={pending}>{tc("cancel")}</AlertDialogCancel>
           {/* Solid red: the `destructive` variant is only a tint, too quiet for a delete that cannot be undone. */}
           <Button
             variant="destructive"
@@ -69,7 +74,7 @@ export function ItemDeleteDialog({ card, open, onOpenChange, onDeleted }: ItemDe
             disabled={pending}
             onClick={handleDelete}
           >
-            {pending ? "Deleting…" : "Delete"}
+            {pending ? tc("deleting") : tc("delete")}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

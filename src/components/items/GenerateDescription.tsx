@@ -1,6 +1,7 @@
 "use client";
 
 import { Sparkles } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Suspense, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -25,6 +26,7 @@ interface GenerateDescriptionProps {
  */
 export function GenerateDescriptionButton({ aiAllowed, input, onGenerated, disabled }: GenerateDescriptionProps) {
   // Disables the button while a request runs, so a double click does not spend two.
+  const t = useTranslations("ai");
   const [pending, startTransition] = useTransition();
   const canGenerate = input.title.trim() !== "";
 
@@ -48,11 +50,11 @@ export function GenerateDescriptionButton({ aiAllowed, input, onGenerated, disab
           size="xs"
           className="text-muted-foreground"
           disabled={pending || disabled || !canGenerate}
-          title={canGenerate ? undefined : "Add a title first."}
+          title={canGenerate ? undefined : t("addTitleFirst")}
           onClick={generate}
         >
           <Sparkles aria-hidden />
-          {pending ? "Generating…" : "Generate Description"}
+          {pending ? t("generating") : t("generateDescription")}
         </Button>
       </ShownIf>
     </Suspense>

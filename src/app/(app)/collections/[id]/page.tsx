@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { connection } from "next/server";
 
 import { auth } from "@/auth";
@@ -19,7 +20,9 @@ export async function generateMetadata({ params }: CollectionPageProps): Promise
   const session = await auth();
   if (!session?.user?.id) return {};
   const collection = await getCollection(session.user.id, (await params).id);
-  return collection ? { title: `${collection.name} · Cortex` } : {};
+  if (!collection) return {};
+  const t = await getTranslations("metadata");
+  return { title: t("page", { page: collection.name }) };
 }
 
 export default async function CollectionPage({ params, searchParams }: CollectionPageProps) {
@@ -43,6 +46,7 @@ export default async function CollectionPage({ params, searchParams }: Collectio
   if (page > pages) notFound();
   const first = pageOffset(page, ITEMS_PER_PAGE) + 1;
   const now = new Date().toISOString();
+  const t = await getTranslations("collections");
 
   return (
     <div className="flex flex-col gap-6">
@@ -56,7 +60,7 @@ export default async function CollectionPage({ params, searchParams }: Collectio
         <div className="flex shrink-0 items-center gap-3">
           {items.length > 0 ? (
             <span className="text-sm text-muted-foreground">
-              {first}–{first + items.length - 1} of {totalCount}
+              {t("range", { first, last: first + items.length - 1, total: totalCount })}
             </span>
           ) : null}
           <CollectionHeaderActions collection={collection} />
@@ -72,7 +76,7 @@ export default async function CollectionPage({ params, searchParams }: Collectio
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-muted-foreground">No items in this collection yet.</p>
+        <p className="text-sm text-muted-foreground">{t("noItems")}</p>
       )}
 
       <Pagination

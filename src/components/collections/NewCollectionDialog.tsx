@@ -21,6 +21,7 @@ import {
 /** The top bar's "New Collection" button and the dialog it opens. */
 export function NewCollectionDialog() {
   const t = useTranslations("nav");
+  const tn = useTranslations("collections.new");
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [saving, startSaving] = useTransition();
@@ -35,8 +36,8 @@ export function NewCollectionDialog() {
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg" showCloseButton={!saving}>
         <DialogHeader>
-          <DialogTitle>New collection</DialogTitle>
-          <DialogDescription>Give it a name and, if you like, a description.</DialogDescription>
+          <DialogTitle>{tn("title")}</DialogTitle>
+          <DialogDescription>{tn("description")}</DialogDescription>
         </DialogHeader>
         {/* Inside the popup, so it unmounts on close and every opening starts empty. */}
         <CollectionForm
@@ -44,12 +45,12 @@ export function NewCollectionDialog() {
           startSaving={startSaving}
           submit={(values) => createCollection(values)}
           onSaved={() => {
-            toast.success("Collection created.");
+            toast.success(tn("created"));
             setOpen(false);
             router.refresh();
           }}
-          submitLabel="Create collection"
-          savingLabel="Creating…"
+          submitLabel={tn("submit")}
+          savingLabel={tn("saving")}
         />
       </DialogContent>
     </Dialog>

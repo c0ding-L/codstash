@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { connection } from "next/server";
 
 import { auth } from "@/auth";
@@ -10,10 +11,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { formatProUntil } from "@/lib/billing-plans";
 import { findPaymentByReference, getPlanStatus } from "@/lib/db/billing";
 import { cn } from "@/lib/utils";
+import { pageMetadata } from "@/i18n/labels-server";
 
-export const metadata: Metadata = {
-  title: "Payment · Cortex",
-};
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("billing.return.title");
+}
 
 interface BillingReturnPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -38,7 +40,11 @@ export default async function BillingReturnPage({ searchParams }: BillingReturnP
   const errored = first(params.error) === "1";
 
   // Only the signed-in user's own payment; anyone else's reads as not found.
-  const found = reference ? await findPaymentByReference(reference) : null;
+  const [found, t, locale] = await Promise.all([
+    reference ? findPaymentByReference(reference) : null,
+    getTranslations("billing.return"),
+    getLocale(),
+  ]);
   const payment = found?.userId === userId ? found : null;
 
   let title: string;
@@ -47,26 +53,26 @@ export default async function BillingReturnPage({ searchParams }: BillingReturnP
   let retry = false;
 
   if (!payment) {
-    title = "Payment not found";
-    description = "We could not find this payment on your account.";
+    title = t("notFound");
+    description = t("notFoundDescription");
     retry = true;
   } else if (payment.status === "SUCCEEDED") {
     const { proUntil } = await getPlanStatus(userId);
-    title = proUntil ? `You're Pro until ${formatProUntil(proUntil)}` : "You're Pro";
-    description = "Thank you! Your payment is confirmed.";
+    title = proUntil ? t("proUntil", { date: formatProUntil(proUntil, locale) }) : t("pro");
+    description = t("thanks");
   } else if (payment.status === "NEEDS_REVIEW") {
-    title = "We're checking your payment";
-    description = "We received your payment and are checking it — contact support if this takes long.";
+    title = t("reviewing");
+    description = t("reviewingDescription");
   } else if (errored) {
-    title = "The payment did not go through";
-    description = "Your plan has not changed. You can try again with another card or payment method.";
+    title = t("failed");
+    description = t("failedDescription");
     retry = true;
   } else {
     // PENDING, or FAILED after Bictorys sent the customer back as paid: a
     // declined card then a good one on the same page leaves the row FAILED
     // until the second webhook arrives, so wait for it.
-    title = "Confirming your payment…";
-    description = "This usually takes a few seconds.";
+    title = t("confirming");
+    description = t("confirmingDescription");
     polling = true;
   }
 
@@ -86,7 +92,7 @@ export default async function BillingReturnPage({ searchParams }: BillingReturnP
               href="/settings#plan"
               className={cn(buttonVariants({ variant: retry ? "default" : "outline" }))}
             >
-              {retry ? "Try again" : "Back to settings"}
+              {retry ? t("retry") : t("back")}
             </Link>
           </div>
         </CardContent>

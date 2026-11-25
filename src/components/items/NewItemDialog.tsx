@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, use, useId, useState, useTransition, type TransitionStartFunction } from "react";
 import { toast } from "sonner";
@@ -38,14 +39,15 @@ import { addTag, toTags } from "@/lib/tags";
 import { uploadFile } from "@/lib/upload-client";
 import { cn } from "@/lib/utils";
 
-const TYPES: { slug: CreatableType; label: string }[] = [
-  { slug: "snippet", label: "Snippet" },
-  { slug: "prompt", label: "Prompt" },
-  { slug: "command", label: "Command" },
-  { slug: "note", label: "Note" },
-  { slug: "file", label: "File" },
-  { slug: "image", label: "Image" },
-  { slug: "link", label: "Link" },
+/** The picker's order. Labels come from the `itemTypes` messages. */
+const TYPES: { slug: CreatableType }[] = [
+  { slug: "snippet" },
+  { slug: "prompt" },
+  { slug: "command" },
+  { slug: "note" },
+  { slug: "file" },
+  { slug: "image" },
+  { slug: "link" },
 ];
 
 interface NewItemDialogProps {
@@ -63,23 +65,26 @@ interface NewItemDialogProps {
  * A "New Item" button and the dialog it opens: in the top bar, and on the type
  * pages, where the dialog starts on the page's type.
  */
-export function NewItemDialog({ uploadsAllowed, aiAllowed, label = "New Item", iconOnlyOnMobile = true }: NewItemDialogProps) {
+export function NewItemDialog({ uploadsAllowed, aiAllowed, label, iconOnlyOnMobile = true }: NewItemDialogProps) {
+  const t = useTranslations("newItem");
+  const tn = useTranslations("nav");
+  const triggerLabel = label ?? tn("newItem");
   const [open, setOpen] = useState(false);
   const [saving, startSaving] = useTransition();
 
   return (
     // Kept open while saving, so a create in flight cannot be dismissed half done.
     <Dialog open={open} onOpenChange={(next) => (saving ? undefined : setOpen(next))}>
-      <DialogTrigger render={<Button size="lg" aria-label={label} />}>
+      <DialogTrigger render={<Button size="lg" aria-label={triggerLabel} />}>
         <Plus aria-hidden />
         {/* In the top bar, icon only on narrow screens, like "New Collection". */}
-        <span className={cn(iconOnlyOnMobile && "hidden sm:inline")}>{label}</span>
+        <span className={cn(iconOnlyOnMobile && "hidden sm:inline")}>{triggerLabel}</span>
       </DialogTrigger>
       {/* Capped to the viewport and scrollable: a long snippet would push "Create item" off screen. */}
       <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg" showCloseButton={!saving}>
         <DialogHeader>
-          <DialogTitle>New item</DialogTitle>
-          <DialogDescription>Choose a type, then fill in its fields.</DialogDescription>
+          <DialogTitle>{t("title")}</DialogTitle>
+          <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
         {/* Inside the popup, so it unmounts on close and every opening starts empty. */}
         <Suspense fallback={null}>
@@ -105,6 +110,10 @@ interface NewItemFormProps {
 }
 
 function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed }: NewItemFormProps) {
+  const t = useTranslations("newItem");
+  const tf = useTranslations("itemForm");
+  const tc = useTranslations("common");
+  const tTypes = useTranslations("itemTypes");
   const canUpload = use(uploadsAllowed);
   const router = useRouter();
   const id = useId();
@@ -163,7 +172,7 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed
           input.fileKey = await uploadFile(uploadKind, file, setProgress);
         } catch (uploadError) {
           setProgress(null);
-          const message = uploadError instanceof Error ? uploadError.message : "Could not upload the file.";
+          const message = uploadError instanceof Error ? uploadError.message : t("uploadFailed");
           toast.error(message);
           setError({ field: "fileKey", message });
           return;
@@ -179,7 +188,7 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed
         return;
       }
 
-      toast.success("Item created.");
+      toast.success(t("created"));
       onCreated();
       router.refresh();
     });
@@ -199,13 +208,13 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed
         }}
       />
 
-      <Field id={`${id}-title`} label="Title" error={messageFor("title")}>
+      <Field id={`${id}-title`} label={tf("title")} error={messageFor("title")}>
         <Input value={title} autoFocus {...fieldProps("title", setTitle)} />
       </Field>
 
       <Field
         id={`${id}-description`}
-        label="Description"
+        label={tf("description")}
         error={messageFor("description")}
         action={
           <GenerateDescriptionButton
@@ -231,7 +240,7 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed
       </Field>
 
       {uploadKind ? (
-        <Field id={`${id}-fileKey`} label={uploadKind === "image" ? "Image" : "File"} error={messageFor("fileKey")}>
+        <Field id={`${id}-fileKey`} label={tTypes(`${uploadKind}.one`)} error={messageFor("fileKey")}>
           <FileUpload
             kind={uploadKind}
             file={file}
@@ -250,7 +259,7 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed
       ) : null}
 
       {hasUrl ? (
-        <Field id={`${id}-url`} label="URL" error={messageFor("url")}>
+        <Field id={`${id}-url`} label={tf("url")} error={messageFor("url")}>
           <Input value={url} inputMode="url" placeholder="https://" {...fieldProps("url", setUrl)} />
         </Field>
       ) : null}
@@ -303,10 +312,10 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed
 
       <DialogFooter>
         <DialogClose render={<Button type="button" variant="ghost" />} disabled={saving}>
-          Cancel
+          {tc("cancel")}
         </DialogClose>
         <Button type="submit" disabled={saving || !canSubmit}>
-          {progress !== null && progress < 1 ? "Uploading…" : saving ? "Creating…" : "Create item"}
+          {progress !== null && progress < 1 ? t("uploading") : saving ? t("creating") : t("create")}
         </Button>
       </DialogFooter>
     </form>
@@ -323,9 +332,11 @@ interface TypePickerProps {
 
 /** The types the dialog can create, as a row of radio buttons in each type's colour. */
 function TypePicker({ value, disabled, canUpload, onChange }: TypePickerProps) {
+  const t = useTranslations("newItem");
+  const tTypes = useTranslations("itemTypes");
   return (
-    <div role="radiogroup" aria-label="Type" className="flex flex-wrap gap-1.5">
-      {TYPES.map(({ slug, label }) => {
+    <div role="radiogroup" aria-label={t("typePicker")} className="flex flex-wrap gap-1.5">
+      {TYPES.map(({ slug }) => {
         const Icon = typeIcons[slug];
         const color = typeColors[slug];
         const selected = slug === value;
@@ -340,12 +351,12 @@ function TypePicker({ value, disabled, canUpload, onChange }: TypePickerProps) {
             size="sm"
             className={cn(selected && ["ring-1 ring-foreground/20", surfaceClasses[color]])}
             disabled={disabled || proOnly}
-            title={proOnly ? "File and image uploads are a Pro feature." : undefined}
+            title={proOnly ? t("uploadsProOnly") : undefined}
             onClick={() => onChange(slug)}
           >
             <Icon className={colorClasses[color]} aria-hidden />
-            {label}
-            {proOnly ? <span className="text-xs text-muted-foreground">Pro</span> : null}
+            {tTypes(`${slug}.one`)}
+            {proOnly ? <span className="text-xs text-muted-foreground">{t("pro")}</span> : null}
           </Button>
         );
       })}

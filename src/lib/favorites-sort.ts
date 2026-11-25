@@ -1,11 +1,8 @@
 /** How `/favorites` orders its rows. "date" is `updatedAt` desc, the order the queries return. */
 export type FavoritesSort = "date" | "name" | "type";
 
-export const FAVORITES_SORTS: { value: FavoritesSort; label: string }[] = [
-  { value: "date", label: "Date" },
-  { value: "name", label: "Name" },
-  { value: "type", label: "Type" },
-];
+/** The sort options, in menu order. Their labels are the `favorites.sort` messages. */
+export const FAVORITES_SORTS: readonly FavoritesSort[] = ["date", "name", "type"];
 
 const collator = new Intl.Collator(undefined, { sensitivity: "base", numeric: true });
 

@@ -1,4 +1,5 @@
 import { FolderHeart, FolderOpen, Layers, Star } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { connection } from "next/server";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,31 +9,31 @@ export async function StatsCards({ userId }: { userId: string }) {
   // A Prisma query does not opt the route out of prerendering on its own.
   await connection();
 
-  const stats = await getDashboardStats(userId);
+  const [stats, t] = await Promise.all([getDashboardStats(userId), getTranslations("dashboard.stats")]);
 
   const cards = [
     {
-      label: "Items",
+      label: t("items"),
       value: stats.totalItems,
-      hint: "across all collections",
+      hint: t("itemsHint"),
       icon: Layers,
     },
     {
-      label: "Collections",
+      label: t("collections"),
       value: stats.collectionCount,
-      hint: "across all types",
+      hint: t("collectionsHint"),
       icon: FolderOpen,
     },
     {
-      label: "Favorite items",
+      label: t("favoriteItems"),
       value: stats.favoriteItemCount,
-      hint: "starred items",
+      hint: t("favoriteItemsHint"),
       icon: Star,
     },
     {
-      label: "Favorite collections",
+      label: t("favoriteCollections"),
       value: stats.favoriteCollectionCount,
-      hint: "pinned collections",
+      hint: t("favoriteCollectionsHint"),
       icon: FolderHeart,
     },
   ];

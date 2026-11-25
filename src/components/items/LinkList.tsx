@@ -1,4 +1,5 @@
 import { ArrowUpRight, Pin, Star } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
 import { LinkCopyButton } from "@/components/items/LinkCopyButton";
@@ -20,6 +21,8 @@ export function LinkList({ items }: { items: DashboardItem[] }) {
 }
 
 function LinkRow({ item }: { item: DashboardItem }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("items");
   const url = item.url ?? "";
   const { domain, path } = parseLinkUrl(url);
 
@@ -32,7 +35,7 @@ function LinkRow({ item }: { item: DashboardItem }) {
           <LinkLogo url={url} letter={domain.charAt(0) || "?"} />
           <div className="min-w-0">
             <p className="truncate font-mono text-xs text-lime-400 sm:text-sm sm:text-foreground">
-              {domain || "No URL"}
+              {domain || t("noUrl")}
             </p>
             {path ? (
               <p className="hidden truncate font-mono text-xs text-muted-foreground sm:block">{path}</p>
@@ -44,10 +47,10 @@ function LinkRow({ item }: { item: DashboardItem }) {
           <div className="flex items-center gap-1.5">
             <h2 className="truncate font-medium">{item.title}</h2>
             {item.isPinned ? (
-              <Pin className="size-3 shrink-0 text-muted-foreground" aria-label="Pinned" />
+              <Pin className="size-3 shrink-0 text-muted-foreground" aria-label={tc("pinned")} />
             ) : null}
             {item.isFavorite ? (
-              <Star className="size-3 shrink-0 fill-amber-400 text-amber-400" aria-label="Favorite" />
+              <Star className="size-3 shrink-0 fill-amber-400 text-amber-400" aria-label={tc("favorite")} />
             ) : null}
           </div>
           {item.description ? (
@@ -72,10 +75,10 @@ function LinkRow({ item }: { item: DashboardItem }) {
             href={url}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label={`Open ${item.title} in a new tab`}
+            aria-label={tc("openInNewTab", { name: item.title })}
             className={cn(buttonVariants({ variant: "outline", size: "sm" }), "relative z-20")}
           >
-            Open
+            {tc("openLink")}
             <ArrowUpRight data-icon="inline-end" aria-hidden />
           </a>
         ) : null}

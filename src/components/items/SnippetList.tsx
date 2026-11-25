@@ -1,9 +1,11 @@
 import { Pin, Star } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { ItemCopyButton } from "@/components/items/ItemCopyButton";
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
 import type { DashboardItem, SnippetPreview } from "@/lib/db/items";
-import { formatCollectionNames, formatRelativeTime } from "@/lib/format";
+import { useRelativeTime } from "@/i18n/labels";
+import { formatCollectionNames } from "@/lib/format";
 import { highlightCode } from "@/lib/highlight";
 
 interface SnippetListProps {
@@ -45,6 +47,9 @@ function SnippetRow({
   html: string | null;
   now: string;
 }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("items");
+  const relativeTime = useRelativeTime();
   const collectionNames = formatCollectionNames(item.collections);
   return (
     <li className="group relative grid transition-colors hover:bg-foreground/[0.02] sm:grid-cols-[minmax(0,1fr)_minmax(0,3fr)]">
@@ -55,10 +60,10 @@ function SnippetRow({
         <div className="flex items-start gap-1.5">
           <h2 className="min-w-0 font-mono font-medium break-words transition-colors group-hover:text-emerald-400">{item.title}</h2>
           {item.isPinned ? (
-            <Pin className="mt-1 size-3 shrink-0 text-muted-foreground" aria-label="Pinned" />
+            <Pin className="mt-1 size-3 shrink-0 text-muted-foreground" aria-label={tc("pinned")} />
           ) : null}
           {item.isFavorite ? (
-            <Star className="mt-1 size-3 shrink-0 fill-amber-400 text-amber-400" aria-label="Favorite" />
+            <Star className="mt-1 size-3 shrink-0 fill-amber-400 text-amber-400" aria-label={tc("favorite")} />
           ) : null}
         </div>
         {item.description ? <p className="text-sm text-muted-foreground">{item.description}</p> : null}
@@ -76,7 +81,7 @@ function SnippetRow({
           {preview.language ? <span className="text-emerald-400">{preview.language}</span> : null}
           <span className="whitespace-nowrap">
             {preview.language ? <span aria-hidden>/ </span> : null}
-            {preview.lineCount === 1 ? "1 line" : `${preview.lineCount} lines`}
+            {t("lineCount", { count: preview.lineCount })}
           </span>
           {collectionNames ? (
             <span className="whitespace-nowrap">
@@ -86,7 +91,7 @@ function SnippetRow({
           ) : null}
           <span className="whitespace-nowrap">
             <span aria-hidden>/ </span>
-            {formatRelativeTime(item.updatedAt.toISOString(), now)}
+            {relativeTime(item.updatedAt.toISOString(), now)}
           </span>
         </p>
       </div>
@@ -96,13 +101,13 @@ function SnippetRow({
           // Shiki's HTML: the code is escaped by Shiki, and is the owner's own snippet.
           <div className="snippet-code" dangerouslySetInnerHTML={{ __html: html }} />
         ) : (
-          <p className="font-mono text-xs text-muted-foreground">Empty snippet.</p>
+          <p className="font-mono text-xs text-muted-foreground">{t("emptySnippet")}</p>
         )}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-background to-transparent" />
         <ItemCopyButton
           itemId={item.id}
           title={item.title}
-          label="Copy"
+          label={tc("copy")}
           // Opaque, since it sits on the code: the outline variant's dark background is translucent.
           // Hidden until hover only with a mouse: a touch screen, even a wide one, never hovers.
           className="absolute top-3 right-3 bg-background hover:bg-neutral-800 dark:bg-background dark:hover:bg-neutral-800 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:focus-visible:opacity-100"

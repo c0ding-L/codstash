@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useActionState, useState } from "react";
 
 import { type ActionResult, deleteAccount } from "@/actions/profile";
@@ -30,22 +31,21 @@ interface DeleteAccountDialogProps {
  * the password if the account has one. The server action checks both again.
  */
 export function DeleteAccountDialog({ email, isDemo, hasPassword }: Readonly<DeleteAccountDialogProps>) {
+  const t = useTranslations("deleteAccount");
   if (isDemo) {
     return (
       <div className="grid gap-2">
         <Button variant="destructive" disabled className="justify-self-start">
-          Delete account
+          {t("button")}
         </Button>
-        <p className="text-sm text-muted-foreground">
-          The demo account cannot be deleted: the dashboard reads its data.
-        </p>
+        <p className="text-sm text-muted-foreground">{t("demo")}</p>
       </div>
     );
   }
 
   return (
     <AlertDialog>
-      <AlertDialogTrigger render={<Button variant="destructive" />}>Delete account</AlertDialogTrigger>
+      <AlertDialogTrigger render={<Button variant="destructive" />}>{t("button")}</AlertDialogTrigger>
       <AlertDialogContent>
         {/* Inside the popup, so it unmounts on close: what was typed and any
             error from the server are gone when it is reopened. */}
@@ -56,6 +56,8 @@ export function DeleteAccountDialog({ email, isDemo, hasPassword }: Readonly<Del
 }
 
 function DeleteAccountForm({ email, hasPassword }: Readonly<{ email: string; hasPassword: boolean }>) {
+  const t = useTranslations("deleteAccount");
+  const tc = useTranslations("common");
   const [state, formAction, pending] = useActionState(deleteAccount, initialState);
   const [typed, setTyped] = useState("");
   const [password, setPassword] = useState("");
@@ -66,23 +68,25 @@ function DeleteAccountForm({ email, hasPassword }: Readonly<{ email: string; has
   return (
     <form action={formAction} className="grid gap-4">
       <AlertDialogHeader>
-        <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+        <AlertDialogTitle>{t("title")}</AlertDialogTitle>
         <AlertDialogDescription>
-          Your account, items, collections and tags are deleted for good. Type{" "}
-          <span className="font-medium text-foreground">{email}</span> to confirm.
+          {t.rich("body", {
+            email,
+            strong: (chunks) => <span className="font-medium text-foreground">{chunks}</span>,
+          })}
         </AlertDialogDescription>
       </AlertDialogHeader>
       <Input
         name="confirmEmail"
         type="email"
         autoComplete="off"
-        aria-label="Your email"
+        aria-label={t("yourEmail")}
         value={typed}
         onChange={(event) => setTyped(event.target.value)}
       />
       {hasPassword ? (
         <label className="grid gap-1.5 text-sm font-medium">
-          Your password
+          {t("yourPassword")}
           <Input
             name="password"
             type="password"
@@ -98,9 +102,9 @@ function DeleteAccountForm({ email, hasPassword }: Readonly<{ email: string; has
         </p>
       ) : null}
       <AlertDialogFooter>
-        <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+        <AlertDialogCancel disabled={pending}>{tc("cancel")}</AlertDialogCancel>
         <Button type="submit" variant="destructive" disabled={!ready || pending}>
-          {pending ? "Deleting…" : "Delete account"}
+          {pending ? tc("deleting") : t("button")}
         </Button>
       </AlertDialogFooter>
     </form>

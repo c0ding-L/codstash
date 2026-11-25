@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { connection } from "next/server";
 
 import { auth } from "@/auth";
@@ -7,10 +8,11 @@ import { CollectionCard } from "@/components/dashboard/CollectionCard";
 import { Pagination } from "@/components/Pagination";
 import { getCollectionsPage } from "@/lib/db/collections";
 import { COLLECTIONS_PER_PAGE, pageCount, pageOffset, parsePageParam } from "@/lib/pagination";
+import { pageMetadata } from "@/i18n/labels-server";
 
-export const metadata: Metadata = {
-  title: "Collections · Cortex",
-};
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("collections.title");
+}
 
 interface CollectionsPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -33,14 +35,15 @@ export default async function CollectionsPage({ searchParams }: CollectionsPageP
   if (page > pages) notFound();
   const first = pageOffset(page, COLLECTIONS_PER_PAGE) + 1;
   const now = new Date().toISOString();
+  const t = await getTranslations("collections");
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-baseline justify-between">
-        <h1 className="text-2xl font-semibold">Collections</h1>
+        <h1 className="text-2xl font-semibold">{t("title")}</h1>
         {collections.length > 0 ? (
           <span className="text-sm text-muted-foreground">
-            {first}–{first + collections.length - 1} of {totalCount}
+            {t("range", { first, last: first + collections.length - 1, total: totalCount })}
           </span>
         ) : null}
       </div>
@@ -52,7 +55,7 @@ export default async function CollectionsPage({ searchParams }: CollectionsPageP
           ))}
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">No collections yet.</p>
+        <p className="text-sm text-muted-foreground">{t("empty")}</p>
       )}
 
       <Pagination

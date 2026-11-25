@@ -1,9 +1,9 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import { PLANS, type Plan } from "@/lib/billing-plans";
 import { cn } from "@/lib/utils";
-
-const PERIOD_LABEL: Record<Plan, string> = { MONTHLY: "Monthly", YEARLY: "Yearly" };
 
 interface BillingPeriodSwitchProps {
   value: Plan;
@@ -12,8 +12,9 @@ interface BillingPeriodSwitchProps {
 
 /** Monthly / yearly, with the yearly saving. Styled like `CurrencySwitch`. */
 export function BillingPeriodSwitch({ value, onChange }: BillingPeriodSwitchProps) {
+  const t = useTranslations("billing");
   return (
-    <div role="group" aria-label="Billing period" className="inline-flex rounded-lg border border-border bg-card p-1 text-sm">
+    <div role="group" aria-label={t("period")} className="inline-flex rounded-lg border border-border bg-card p-1 text-sm">
       {PLANS.map((plan) => (
         <button
           key={plan}
@@ -25,8 +26,8 @@ export function BillingPeriodSwitch({ value, onChange }: BillingPeriodSwitchProp
             value === plan ? "bg-secondary text-foreground" : "text-muted-foreground hover:text-foreground",
           )}
         >
-          {PERIOD_LABEL[plan]}
-          {plan === "YEARLY" ? <span className="text-xs text-emerald-400">Save 25%</span> : null}
+          {plan === "MONTHLY" ? t("monthly") : t("yearly")}
+          {plan === "YEARLY" ? <span className="text-xs text-emerald-400">{t("save")}</span> : null}
         </button>
       ))}
     </div>

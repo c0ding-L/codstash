@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { CodeEditor } from "@/components/items/CodeEditor";
@@ -107,17 +108,18 @@ interface ContentFieldProps {
 
 /** The content: Monaco for code types, the Markdown editor for the others. */
 export function ContentField({ id, slug, value, language, error, onChange }: ContentFieldProps) {
+  const t = useTranslations("itemForm");
   const fieldId = `${id}-content`;
 
   return (
-    <Field id={fieldId} label="Content" error={error}>
+    <Field id={fieldId} label={t("content")} error={error}>
       {isCodeType(slug) ? (
-        <CodeEditor value={value} language={language} ariaLabel="Content" onChange={onChange} />
+        <CodeEditor value={value} language={language} ariaLabel={t("content")} onChange={onChange} />
       ) : (
         <MarkdownEditor
           value={value}
           id={fieldId}
-          ariaLabel="Content"
+          ariaLabel={t("content")}
           invalid={error !== undefined}
           describedBy={`${fieldId}-message`}
           onChange={onChange}
@@ -137,11 +139,15 @@ interface LanguageFieldProps {
 
 /** The language, picked from a list; the code editor below highlights with it. */
 export function LanguageField({ id, value, error, onChange }: LanguageFieldProps) {
+  const t = useTranslations("itemForm");
   const fieldId = `${id}-language`;
-  const options = languageOptionsFor(value);
+  // The one option that is not a language name: "Plain text", in the UI language.
+  const options = languageOptionsFor(value).map((option) =>
+    option.value === "" ? { ...option, label: t("plainText") } : option,
+  );
 
   return (
-    <Field id={fieldId} label="Language" error={error}>
+    <Field id={fieldId} label={t("language")} error={error}>
       <Select items={options} value={value} onValueChange={(next) => next !== null && onChange(next)}>
         <SelectTrigger
           id={fieldId}
@@ -178,18 +184,19 @@ interface TagsFieldProps {
 
 /** The comma-separated tags, previewed as badges as they will be saved. */
 export function TagsField({ id, value, error, inputProps, action, below }: TagsFieldProps) {
+  const t = useTranslations("itemForm");
   const tags = toTags(value);
 
   return (
     <div className="flex flex-col gap-1.5">
       <Field
         id={`${id}-tags`}
-        label="Tags"
+        label={t("tags")}
         error={error}
         action={action}
-        hint={tags.length > 0 ? <TagBadges tags={tags} /> : "Separate tags with commas."}
+        hint={tags.length > 0 ? <TagBadges tags={tags} /> : t("tagsHint")}
       >
-        <Input value={value} placeholder="react, hooks" {...inputProps} />
+        <Input value={value} placeholder={t("tagsPlaceholder")} {...inputProps} />
       </Field>
       {below}
     </div>
@@ -240,31 +247,32 @@ interface CollectionsFieldProps {
 
 /** A multi-select of the user's collections, the chosen ones listed as removable badges. */
 export function CollectionsField({ id, value, known = [], error, disabled, onChange }: CollectionsFieldProps) {
+  const t = useTranslations("itemForm");
   const fieldId = `${id}-collectionIds`;
   const state = useCollectionOptions();
   const options = state.status === "ready" ? state.options : [];
 
   const nameOf = new Map([...known, ...options].map(({ id: optionId, name }) => [optionId, name]));
-  const chosen = value.map((optionId) => ({ id: optionId, name: nameOf.get(optionId) ?? "Unknown collection" }));
+  const chosen = value.map((optionId) => ({ id: optionId, name: nameOf.get(optionId) ?? t("unknownCollection") }));
 
   const toggle = (optionId: string, checked: boolean) =>
     onChange(checked ? [...value, optionId] : value.filter((other) => other !== optionId));
 
   const placeholder =
     state.status === "loading"
-      ? "Loading collections…"
+      ? t("loadingCollections")
       : state.status === "error"
-        ? "Could not load collections"
+        ? t("collectionsFailed")
         : options.length === 0
-          ? "No collections yet"
+          ? t("noCollections")
           : value.length === 0
-            ? "Choose collections"
-            : `${value.length} selected`;
+            ? t("chooseCollections")
+            : t("selectedCount", { count: value.length });
 
   return (
     <Field
       id={fieldId}
-      label="Collections"
+      label={t("collections")}
       error={error}
       hint={
         chosen.length > 0 ? (
@@ -275,7 +283,7 @@ export function CollectionsField({ id, value, known = [], error, disabled, onCha
                 <button
                   type="button"
                   className="rounded-full p-0.5 hover:bg-foreground/10 disabled:pointer-events-none"
-                  aria-label={`Remove from ${name}`}
+                  aria-label={t("removeFromCollection", { name })}
                   disabled={disabled}
                   onClick={() => toggle(optionId, false)}
                 >

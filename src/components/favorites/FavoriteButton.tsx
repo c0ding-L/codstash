@@ -1,6 +1,7 @@
 "use client";
 
 import { Star } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Button } from "@/components/ui/button";
 import { useFavoriteToggle, type FavoriteKind } from "@/hooks/use-favorite-toggle";
@@ -21,15 +22,16 @@ interface FavoriteButtonProps {
  * (`z-20` over `z-10`), so clicking it neither opens the drawer nor follows the link.
  */
 export function FavoriteButton({ kind, id, name, isFavorite, size = "icon-xs", className }: FavoriteButtonProps) {
+  const t = useTranslations("favorites");
   const favorite = useFavoriteToggle(kind, id, isFavorite);
 
   return (
     <Button
       variant="ghost"
       size={size}
-      aria-label={`Favorite ${name}`}
+      aria-label={t("favoriteName", { name })}
       aria-pressed={favorite.isFavorite}
-      title={favorite.isFavorite ? "Remove from favorites" : "Add to favorites"}
+      title={favorite.isFavorite ? t("remove") : t("add")}
       disabled={favorite.pending}
       onClick={favorite.toggle}
       className={cn("relative z-20 text-muted-foreground disabled:opacity-100", className)}

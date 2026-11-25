@@ -4,13 +4,62 @@
     "fr": "Français"
   },
   "itemTypes": {
-    "snippet": { "one": "Snippet", "other": "Snippets" },
-    "prompt": { "one": "Prompt", "other": "Prompts" },
-    "note": { "one": "Note", "other": "Notes" },
-    "command": { "one": "Commande", "other": "Commandes" },
-    "file": { "one": "Fichier", "other": "Fichiers" },
-    "image": { "one": "Image", "other": "Images" },
-    "link": { "one": "Lien", "other": "Liens" }
+    "snippet": {
+      "one": "Snippet",
+      "other": "Snippets",
+      "new": "Nouveau snippet",
+      "empty": "Aucun snippet pour l’instant",
+      "description": "Enregistrez le code que vous réutilisez, avec des tags et facile à retrouver.",
+      "edit": "Modifier le snippet"
+    },
+    "prompt": {
+      "one": "Prompt",
+      "other": "Prompts",
+      "new": "Nouveau prompt",
+      "empty": "Aucun prompt pour l’instant",
+      "description": "Conservez les prompts IA qui marchent, prêts à copier.",
+      "edit": "Modifier le prompt"
+    },
+    "note": {
+      "one": "Note",
+      "other": "Notes",
+      "new": "Nouvelle note",
+      "empty": "Aucune note pour l’instant",
+      "description": "Notez vos idées, vos documents et tout ce qui mérite d’être retenu.",
+      "edit": "Modifier la note"
+    },
+    "command": {
+      "one": "Commande",
+      "other": "Commandes",
+      "new": "Nouvelle commande",
+      "empty": "Aucune commande pour l’instant",
+      "description": "Enregistrez les commandes de terminal dont vous ne vous souvenez jamais.",
+      "edit": "Modifier la commande"
+    },
+    "file": {
+      "one": "Fichier",
+      "other": "Fichiers",
+      "new": "Nouveau fichier",
+      "empty": "Aucun fichier pour l’instant",
+      "description": "Importez des documents et d’autres fichiers à conserver avec votre travail.",
+      "edit": "Modifier le fichier"
+    },
+    "image": {
+      "one": "Image",
+      "other": "Images",
+      "new": "Nouvelle image",
+      "empty": "Aucune image pour l’instant",
+      "description": "Importez des captures d’écran, des schémas et d’autres images.",
+      "edit": "Modifier l’image"
+    },
+    "link": {
+      "one": "Lien",
+      "other": "Liens",
+      "new": "Nouveau lien",
+      "empty": "Aucun lien pour l’instant",
+      "description": "Gardez sous la main les docs, articles et outils que vous consultez régulièrement.",
+      "edit": "Modifier le lien"
+    }
   },
   "nav": {
     "types": "Types",
@@ -47,6 +96,393 @@
       "title": "Langue d’affichage",
       "description": "La langue de l’interface. Vos éléments ne sont jamais traduits.",
       "saveFailed": "Impossible de changer la langue. Réessayez."
+    },
+    "title": "Paramètres",
+    "subtitle": "Gérez votre formule, votre éditeur, votre mot de passe et votre compte.",
+    "plan": {
+      "heading": "Formule",
+      "proUntil": "Pro jusqu’au {date}",
+      "free": "Gratuit",
+      "proDescription": "Vous pouvez payer à nouveau à tout moment : la nouvelle période commence à la fin de la période en cours.",
+      "freeDescription": "{items}/{maxItems} éléments, {collections}/{maxCollections} collections. La formule Pro supprime les limites et ajoute l’import de fichiers et d’images."
+    },
+    "editor": {
+      "heading": "Éditeur",
+      "title": "Éditeur de code",
+      "description": "S’applique à tous les éditeurs et visionneuses de code. Les modifications sont enregistrées automatiquement.",
+      "fontSize": "Taille de la police",
+      "tabSize": "Taille des tabulations",
+      "tabSizeValue": "{count} espaces",
+      "theme": "Thème",
+      "wordWrap": "Retour à la ligne automatique",
+      "wordWrapDescription": "Les lignes longues sont renvoyées à la ligne au lieu de défiler latéralement.",
+      "minimap": "Minimap",
+      "minimapDescription": "Afficher l’aperçu du code le long du bord droit de l’éditeur.",
+      "saved": "Préférences de l’éditeur enregistrées.",
+      "saveFailed": "Impossible d’enregistrer vos préférences d’éditeur. Réessayez."
+    },
+    "account": {
+      "heading": "Compte",
+      "password": "Mot de passe",
+      "passwordDescription": "Modifiez le mot de passe que vous utilisez pour vous connecter avec votre adresse e-mail.",
+      "githubOnly": "Vous vous connectez via GitHub ; il n’y a donc pas de mot de passe à modifier.",
+      "delete": "Supprimer le compte",
+      "deleteDescription": "Supprime définitivement votre compte, vos éléments, vos collections et vos tags. Cette action est irréversible."
     }
+  },
+  "time": {
+    "justNow": "À l’instant",
+    "minutes": "il y a {count} min",
+    "hours": "il y a {count} h",
+    "yesterday": "Hier",
+    "days": "il y a {count} j",
+    "weeks": "il y a {count} sem.",
+    "months": "il y a {count} mois",
+    "years": "{count, plural, one {il y a # an} other {il y a # ans}}"
+  },
+  "clipboard": {
+    "copied": "Copié dans le presse-papiers.",
+    "failed": "Impossible de copier dans le presse-papiers."
+  },
+  "billing": {
+    "paymentMethods": {
+      "card": "Carte uniquement",
+      "cardOrMobileMoney": "Carte ou Mobile Money"
+    },
+    "monthly": "Mensuel",
+    "yearly": "Annuel",
+    "save": "Économisez 25 %",
+    "period": "Période de facturation",
+    "currency": "Devise",
+    "westAfrica": " (Afrique de l’Ouest)",
+    "free": "Gratuit",
+    "pro": "Pro",
+    "forever": "/pour toujours",
+    "perMonth": "/mois",
+    "perYear": "/an",
+    "perMonthPrice": "{price}/mois",
+    "mostPopular": "Le plus populaire",
+    "freeFeatures": {
+      "items": "50 éléments",
+      "collections": "3 collections",
+      "search": "Recherche simple",
+      "noAi": "Pas de fonctionnalités d’IA"
+    },
+    "proFeatures": {
+      "unlimited": "Éléments et collections illimités",
+      "uploads": "Import de fichiers et d’images",
+      "customTypes": "Types d’éléments personnalisés",
+      "ai": "Fonctionnalités d’IA",
+      "export": "Export (JSON / ZIP)"
+    },
+    "currentPlan": "Formule actuelle",
+    "openingCheckout": "Ouverture de la page de paiement…",
+    "upgradeMonthly": "Passer à Pro · {price}/mois",
+    "upgradeYearly": "Passer à Pro · {price}/an",
+    "upgradeFor": "{plan, select, MONTHLY {Passer à Pro pour 1 mois} other {Passer à Pro pour 1 an}} · {price}",
+    "extendBy": "{plan, select, MONTHLY {Prolonger de 1 mois} other {Prolonger de 1 an}} · {price}",
+    "slowConfirmation": "Cela prend plus de temps que d’habitude. Vous pouvez quitter cette page : l’abonnement Pro sera activé dès que le paiement aura été confirmé.",
+    "return": {
+      "title": "Paiement",
+      "notFound": "Paiement introuvable",
+      "notFoundDescription": "Nous n’avons pas pu trouver ce paiement sur votre compte.",
+      "proUntil": "Vous êtes Pro jusqu’au {date}",
+      "pro": "Vous êtes Pro",
+      "thanks": "Merci ! Votre paiement est confirmé.",
+      "reviewing": "Nous vérifions votre paiement",
+      "reviewingDescription": "Nous avons bien reçu votre paiement et le vérifions. Contactez le support si cela prend trop de temps.",
+      "failed": "Le paiement n’a pas abouti",
+      "failedDescription": "Votre formule n’a pas changé. Vous pouvez réessayer avec une autre carte ou un autre moyen de paiement.",
+      "confirming": "Confirmation de votre paiement…",
+      "confirmingDescription": "Cela ne prend généralement que quelques secondes.",
+      "retry": "Réessayer",
+      "back": "Retour aux paramètres"
+    }
+  },
+  "common": {
+    "pinned": "Épinglé",
+    "favorite": "Favori",
+    "loading": "Chargement",
+    "open": "Ouvrir {name}",
+    "itemCount": "{count, plural, one {# élément} other {# éléments}}",
+    "openInNewTab": "Ouvrir {name} dans un nouvel onglet",
+    "openLink": "Ouvrir",
+    "copy": "Copier",
+    "copyItem": "Copier {name}",
+    "copyUrlOf": "Copier l’URL de {name}",
+    "copyUrl": "Copier l’URL",
+    "download": "Télécharger",
+    "imageUnavailable": "Image indisponible",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "deleting": "Suppression…",
+    "edit": "Modifier",
+    "none": "Aucun"
+  },
+  "errorFallback": {
+    "title": "Une erreur s’est produite",
+    "body": "Nous n’avons pas pu charger cette page. Il s’agit peut-être d’un problème temporaire.",
+    "reference": "Référence : {digest}",
+    "retry": "Réessayer"
+  },
+  "dashboard": {
+    "title": "Tableau de bord",
+    "subtitle": "Votre mémoire de développeur : snippets, prompts, notes et plus encore.",
+    "stats": {
+      "items": "Éléments",
+      "itemsHint": "dans toutes les collections",
+      "collections": "Collections",
+      "collectionsHint": "tous types confondus",
+      "favoriteItems": "Éléments favoris",
+      "favoriteItemsHint": "éléments étoilés",
+      "favoriteCollections": "Collections favorites",
+      "favoriteCollectionsHint": "collections épinglées"
+    },
+    "recentItems": "Éléments récents",
+    "recentItemsCount": "{shown} sur {total}",
+    "noItems": "Aucun élément pour l’instant.",
+    "recentCollections": "Collections récentes",
+    "collectionCount": "{count, plural, one {# collection} other {# collections}}",
+    "pinnedItems": "Éléments épinglés"
+  },
+  "items": {
+    "range": "{first}–{last} sur {total}",
+    "lineCount": "{count, plural, one {# ligne} other {# lignes}}",
+    "wordCount": "{count, plural, one {# mot} other {# mots}}",
+    "tokenCount": "~{count} tokens",
+    "emptySnippet": "Snippet vide.",
+    "copyPrompt": "Copier le prompt",
+    "noUrl": "Pas d’URL",
+    "commandCopyFailed": "Impossible de charger la commande à copier.",
+    "fileTable": {
+      "name": "Nom",
+      "kind": "Type",
+      "size": "Taille",
+      "updated": "Mis à jour"
+    }
+  },
+  "fileKinds": {
+    "pdf": "Document PDF",
+    "text": "Texte brut",
+    "markdown": "Markdown",
+    "json": "JSON",
+    "yaml": "YAML",
+    "xml": "XML",
+    "csv": "Feuille de calcul CSV",
+    "toml": "Config TOML",
+    "ini": "Config INI",
+    "file": "Fichier"
+  },
+  "pagination": {
+    "label": "Pagination",
+    "previous": "Précédent",
+    "next": "Suivant",
+    "page": "Page {page}"
+  },
+  "metadata": {
+    "page": "{page} · Cortex"
+  },
+  "drawer": {
+    "type": "Type",
+    "collections": "{count, plural, one {Collection} other {Collections}}",
+    "updated": "Mis à jour",
+    "created": "Créé",
+    "language": "Langage",
+    "file": "Fichier",
+    "size": "Taille",
+    "tags": "Tags",
+    "editTitle": "Modifier {type}",
+    "loadingItem": "Chargement de l’élément",
+    "loadFailed": "Le reste de cet élément n’a pas pu être chargé.",
+    "content": "Contenu",
+    "actions": {
+      "favorite": "Favori",
+      "addFavorite": "Ajouter aux favoris",
+      "removeFavorite": "Retirer des favoris",
+      "pin": "Épingler",
+      "pinToTop": "Épingler en haut",
+      "unpin": "Désépingler",
+      "copy": "Copier",
+      "nothingToCopy": "Rien à copier",
+      "copyContent": "Copier le contenu",
+      "copyUrl": "Copier l’URL"
+    },
+    "delete": {
+      "title": "Supprimer cet élément ?",
+      "body": "<name>{title}</name> sera supprimé définitivement. Cette action est irréversible.",
+      "deleted": "Élément supprimé."
+    }
+  },
+  "itemForm": {
+    "title": "Titre",
+    "description": "Description",
+    "url": "URL",
+    "language": "Langage",
+    "plainText": "Texte brut",
+    "content": "Contenu",
+    "tags": "Tags",
+    "tagsHint": "Séparez les tags par des virgules.",
+    "tagsPlaceholder": "react, hooks",
+    "collections": "Collections",
+    "unknownCollection": "Collection inconnue",
+    "loadingCollections": "Chargement des collections…",
+    "collectionsFailed": "Impossible de charger les collections",
+    "noCollections": "Aucune collection pour l’instant",
+    "chooseCollections": "Choisir des collections",
+    "selectedCount": "{count, plural, one {# sélectionnée} other {# sélectionnées}}",
+    "removeFromCollection": "Retirer de {name}",
+    "saving": "Enregistrement…",
+    "saveChanges": "Enregistrer les modifications",
+    "saved": "Modifications enregistrées."
+  },
+  "ai": {
+    "proOnly": "Les fonctionnalités d’IA nécessitent la formule Pro",
+    "proOnlyLink": "{label} : les fonctionnalités d’IA nécessitent la formule Pro. Passer à Pro",
+    "explain": "Expliquer",
+    "explaining": "Explication…",
+    "explainHint": "Expliquer ce code avec l’IA. Le code est envoyé à un fournisseur d’IA tiers.",
+    "optimize": "Optimiser",
+    "optimizing": "Optimisation…",
+    "optimizeHint": "Optimiser ce prompt avec l’IA. Le prompt est envoyé à un fournisseur d’IA tiers.",
+    "alreadyClear": "Ce prompt est déjà clair. Rien à changer.",
+    "promptUpdated": "Prompt mis à jour.",
+    "suggestTags": "Suggérer des tags",
+    "suggesting": "Suggestion…",
+    "generateDescription": "Générer une description",
+    "generating": "Génération…",
+    "addTitleFirst": "Commencez par ajouter un titre.",
+    "suggestedTags": "Tags suggérés",
+    "addTag": "Ajouter le tag {tag}",
+    "dismissTag": "Ignorer le tag {tag}"
+  },
+  "newItem": {
+    "title": "Nouvel élément",
+    "description": "Choisissez un type, puis remplissez ses champs.",
+    "typePicker": "Type",
+    "uploadsProOnly": "L’import de fichiers et d’images est réservé à la formule Pro.",
+    "pro": "Pro",
+    "uploadFailed": "Impossible d’importer le fichier.",
+    "created": "Élément créé.",
+    "uploading": "Import en cours…",
+    "creating": "Création…",
+    "create": "Créer l’élément"
+  },
+  "upload": {
+    "remove": "Retirer le fichier",
+    "progress": "Progression de l’import",
+    "dropImage": "<strong>Déposez une image ici</strong> ou cliquez pour en choisir une",
+    "dropFile": "<strong>Déposez un fichier ici</strong> ou cliquez pour en choisir un",
+    "limits": "{extensions} · jusqu’à {size} Mo",
+    "preview": "Aperçu de {name}"
+  },
+  "editor": {
+    "code": "Code",
+    "markdown": "Markdown",
+    "viewTabs": "Vue {name}",
+    "tabs": {
+      "code": "Code",
+      "explain": "Explication",
+      "write": "Écrire",
+      "preview": "Aperçu",
+      "original": "Original",
+      "optimized": "Optimisé"
+    },
+    "copyCode": "Copier le code",
+    "copyMarkdown": "Copier le Markdown",
+    "copyOptimized": "Copier le prompt optimisé",
+    "explanation": "Explication",
+    "originalPrompt": "Prompt d’origine",
+    "optimizedPrompt": "Prompt optimisé",
+    "useOptimized": "Utiliser le prompt optimisé ?",
+    "discard": "Ignorer",
+    "useThis": "Utiliser",
+    "saving": "Enregistrement…",
+    "placeholder": "Écrivez en Markdown…",
+    "nothingToPreview": "Aucun aperçu disponible."
+  },
+  "favorites": {
+    "title": "Favoris",
+    "subtitle": "Éléments et collections favoris.",
+    "empty": "Aucun favori pour l’instant. Ajoutez un élément ou une collection à vos favoris pour le voir apparaître ici.",
+    "items": "Éléments",
+    "collections": "Collections",
+    "noItems": "Aucun élément favori.",
+    "noCollections": "Aucune collection favorite.",
+    "sortBy": "Trier par",
+    "sort": {
+      "date": "Date",
+      "name": "Nom",
+      "type": "Type"
+    },
+    "emptyCollection": "vide",
+    "favoriteName": "Mettre {name} en favori",
+    "add": "Ajouter aux favoris",
+    "remove": "Retirer des favoris"
+  },
+  "collections": {
+    "title": "Collections",
+    "range": "{first}–{last} sur {total}",
+    "empty": "Aucune collection pour l’instant.",
+    "noItems": "Cette collection ne contient encore aucun élément.",
+    "actionsFor": "Actions pour {name}",
+    "edit": "Modifier la collection",
+    "deleteLabel": "Supprimer la collection",
+    "name": "Nom",
+    "description": "Description",
+    "new": {
+      "title": "Nouvelle collection",
+      "description": "Donnez-lui un nom et, si vous le souhaitez, une description.",
+      "created": "Collection créée.",
+      "submit": "Créer la collection",
+      "saving": "Création…"
+    },
+    "editDialog": {
+      "title": "Modifier la collection",
+      "description": "Modifiez son nom ou sa description.",
+      "saved": "Collection enregistrée.",
+      "submit": "Enregistrer les modifications",
+      "saving": "Enregistrement…"
+    },
+    "delete": {
+      "title": "Supprimer cette collection ?",
+      "body": "<name>{collection}</name> sera supprimée. Ses éléments sont conservés : ils quittent simplement cette collection. Cette action est irréversible.",
+      "deleted": "Collection supprimée."
+    }
+  },
+  "profile": {
+    "title": "Profil",
+    "subtitle": "Votre compte et votre utilisation.",
+    "memberSince": "Membre depuis le {date}",
+    "usage": "Utilisation",
+    "items": "Éléments",
+    "collections": "Collections",
+    "byType": "Par type"
+  },
+  "password": {
+    "changed": "Mot de passe modifié. Vous avez été déconnecté de vos autres sessions.",
+    "change": "Modifier le mot de passe",
+    "dialogDescription": "Saisissez votre mot de passe actuel, puis choisissez-en un nouveau.",
+    "current": "Mot de passe actuel",
+    "new": "Nouveau mot de passe",
+    "confirm": "Confirmer le nouveau mot de passe",
+    "saving": "Enregistrement…"
+  },
+  "deleteAccount": {
+    "button": "Supprimer le compte",
+    "demo": "Le compte de démonstration ne peut pas être supprimé : le tableau de bord lit ses données.",
+    "title": "Supprimer votre compte ?",
+    "body": "Votre compte, vos éléments, vos collections et vos tags seront supprimés définitivement. Saisissez <strong>{email}</strong> pour confirmer.",
+    "yourEmail": "Votre adresse e-mail",
+    "yourPassword": "Votre mot de passe"
+  },
+  "upgrade": {
+    "title": "Passer à Pro",
+    "subtitle": "Vous êtes sur la formule Gratuite : {items}/{maxItems} éléments, {collections}/{maxCollections} collections. Choisissez une formule pour supprimer les limites."
+  },
+  "ui": {
+    "close": "Fermer",
+    "sidebar": "Barre latérale",
+    "sidebarDescription": "Affiche la barre latérale mobile.",
+    "toggleSidebar": "Afficher/masquer la barre latérale"
   }
 }

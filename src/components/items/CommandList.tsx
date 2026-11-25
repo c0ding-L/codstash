@@ -1,10 +1,12 @@
 import { Pin, Star } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { CommandCopyButton } from "@/components/items/CommandCopyButton";
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
 import { commandFirstLine, tokenizeCommand, type CommandTokenKind } from "@/lib/command-text";
 import type { DashboardItem } from "@/lib/db/items";
-import { formatCollectionNames, formatRelativeTime } from "@/lib/format";
+import { useRelativeTime } from "@/i18n/labels";
+import { formatCollectionNames } from "@/lib/format";
 
 const tokenClasses: Record<CommandTokenKind, string> = {
   program: "text-cyan-400",
@@ -52,6 +54,8 @@ function CommandRow({
   command?: { text: string; isCut: boolean };
   now: string;
 }) {
+  const tc = useTranslations("common");
+  const relativeTime = useRelativeTime();
   const collectionNames = formatCollectionNames(item.collections);
   const { line, hasMore } = commandFirstLine(command.text);
 
@@ -77,11 +81,11 @@ function CommandRow({
           {collectionNames ? (
             <span className="hidden sm:inline">{collectionNames} / </span>
           ) : null}
-          {formatRelativeTime(item.updatedAt.toISOString(), now)}
+          {relativeTime(item.updatedAt.toISOString(), now)}
         </span>
-        {item.isPinned ? <Pin className="size-3 shrink-0" aria-label="Pinned" /> : null}
+        {item.isPinned ? <Pin className="size-3 shrink-0" aria-label={tc("pinned")} /> : null}
         {item.isFavorite ? (
-          <Star className="size-3 shrink-0 fill-amber-400 text-amber-400" aria-label="Favorite" />
+          <Star className="size-3 shrink-0 fill-amber-400 text-amber-400" aria-label={tc("favorite")} />
         ) : null}
         <CommandCopyButton
           itemId={item.id}

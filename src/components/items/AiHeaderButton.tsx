@@ -2,12 +2,11 @@
 
 import { Crown, Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { use } from "react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-
-const PRO_ONLY_HINT = "AI features require Pro subscription";
 
 interface AiHeaderButtonProps {
   /** From the server's plan check. */
@@ -30,6 +29,7 @@ interface AiHeaderButtonProps {
  * `aiAllowed`, so it goes inside a `Suspense`.
  */
 export function AiHeaderButton({ aiAllowed, label, pendingLabel, hint, pending, disabled, onClick }: AiHeaderButtonProps) {
+  const t = useTranslations("ai");
   const allowed = use(aiAllowed);
   return (
     <Tooltip>
@@ -46,7 +46,7 @@ export function AiHeaderButton({ aiAllowed, label, pendingLabel, hint, pending, 
         ) : (
           <Link
             href="/upgrade"
-            aria-label={`${label}: ${PRO_ONLY_HINT}. Upgrade`}
+            aria-label={t("proOnlyLink", { label })}
             className={buttonVariants({ variant: "ghost", size: "xs" })}
           >
             <Crown className="text-amber-400" aria-hidden />
@@ -54,7 +54,7 @@ export function AiHeaderButton({ aiAllowed, label, pendingLabel, hint, pending, 
           </Link>
         )}
       </TooltipTrigger>
-      <TooltipContent side="bottom">{allowed ? hint : PRO_ONLY_HINT}</TooltipContent>
+      <TooltipContent side="bottom">{allowed ? hint : t("proOnly")}</TooltipContent>
     </Tooltip>
   );
 }

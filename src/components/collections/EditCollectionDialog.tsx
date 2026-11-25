@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { updateCollection } from "@/actions/collections";
@@ -22,6 +23,7 @@ interface EditCollectionDialogProps {
 
 /** Edits a collection's name and description. Controlled, so a menu or a button can open it. */
 export function EditCollectionDialog({ collection, open, onOpenChange }: EditCollectionDialogProps) {
+  const t = useTranslations("collections.editDialog");
   const router = useRouter();
   const [saving, startSaving] = useTransition();
 
@@ -30,8 +32,8 @@ export function EditCollectionDialog({ collection, open, onOpenChange }: EditCol
     <Dialog open={open} onOpenChange={(next) => !saving && onOpenChange(next)}>
       <DialogContent className="sm:max-w-lg" showCloseButton={!saving}>
         <DialogHeader>
-          <DialogTitle>Edit collection</DialogTitle>
-          <DialogDescription>Change its name or description.</DialogDescription>
+          <DialogTitle>{t("title")}</DialogTitle>
+          <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
         {/* Inside the popup, so every opening starts from the saved values. */}
         <CollectionForm
@@ -40,12 +42,12 @@ export function EditCollectionDialog({ collection, open, onOpenChange }: EditCol
           startSaving={startSaving}
           submit={(values) => updateCollection(collection.id, values)}
           onSaved={() => {
-            toast.success("Collection saved.");
+            toast.success(t("saved"));
             onOpenChange(false);
             router.refresh();
           }}
-          submitLabel="Save changes"
-          savingLabel="Saving…"
+          submitLabel={t("submit")}
+          savingLabel={t("saving")}
         />
       </DialogContent>
     </Dialog>

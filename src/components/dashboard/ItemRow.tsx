@@ -1,14 +1,20 @@
 import { Pin, Star } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
 import { TypeIconTile } from "@/components/items/TypeIconTile";
 import type { DashboardItem } from "@/lib/db/items";
-import { formatCollectionNames, formatFileSize, formatRelativeTime } from "@/lib/format";
+import { useFileSize, useItemTypeLabel, useRelativeTime } from "@/i18n/labels";
+import { formatCollectionNames } from "@/lib/format";
 import { colorClasses, toColorToken, toItemTypeSlug } from "@/lib/item-type-ui";
 import { cn } from "@/lib/utils";
 
 /** `now` is passed in so labels measure against the wall clock, not MOCK_NOW. */
 export function ItemRow({ item, now }: { item: DashboardItem; now: string }) {
+  const t = useTranslations("common");
+  const typeLabel = useItemTypeLabel();
+  const relativeTime = useRelativeTime();
+  const fileSize = useFileSize();
   const collectionNames = formatCollectionNames(item.collections);
   const slug = toItemTypeSlug(item.type.slug);
   const color = toColorToken(item.type.color);
@@ -23,12 +29,12 @@ export function ItemRow({ item, now }: { item: DashboardItem; now: string }) {
         <div className="flex items-center gap-1.5">
           <span className="truncate text-sm font-medium">{item.title}</span>
           {item.isPinned ? (
-            <Pin className="size-3 shrink-0 text-muted-foreground" aria-label="Pinned" />
+            <Pin className="size-3 shrink-0 text-muted-foreground" aria-label={t("pinned")} />
           ) : null}
           {item.isFavorite ? (
             <Star
               className="size-3 shrink-0 fill-amber-400 text-amber-400"
-              aria-label="Favorite"
+              aria-label={t("favorite")}
             />
           ) : null}
         </div>
@@ -38,14 +44,14 @@ export function ItemRow({ item, now }: { item: DashboardItem; now: string }) {
         ) : null}
 
         <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
-          <span className={cn(color && colorClasses[color])}>{item.type.name}</span>
+          <span className={cn(color && colorClasses[color])}>{typeLabel(item.type)}</span>
           {collectionNames ? <span>· {collectionNames}</span> : null}
-          {item.fileSize ? <span>· {formatFileSize(item.fileSize)}</span> : null}
+          {item.fileSize ? <span>· {fileSize(item.fileSize)}</span> : null}
         </div>
       </div>
 
       <span className="shrink-0 text-xs whitespace-nowrap text-muted-foreground">
-        {formatRelativeTime(item.updatedAt.toISOString(), now)}
+        {relativeTime(item.updatedAt.toISOString(), now)}
       </span>
     </li>
   );

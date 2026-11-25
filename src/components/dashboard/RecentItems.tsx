@@ -1,4 +1,5 @@
 import { Clock } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { connection } from "next/server";
 
 import { ItemRow } from "@/components/dashboard/ItemRow";
@@ -8,7 +9,7 @@ export async function RecentItems({ userId }: { userId: string }) {
   // A Prisma query does not opt the route out of prerendering on its own.
   await connection();
 
-  const { items, totalCount } = await getRecentItems(userId);
+  const [{ items, totalCount }, t] = await Promise.all([getRecentItems(userId), getTranslations("dashboard")]);
   const now = new Date().toISOString();
 
   return (
@@ -16,11 +17,11 @@ export async function RecentItems({ userId }: { userId: string }) {
       <div className="flex items-baseline justify-between">
         <h2 className="flex items-center gap-2 text-lg font-semibold">
           <Clock className="size-4 text-muted-foreground" aria-hidden />
-          Recent items
+          {t("recentItems")}
         </h2>
         {items.length > 0 ? (
           <span className="text-sm text-muted-foreground">
-            {items.length} of {totalCount}
+            {t("recentItemsCount", { shown: items.length, total: totalCount })}
           </span>
         ) : null}
       </div>
@@ -32,7 +33,7 @@ export async function RecentItems({ userId }: { userId: string }) {
           ))}
         </ul>
       ) : (
-        <p className="text-sm text-muted-foreground">No items yet.</p>
+        <p className="text-sm text-muted-foreground">{t("noItems")}</p>
       )}
     </section>
   );

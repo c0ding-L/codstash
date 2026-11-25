@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState, type TransitionStartFunction } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import type { CreateCollectionField } from "@/actions/collections";
@@ -38,6 +39,8 @@ export function CollectionForm({
   submitLabel,
   savingLabel,
 }: CollectionFormProps) {
+  const t = useTranslations("collections");
+  const tc = useTranslations("common");
   const id = useId();
   const { setError, messageFor, fieldProps } = useFieldErrors<CreateCollectionField>(id);
 
@@ -63,17 +66,17 @@ export function CollectionForm({
 
   return (
     <form onSubmit={handleSubmit} noValidate className="flex min-w-0 flex-col gap-4">
-      <Field id={`${id}-name`} label="Name" error={messageFor("name")}>
+      <Field id={`${id}-name`} label={t("name")} error={messageFor("name")}>
         <Input value={name} autoFocus {...fieldProps("name", setName)} />
       </Field>
 
-      <Field id={`${id}-description`} label="Description" error={messageFor("description")}>
+      <Field id={`${id}-description`} label={t("description")} error={messageFor("description")}>
         <Textarea value={description} className="resize-none" {...fieldProps("description", setDescription)} />
       </Field>
 
       <DialogFooter>
         <DialogClose render={<Button type="button" variant="ghost" />} disabled={saving}>
-          Cancel
+          {tc("cancel")}
         </DialogClose>
         <Button type="submit" disabled={saving || !canSubmit}>
           {saving ? savingLabel : submitLabel}

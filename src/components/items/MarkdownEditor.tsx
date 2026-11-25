@@ -1,6 +1,7 @@
 "use client";
 
 import { Copy } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Suspense, useState, useTransition } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -11,12 +12,11 @@ import { applyOptimizedPrompt } from "@/actions/items";
 import { AiHeaderButton } from "@/components/items/AiHeaderButton";
 import type { SavedItem } from "@/components/items/ItemEditForm";
 import { Button } from "@/components/ui/button";
-import { copyToClipboard } from "@/lib/clipboard";
+import { useClipboard } from "@/i18n/labels";
 import { cn } from "@/lib/utils";
 
 type Tab = "write" | "preview" | "original" | "optimized";
 
-const OPTIMIZE_HINT = "Optimize this prompt with AI. Sends the prompt to a third-party AI provider.";
 
 /** Links leave the app, so they open in a new tab. Shared with the AI explanation in `CodeEditor`. */
 export const markdownComponents: Components = {
@@ -51,12 +51,16 @@ export function MarkdownEditor({
   value,
   onChange,
   id,
-  ariaLabel = "Markdown",
+  ariaLabel: ariaLabelProp,
   invalid,
   describedBy,
   className,
   optimize,
 }: MarkdownEditorProps) {
+  const t = useTranslations("editor");
+  const ta = useTranslations("ai");
+  const { copyToClipboard } = useClipboard();
+  const ariaLabel = ariaLabelProp ?? t("markdown");
   const readOnly = !onChange;
   const [tab, setTab] = useState<Tab>(readOnly ? "preview" : "write");
   // The AI's rewrite, offered until the user uses or discards it.
@@ -77,7 +81,7 @@ export function MarkdownEditor({
         return;
       }
       if (result.data === null) {
-        toast.info("This prompt is already clear. Nothing to change.");
+        toast.info(ta("alreadyClear"));
         return;
       }
       setSuggestion(result.data);
@@ -96,7 +100,7 @@ export function MarkdownEditor({
       setSuggestion(null);
       setTab("preview");
       optimize.onApplied(result.data);
-      toast.success("Prompt updated.");
+      toast.success(ta("promptUpdated"));
     });
   }
 
@@ -116,7 +120,7 @@ export function MarkdownEditor({
       )}
     >
       <div className="flex items-center gap-1 border-b border-border bg-[#2d2d2d] py-1.5 pr-1.5 pl-1.5">
-        <div role="tablist" aria-label={`${ariaLabel} view`} className="flex gap-1">
+        <div role="tablist" aria-label={t("viewTabs", { name: ariaLabel })} className="flex gap-1">
           {tabs.map((name) => (
             <button
               key={name}
@@ -131,7 +135,7 @@ export function MarkdownEditor({
                   : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
               )}
             >
-              {name}
+              {t(`tabs.${name}`)}
             </button>
           ))}
         </div>
@@ -140,9 +144,9 @@ export function MarkdownEditor({
             <Suspense fallback={null}>
               <AiHeaderButton
                 aiAllowed={optimize.aiAllowed}
-                label="Optimize"
-                pendingLabel="Optimizing…"
-                hint={OPTIMIZE_HINT}
+                label={ta("optimize")}
+                pendingLabel={ta("optimizing")}
+                hint={ta("optimizeHint")}
                 pending={optimizing}
                 disabled={!value.trim() || applying}
                 onClick={runOptimize}
@@ -155,7 +159,7 @@ export function MarkdownEditor({
           variant="ghost"
           size="icon-sm"
           className={optimize ? undefined : "ml-auto"}
-          aria-label={shown === "optimized" ? "Copy optimized prompt" : "Copy markdown"}
+          aria-label={shown === "optimized" ? t("copyOptimized") : t("copyMarkdown")}
           disabled={!value}
           // Copies what is shown: the suggestion on the Optimized tab, the saved text otherwise.
           onClick={() => void copyToClipboard(shown === "optimized" && suggestion !== null ? suggestion : value)}
@@ -167,17 +171,17 @@ export function MarkdownEditor({
       {shown === "original" || shown === "optimized" ? (
         // Plain text, not Markdown: the preview drops raw tags such as `<context>`, and the user
         // must be able to check that every placeholder survived.
-        <div role="tabpanel" aria-label={shown === "original" ? "Original prompt" : "Optimized prompt"}>
+        <div role="tabpanel" aria-label={shown === "original" ? t("originalPrompt") : t("optimizedPrompt")}>
           <pre className="markdown-scroll max-h-[400px] overflow-y-auto px-4 py-3 font-mono text-xs leading-relaxed whitespace-pre-wrap break-words text-foreground">
             {shown === "original" ? value : suggestion}
           </pre>
           <div className="flex flex-wrap items-center gap-2 border-t border-border bg-[#2d2d2d] px-3 py-2">
-            <p className="mr-auto text-xs text-muted-foreground">Use the optimized prompt?</p>
+            <p className="mr-auto text-xs text-muted-foreground">{t("useOptimized")}</p>
             <Button type="button" variant="ghost" size="xs" disabled={applying} onClick={discardSuggestion}>
-              Discard
+              {t("discard")}
             </Button>
             <Button type="button" size="xs" disabled={applying} onClick={applySuggestion}>
-              {applying ? "Saving…" : "Use this"}
+              {applying ? t("saving") : t("useThis")}
             </Button>
           </div>
         </div>
@@ -190,7 +194,7 @@ export function MarkdownEditor({
           aria-invalid={invalid || undefined}
           aria-describedby={describedBy}
           spellCheck={false}
-          placeholder="Write in Markdown…"
+          placeholder={t("placeholder")}
           className="markdown-scroll block field-sizing-content max-h-[400px] min-h-32 w-full resize-none bg-transparent px-3 py-2.5 font-mono text-xs leading-relaxed text-foreground outline-none placeholder:text-muted-foreground"
         />
       ) : (
@@ -206,7 +210,7 @@ export function MarkdownEditor({
               </ReactMarkdown>
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground">Nothing to preview.</p>
+            <p className="text-xs text-muted-foreground">{t("nothingToPreview")}</p>
           )}
         </div>
       )}

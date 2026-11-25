@@ -12,6 +12,7 @@ import {
   Shapes,
   Tag,
 } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { ItemActionBar } from "@/components/items/ItemActionBar";
@@ -24,7 +25,8 @@ import { SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TypeIconTile } from "@/components/items/TypeIconTile";
 import type { DashboardItem, ItemDetailJson } from "@/lib/db/items";
-import { formatCollectionNames, formatFileSize } from "@/lib/format";
+import { useFileSize, useItemTypeLabel } from "@/i18n/labels";
+import { formatCollectionNames } from "@/lib/format";
 import { colorClasses, toColorToken, toItemTypeSlug, typeIcons } from "@/lib/item-type-ui";
 import { cn } from "@/lib/utils";
 
@@ -33,8 +35,9 @@ export type ItemDetailState =
   | { status: "ready"; detail: ItemDetailJson }
   | { status: "error" };
 
-function formatDate(date: Date | string) {
-  return new Date(date).toLocaleDateString(undefined, { dateStyle: "medium" });
+/** Client-only (the drawer opens in the browser), so the viewer's own time zone is right here. */
+function formatDate(date: Date | string, locale: string) {
+  return new Date(date).toLocaleDateString(locale, { dateStyle: "medium" });
 }
 
 /** The drawer's title, next to the type's icon in the type's color, as on the cards. */
@@ -77,6 +80,12 @@ interface ItemDetailsProps {
 }
 
 export function ItemDetails({ card, state, aiAllowed, onSaved, onDeleted, onFavoriteChanged, onPinnedChanged }: ItemDetailsProps) {
+  const t = useTranslations("drawer");
+  const tc = useTranslations("common");
+  const tTypes = useTranslations("itemTypes");
+  const locale = useLocale();
+  const typeLabel = useItemTypeLabel();
+  const formatFileSize = useFileSize();
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const slug = toItemTypeSlug(card.type.slug);
@@ -85,29 +94,32 @@ export function ItemDetails({ card, state, aiAllowed, onSaved, onDeleted, onFavo
   const detail = state.status === "ready" ? state.detail : null;
 
   const typeRow = (
-    <DetailRow icon={Shapes} label="Type">
+    <DetailRow icon={Shapes} label={t("type")}>
       <span className={cn("inline-flex items-center gap-1.5", color && colorClasses[color])}>
         <TypeIcon className="size-3.5" aria-hidden />
-        {card.type.name}
+        {typeLabel(card.type)}
       </span>
     </DetailRow>
   );
   const collectionNames = formatCollectionNames(card.collections);
   const collectionRow = collectionNames ? (
-    <DetailRow icon={Folder} label={card.collections.length > 1 ? "Collections" : "Collection"}>
+    <DetailRow icon={Folder} label={t("collections", { count: card.collections.length })}>
       {collectionNames}
     </DetailRow>
   ) : null;
   const updatedRow = (
-    <DetailRow icon={CalendarClock} label="Updated">
-      {formatDate(card.updatedAt)}
+    <DetailRow icon={CalendarClock} label={t("updated")}>
+      {formatDate(card.updatedAt, locale)}
     </DetailRow>
   );
 
   if (editing && detail) {
     return (
       <>
-        <DrawerHeader card={card} title={`Edit ${card.type.name.toLowerCase()}`} />
+        <DrawerHeader
+          card={card}
+          title={slug ? tTypes(`${slug}.edit`) : t("editTitle", { type: card.type.name })}
+        />
         <ItemEditForm
           card={card}
           detail={detail}
@@ -122,8 +134,8 @@ export function ItemDetails({ card, state, aiAllowed, onSaved, onDeleted, onFavo
           <dl className="flex flex-col gap-2">
             {typeRow}
             {collectionRow}
-            <DetailRow icon={CalendarPlus} label="Created">
-              {formatDate(detail.createdAt)}
+            <DetailRow icon={CalendarPlus} label={t("created")}>
+              {formatDate(detail.createdAt, locale)}
             </DetailRow>
             {updatedRow}
           </dl>
@@ -169,41 +181,41 @@ export function ItemDetails({ card, state, aiAllowed, onSaved, onDeleted, onFavo
           {typeRow}
           {collectionRow}
           {detail?.language ? (
-            <DetailRow icon={Braces} label="Language">
+            <DetailRow icon={Braces} label={t("language")}>
               {detail.language}
             </DetailRow>
           ) : null}
           {detail?.fileName ? (
-            <DetailRow icon={Paperclip} label="File">
+            <DetailRow icon={Paperclip} label={t("file")}>
               {detail.fileName}
             </DetailRow>
           ) : null}
           {card.fileSize ? (
-            <DetailRow icon={HardDrive} label="Size">
+            <DetailRow icon={HardDrive} label={t("size")}>
               {formatFileSize(card.fileSize)}
             </DetailRow>
           ) : null}
           {state.status === "loading" ? (
             <>
-              <DetailRow icon={Tag} label="Tags">
+              <DetailRow icon={Tag} label={t("tags")}>
                 <Skeleton className="h-4 w-16" />
               </DetailRow>
-              <DetailRow icon={CalendarPlus} label="Created">
+              <DetailRow icon={CalendarPlus} label={t("created")}>
                 <Skeleton className="h-4 w-20" />
               </DetailRow>
             </>
           ) : null}
           {detail ? (
             <>
-              <DetailRow icon={Tag} label="Tags">
+              <DetailRow icon={Tag} label={t("tags")}>
                 {detail.tags.length > 0 ? (
                   <TagBadges tags={detail.tags} className="inline-flex justify-end" />
                 ) : (
-                  <span className="text-muted-foreground">None</span>
+                  <span className="text-muted-foreground">{tc("none")}</span>
                 )}
               </DetailRow>
-              <DetailRow icon={CalendarPlus} label="Created">
-                {formatDate(detail.createdAt)}
+              <DetailRow icon={CalendarPlus} label={t("created")}>
+                {formatDate(detail.createdAt, locale)}
               </DetailRow>
             </>
           ) : null}

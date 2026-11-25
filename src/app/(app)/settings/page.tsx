@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { connection } from "next/server";
 import { Suspense } from "react";
 
@@ -17,10 +17,11 @@ import { getPlanStatus } from "@/lib/db/billing";
 import { DEMO_USER_EMAIL } from "@/lib/db/collections";
 import { getProfile } from "@/lib/db/profile";
 import { FREE_LIMITS } from "@/lib/usage-limits";
+import { pageMetadata } from "@/i18n/labels-server";
 
-export const metadata: Metadata = {
-  title: "Settings · Cortex",
-};
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("settings.title");
+}
 
 interface SettingsPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -37,28 +38,38 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   if (!profile) redirect("/sign-in?callbackUrl=/settings");
 
   // `?currency=` comes from the pricing page's "Get Pro" link.
-  const [plan, { currency }, t] = await Promise.all([
+  const [plan, { currency }, t, locale] = await Promise.all([
     getPlanStatus(profile.id),
     searchParams,
-    getTranslations("settings.language"),
+    getTranslations("settings"),
+    getLocale(),
   ]);
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold">Settings</h1>
-        <p className="text-sm text-muted-foreground">Manage your plan, your editor, your password and your account.</p>
+        <h1 className="text-2xl font-semibold">{t("title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       <section id="plan" className="flex scroll-mt-20 flex-col gap-4">
-        <h2 className="text-lg font-semibold">Plan</h2>
+        <h2 className="text-lg font-semibold">{t("plan.heading")}</h2>
         <Card>
           <CardHeader>
-            <CardTitle>{plan.isPro && plan.proUntil ? `Pro until ${formatProUntil(plan.proUntil)}` : "Free"}</CardTitle>
+            <CardTitle>
+              {plan.isPro && plan.proUntil
+                ? t("plan.proUntil", { date: formatProUntil(plan.proUntil, locale) })
+                : t("plan.free")}
+            </CardTitle>
             <CardDescription>
               {plan.isPro
-                ? "Pay again at any time: the new period starts when the current one ends."
-                : `${plan.items}/${FREE_LIMITS.items} items, ${plan.collections}/${FREE_LIMITS.collections} collections. Pro removes the limits and adds file and image uploads.`}
+                ? t("plan.proDescription")
+                : t("plan.freeDescription", {
+                    items: plan.items,
+                    maxItems: FREE_LIMITS.items,
+                    collections: plan.collections,
+                    maxCollections: FREE_LIMITS.collections,
+                  })}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -68,11 +79,11 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold">Editor</h2>
+        <h2 className="text-lg font-semibold">{t("editor.heading")}</h2>
         <Card>
           <CardHeader>
-            <CardTitle>Code editor</CardTitle>
-            <CardDescription>Applies to every code editor and viewer. Changes save automatically.</CardDescription>
+            <CardTitle>{t("editor.title")}</CardTitle>
+            <CardDescription>{t("editor.description")}</CardDescription>
           </CardHeader>
           <CardContent>
             <Suspense fallback={<Skeleton className="h-64 w-full" />}>
@@ -83,10 +94,10 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold">{t("heading")}</h2>
+        <h2 className="text-lg font-semibold">{t("language.heading")}</h2>
         <Card>
           <CardHeader>
-            <CardDescription>{t("description")}</CardDescription>
+            <CardDescription>{t("language.description")}</CardDescription>
           </CardHeader>
           <CardContent>
             <LanguageForm />
@@ -95,14 +106,14 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       </section>
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold">Account</h2>
+        <h2 className="text-lg font-semibold">{t("account.heading")}</h2>
         <Card>
           <CardHeader>
-            <CardTitle>Password</CardTitle>
+            <CardTitle>{t("account.password")}</CardTitle>
             <CardDescription>
               {profile.hasPassword
-                ? "Change the password you use to sign in with your email."
-                : "You sign in with GitHub, so there is no password to change."}
+                ? t("account.passwordDescription")
+                : t("account.githubOnly")}
             </CardDescription>
           </CardHeader>
           {profile.hasPassword ? (
@@ -114,10 +125,8 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
 
         <Card className="ring-destructive/40">
           <CardHeader>
-            <CardTitle>Delete account</CardTitle>
-            <CardDescription>
-              Permanently deletes your account, your items, collections and tags. This cannot be undone.
-            </CardDescription>
+            <CardTitle>{t("account.delete")}</CardTitle>
+            <CardDescription>{t("account.deleteDescription")}</CardDescription>
           </CardHeader>
           <CardContent>
             <DeleteAccountDialog

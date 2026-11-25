@@ -42,6 +42,9 @@ describe("formatPrice", () => {
     // A plain U+0020 space, not the narrow no-break space fr-FR emits.
     expect(formatPrice(4_000, "XOF")).toBe("4 000 FCFA");
     expect(formatPrice(36_000, "XOF")).toBe("36 000 FCFA");
+    expect(formatPrice(7, "EUR", "fr")).toBe("7\u00a0€");
+    expect(formatPrice(7, "USD", "fr")).toBe("7\u00a0$US");
+    expect(formatPrice(4_000, "XOF", "fr")).toBe("4 000 FCFA");
   });
 });
 
@@ -94,7 +97,7 @@ describe("parseCurrency", () => {
 describe("PAYMENT_METHODS", () => {
   it("offers Mobile Money in XOF only", () => {
     for (const currency of CURRENCIES) {
-      expect(PAYMENT_METHODS[currency].includes("Mobile Money")).toBe(currency === "XOF");
+      expect(PAYMENT_METHODS[currency] === "cardOrMobileMoney").toBe(currency === "XOF");
     }
   });
 });
@@ -102,6 +105,7 @@ describe("PAYMENT_METHODS", () => {
 describe("formatProUntil", () => {
   it("formats the day in UTC", () => {
     expect(formatProUntil(new Date("2026-12-23T23:30:00Z"))).toBe("December 23, 2026");
+    expect(formatProUntil(new Date("2026-12-23T23:30:00Z"), "fr")).toBe("23 décembre 2026");
   });
 });
 
@@ -131,6 +135,12 @@ describe("formatYearlyPerMonth", () => {
   it("shows cents for USD and EUR", () => {
     expect(formatYearlyPerMonth("USD")).toBe("$5.25");
     expect(formatYearlyPerMonth("EUR")).toBe("€5.25");
+  });
+
+  it("follows French conventions in French", () => {
+    expect(formatYearlyPerMonth("EUR", "fr")).toBe("5,25\u00a0€");
+    expect(formatYearlyPerMonth("USD", "fr")).toBe("5,25\u00a0$US");
+    expect(formatYearlyPerMonth("XOF", "fr")).toBe("3 000 FCFA");
   });
 
   it("rounds XOF to the franc", () => {

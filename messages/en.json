@@ -4,13 +4,62 @@
     "fr": "Français"
   },
   "itemTypes": {
-    "snippet": { "one": "Snippet", "other": "Snippets" },
-    "prompt": { "one": "Prompt", "other": "Prompts" },
-    "note": { "one": "Note", "other": "Notes" },
-    "command": { "one": "Command", "other": "Commands" },
-    "file": { "one": "File", "other": "Files" },
-    "image": { "one": "Image", "other": "Images" },
-    "link": { "one": "Link", "other": "Links" }
+    "snippet": {
+      "one": "Snippet",
+      "other": "Snippets",
+      "new": "New Snippet",
+      "empty": "No snippets yet",
+      "description": "Save the code you reuse, tagged and easy to find.",
+      "edit": "Edit snippet"
+    },
+    "prompt": {
+      "one": "Prompt",
+      "other": "Prompts",
+      "new": "New Prompt",
+      "empty": "No prompts yet",
+      "description": "Keep the AI prompts that work, ready to copy.",
+      "edit": "Edit prompt"
+    },
+    "note": {
+      "one": "Note",
+      "other": "Notes",
+      "new": "New Note",
+      "empty": "No notes yet",
+      "description": "Write down ideas, docs and anything worth remembering.",
+      "edit": "Edit note"
+    },
+    "command": {
+      "one": "Command",
+      "other": "Commands",
+      "new": "New Command",
+      "empty": "No commands yet",
+      "description": "Store the terminal commands you never remember.",
+      "edit": "Edit command"
+    },
+    "file": {
+      "one": "File",
+      "other": "Files",
+      "new": "New File",
+      "empty": "No files yet",
+      "description": "Upload documents and other files to keep with your work.",
+      "edit": "Edit file"
+    },
+    "image": {
+      "one": "Image",
+      "other": "Images",
+      "new": "New Image",
+      "empty": "No images yet",
+      "description": "Upload screenshots, diagrams and other images.",
+      "edit": "Edit image"
+    },
+    "link": {
+      "one": "Link",
+      "other": "Links",
+      "new": "New Link",
+      "empty": "No links yet",
+      "description": "Bookmark the docs, articles and tools you come back to.",
+      "edit": "Edit link"
+    }
   },
   "nav": {
     "types": "Types",
@@ -47,6 +96,393 @@
       "title": "Display language",
       "description": "The language of the interface. Your items are never translated.",
       "saveFailed": "Could not change the language. Try again."
+    },
+    "title": "Settings",
+    "subtitle": "Manage your plan, your editor, your password and your account.",
+    "plan": {
+      "heading": "Plan",
+      "proUntil": "Pro until {date}",
+      "free": "Free",
+      "proDescription": "Pay again at any time: the new period starts when the current one ends.",
+      "freeDescription": "{items}/{maxItems} items, {collections}/{maxCollections} collections. Pro removes the limits and adds file and image uploads."
+    },
+    "editor": {
+      "heading": "Editor",
+      "title": "Code editor",
+      "description": "Applies to every code editor and viewer. Changes save automatically.",
+      "fontSize": "Font size",
+      "tabSize": "Tab size",
+      "tabSizeValue": "{count} spaces",
+      "theme": "Theme",
+      "wordWrap": "Word wrap",
+      "wordWrapDescription": "Wrap long lines instead of scrolling sideways.",
+      "minimap": "Minimap",
+      "minimapDescription": "Show the code overview along the editor’s right edge.",
+      "saved": "Editor preferences saved.",
+      "saveFailed": "Could not save your editor preferences. Try again."
+    },
+    "account": {
+      "heading": "Account",
+      "password": "Password",
+      "passwordDescription": "Change the password you use to sign in with your email.",
+      "githubOnly": "You sign in with GitHub, so there is no password to change.",
+      "delete": "Delete account",
+      "deleteDescription": "Permanently deletes your account, your items, collections and tags. This cannot be undone."
     }
+  },
+  "time": {
+    "justNow": "Just now",
+    "minutes": "{count}m ago",
+    "hours": "{count}h ago",
+    "yesterday": "Yesterday",
+    "days": "{count}d ago",
+    "weeks": "{count}w ago",
+    "months": "{count}mo ago",
+    "years": "{count}y ago"
+  },
+  "clipboard": {
+    "copied": "Copied to clipboard.",
+    "failed": "Could not copy to the clipboard."
+  },
+  "billing": {
+    "paymentMethods": {
+      "card": "Card only",
+      "cardOrMobileMoney": "Card or Mobile Money"
+    },
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "save": "Save 25%",
+    "period": "Billing period",
+    "currency": "Currency",
+    "westAfrica": " (West Africa)",
+    "free": "Free",
+    "pro": "Pro",
+    "forever": "/forever",
+    "perMonth": "/month",
+    "perYear": "/year",
+    "perMonthPrice": "{price}/month",
+    "mostPopular": "Most Popular",
+    "freeFeatures": {
+      "items": "50 items",
+      "collections": "3 collections",
+      "search": "Basic search",
+      "noAi": "No AI features"
+    },
+    "proFeatures": {
+      "unlimited": "Unlimited items & collections",
+      "uploads": "File & image uploads",
+      "customTypes": "Custom item types",
+      "ai": "AI features",
+      "export": "Export (JSON / ZIP)"
+    },
+    "currentPlan": "Current plan",
+    "openingCheckout": "Opening checkout…",
+    "upgradeMonthly": "Upgrade · {price}/month",
+    "upgradeYearly": "Upgrade · {price}/year",
+    "upgradeFor": "{plan, select, MONTHLY {Upgrade for 1 month} other {Upgrade for 1 year}} · {price}",
+    "extendBy": "{plan, select, MONTHLY {Extend by 1 month} other {Extend by 1 year}} · {price}",
+    "slowConfirmation": "This is taking longer than usual. You can leave this page: Pro is added as soon as the payment is confirmed.",
+    "return": {
+      "title": "Payment",
+      "notFound": "Payment not found",
+      "notFoundDescription": "We could not find this payment on your account.",
+      "proUntil": "You’re Pro until {date}",
+      "pro": "You’re Pro",
+      "thanks": "Thank you! Your payment is confirmed.",
+      "reviewing": "We’re checking your payment",
+      "reviewingDescription": "We received your payment and are checking it — contact support if this takes long.",
+      "failed": "The payment did not go through",
+      "failedDescription": "Your plan has not changed. You can try again with another card or payment method.",
+      "confirming": "Confirming your payment…",
+      "confirmingDescription": "This usually takes a few seconds.",
+      "retry": "Try again",
+      "back": "Back to settings"
+    }
+  },
+  "common": {
+    "pinned": "Pinned",
+    "favorite": "Favorite",
+    "loading": "Loading",
+    "open": "Open {name}",
+    "itemCount": "{count, plural, one {# item} other {# items}}",
+    "openInNewTab": "Open {name} in a new tab",
+    "openLink": "Open",
+    "copy": "Copy",
+    "copyItem": "Copy {name}",
+    "copyUrlOf": "Copy the URL of {name}",
+    "copyUrl": "Copy URL",
+    "download": "Download",
+    "imageUnavailable": "Image unavailable",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "deleting": "Deleting…",
+    "edit": "Edit",
+    "none": "None"
+  },
+  "errorFallback": {
+    "title": "Something went wrong",
+    "body": "We couldn’t load this. It may be a temporary problem.",
+    "reference": "Reference: {digest}",
+    "retry": "Try again"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "subtitle": "Your developer memory: snippets, prompts, notes and more.",
+    "stats": {
+      "items": "Items",
+      "itemsHint": "across all collections",
+      "collections": "Collections",
+      "collectionsHint": "across all types",
+      "favoriteItems": "Favorite items",
+      "favoriteItemsHint": "starred items",
+      "favoriteCollections": "Favorite collections",
+      "favoriteCollectionsHint": "pinned collections"
+    },
+    "recentItems": "Recent items",
+    "recentItemsCount": "{shown} of {total}",
+    "noItems": "No items yet.",
+    "recentCollections": "Recent collections",
+    "collectionCount": "{count, plural, one {# collection} other {# collections}}",
+    "pinnedItems": "Pinned items"
+  },
+  "items": {
+    "range": "{first}–{last} of {total}",
+    "lineCount": "{count, plural, one {# line} other {# lines}}",
+    "wordCount": "{count, plural, one {# word} other {# words}}",
+    "tokenCount": "~{count} tokens",
+    "emptySnippet": "Empty snippet.",
+    "copyPrompt": "Copy prompt",
+    "noUrl": "No URL",
+    "commandCopyFailed": "Could not load the command to copy.",
+    "fileTable": {
+      "name": "Name",
+      "kind": "Kind",
+      "size": "Size",
+      "updated": "Updated"
+    }
+  },
+  "fileKinds": {
+    "pdf": "PDF document",
+    "text": "Plain text",
+    "markdown": "Markdown",
+    "json": "JSON",
+    "yaml": "YAML",
+    "xml": "XML",
+    "csv": "CSV spreadsheet",
+    "toml": "TOML config",
+    "ini": "INI config",
+    "file": "File"
+  },
+  "pagination": {
+    "label": "Pagination",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {page}"
+  },
+  "metadata": {
+    "page": "{page} · Cortex"
+  },
+  "drawer": {
+    "type": "Type",
+    "collections": "{count, plural, one {Collection} other {Collections}}",
+    "updated": "Updated",
+    "created": "Created",
+    "language": "Language",
+    "file": "File",
+    "size": "Size",
+    "tags": "Tags",
+    "editTitle": "Edit {type}",
+    "loadingItem": "Loading item",
+    "loadFailed": "The rest of this item could not be loaded.",
+    "content": "Content",
+    "actions": {
+      "favorite": "Favorite",
+      "addFavorite": "Add to favorites",
+      "removeFavorite": "Remove from favorites",
+      "pin": "Pin",
+      "pinToTop": "Pin to top",
+      "unpin": "Unpin",
+      "copy": "Copy",
+      "nothingToCopy": "Nothing to copy",
+      "copyContent": "Copy content",
+      "copyUrl": "Copy URL"
+    },
+    "delete": {
+      "title": "Delete this item?",
+      "body": "<name>{title}</name> will be deleted for good. This cannot be undone.",
+      "deleted": "Item deleted."
+    }
+  },
+  "itemForm": {
+    "title": "Title",
+    "description": "Description",
+    "url": "URL",
+    "language": "Language",
+    "plainText": "Plain text",
+    "content": "Content",
+    "tags": "Tags",
+    "tagsHint": "Separate tags with commas.",
+    "tagsPlaceholder": "react, hooks",
+    "collections": "Collections",
+    "unknownCollection": "Unknown collection",
+    "loadingCollections": "Loading collections…",
+    "collectionsFailed": "Could not load collections",
+    "noCollections": "No collections yet",
+    "chooseCollections": "Choose collections",
+    "selectedCount": "{count} selected",
+    "removeFromCollection": "Remove from {name}",
+    "saving": "Saving…",
+    "saveChanges": "Save changes",
+    "saved": "Changes saved."
+  },
+  "ai": {
+    "proOnly": "AI features require Pro subscription",
+    "proOnlyLink": "{label}: AI features require Pro subscription. Upgrade",
+    "explain": "Explain",
+    "explaining": "Explaining…",
+    "explainHint": "Explain this code with AI. Sends the code to a third-party AI provider.",
+    "optimize": "Optimize",
+    "optimizing": "Optimizing…",
+    "optimizeHint": "Optimize this prompt with AI. Sends the prompt to a third-party AI provider.",
+    "alreadyClear": "This prompt is already clear. Nothing to change.",
+    "promptUpdated": "Prompt updated.",
+    "suggestTags": "Suggest Tags",
+    "suggesting": "Suggesting…",
+    "generateDescription": "Generate Description",
+    "generating": "Generating…",
+    "addTitleFirst": "Add a title first.",
+    "suggestedTags": "Suggested tags",
+    "addTag": "Add tag {tag}",
+    "dismissTag": "Dismiss tag {tag}"
+  },
+  "newItem": {
+    "title": "New item",
+    "description": "Choose a type, then fill in its fields.",
+    "typePicker": "Type",
+    "uploadsProOnly": "File and image uploads are a Pro feature.",
+    "pro": "Pro",
+    "uploadFailed": "Could not upload the file.",
+    "created": "Item created.",
+    "uploading": "Uploading…",
+    "creating": "Creating…",
+    "create": "Create item"
+  },
+  "upload": {
+    "remove": "Remove file",
+    "progress": "Upload progress",
+    "dropImage": "<strong>Drop an image here</strong> or click to choose",
+    "dropFile": "<strong>Drop a file here</strong> or click to choose",
+    "limits": "{extensions} · up to {size} MB",
+    "preview": "Preview of {name}"
+  },
+  "editor": {
+    "code": "Code",
+    "markdown": "Markdown",
+    "viewTabs": "{name} view",
+    "tabs": {
+      "code": "Code",
+      "explain": "Explain",
+      "write": "Write",
+      "preview": "Preview",
+      "original": "Original",
+      "optimized": "Optimized"
+    },
+    "copyCode": "Copy code",
+    "copyMarkdown": "Copy markdown",
+    "copyOptimized": "Copy optimized prompt",
+    "explanation": "Explanation",
+    "originalPrompt": "Original prompt",
+    "optimizedPrompt": "Optimized prompt",
+    "useOptimized": "Use the optimized prompt?",
+    "discard": "Discard",
+    "useThis": "Use this",
+    "saving": "Saving…",
+    "placeholder": "Write in Markdown…",
+    "nothingToPreview": "Nothing to preview."
+  },
+  "favorites": {
+    "title": "Favorites",
+    "subtitle": "Starred items and collections.",
+    "empty": "No favorites yet. Star an item or a collection to see it here.",
+    "items": "Items",
+    "collections": "Collections",
+    "noItems": "No favorite items.",
+    "noCollections": "No favorite collections.",
+    "sortBy": "Sort by",
+    "sort": {
+      "date": "Date",
+      "name": "Name",
+      "type": "Type"
+    },
+    "emptyCollection": "empty",
+    "favoriteName": "Favorite {name}",
+    "add": "Add to favorites",
+    "remove": "Remove from favorites"
+  },
+  "collections": {
+    "title": "Collections",
+    "range": "{first}–{last} of {total}",
+    "empty": "No collections yet.",
+    "noItems": "No items in this collection yet.",
+    "actionsFor": "Actions for {name}",
+    "edit": "Edit collection",
+    "deleteLabel": "Delete collection",
+    "name": "Name",
+    "description": "Description",
+    "new": {
+      "title": "New collection",
+      "description": "Give it a name and, if you like, a description.",
+      "created": "Collection created.",
+      "submit": "Create collection",
+      "saving": "Creating…"
+    },
+    "editDialog": {
+      "title": "Edit collection",
+      "description": "Change its name or description.",
+      "saved": "Collection saved.",
+      "submit": "Save changes",
+      "saving": "Saving…"
+    },
+    "delete": {
+      "title": "Delete this collection?",
+      "body": "<name>{collection}</name> will be deleted. Its items are kept; they just leave this collection. This cannot be undone.",
+      "deleted": "Collection deleted."
+    }
+  },
+  "profile": {
+    "title": "Profile",
+    "subtitle": "Your account and your usage.",
+    "memberSince": "Member since {date}",
+    "usage": "Usage",
+    "items": "Items",
+    "collections": "Collections",
+    "byType": "By type"
+  },
+  "password": {
+    "changed": "Password changed. Your other sessions were signed out.",
+    "change": "Change password",
+    "dialogDescription": "Enter your current password, then choose a new one.",
+    "current": "Current password",
+    "new": "New password",
+    "confirm": "Confirm new password",
+    "saving": "Saving…"
+  },
+  "deleteAccount": {
+    "button": "Delete account",
+    "demo": "The demo account cannot be deleted: the dashboard reads its data.",
+    "title": "Delete your account?",
+    "body": "Your account, items, collections and tags are deleted for good. Type <strong>{email}</strong> to confirm.",
+    "yourEmail": "Your email",
+    "yourPassword": "Your password"
+  },
+  "upgrade": {
+    "title": "Upgrade to Pro",
+    "subtitle": "You are on Free: {items}/{maxItems} items, {collections}/{maxCollections} collections. Choose a plan to remove the limits."
+  },
+  "ui": {
+    "close": "Close",
+    "sidebar": "Sidebar",
+    "sidebarDescription": "Displays the mobile sidebar.",
+    "toggleSidebar": "Toggle Sidebar"
   }
 }

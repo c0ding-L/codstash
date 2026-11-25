@@ -1,11 +1,12 @@
 "use client";
 
 import { FileText, ImageIcon, Upload, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { acceptAttribute, allowedExtensions, UPLOAD_RULES, type UploadKind, validateUpload } from "@/lib/files";
-import { formatFileSize } from "@/lib/format";
+import { useFileSize } from "@/i18n/labels";
 import { cn } from "@/lib/utils";
 
 interface FileUploadProps {
@@ -36,6 +37,8 @@ export function FileUpload({
   describedBy,
   disabled,
 }: FileUploadProps) {
+  const t = useTranslations("upload");
+  const formatFileSize = useFileSize();
   const [dragging, setDragging] = useState(false);
   const rules = UPLOAD_RULES[kind];
 
@@ -83,7 +86,7 @@ export function FileUpload({
             type="button"
             variant="ghost"
             size="icon-sm"
-            aria-label="Remove file"
+            aria-label={t("remove")}
             disabled={disabled}
             onClick={() => onFileChange(null)}
           >
@@ -95,7 +98,7 @@ export function FileUpload({
           <div className="flex items-center gap-3">
             <div
               role="progressbar"
-              aria-label="Upload progress"
+              aria-label={t("progress")}
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={percent}
@@ -137,10 +140,12 @@ export function FileUpload({
     >
       <Upload className="size-5 text-muted-foreground" aria-hidden />
       <span className="text-sm">
-        <span className="font-medium">Drop {kind === "image" ? "an image" : "a file"} here</span> or click to choose
+        {t.rich(kind === "image" ? "dropImage" : "dropFile", {
+          strong: (chunks) => <span className="font-medium">{chunks}</span>,
+        })}
       </span>
       <span className="text-xs text-muted-foreground">
-        {allowedExtensions(kind).join(", ")} · up to {rules.maxBytes / (1024 * 1024)} MB
+        {t("limits", { extensions: allowedExtensions(kind).join(", "), size: rules.maxBytes / (1024 * 1024) })}
       </span>
       {input}
     </label>
@@ -149,6 +154,7 @@ export function FileUpload({
 
 /** A local preview, read as a data URL so nothing has to be revoked. */
 function ImagePreview({ file }: { file: File }) {
+  const t = useTranslations("upload");
   const [src, setSrc] = useState<string | null>(null);
 
   useEffect(() => {
@@ -163,7 +169,7 @@ function ImagePreview({ file }: { file: File }) {
       {src ? (
         // A data URL of the user's own file: next/image has nothing to optimise here.
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt={`Preview of ${file.name}`} className="max-h-full max-w-full object-contain" />
+        <img src={src} alt={t("preview", { name: file.name })} className="max-h-full max-w-full object-contain" />
       ) : null}
     </div>
   );

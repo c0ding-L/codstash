@@ -32,18 +32,21 @@ const FILE_TYPES: Record<string, string> = {
   ini: "text/plain",
 };
 
+/** The kinds the file list names, each a key of the `fileKinds` messages; "file" when unknown. */
+export type FileKind = "pdf" | "text" | "markdown" | "json" | "yaml" | "xml" | "csv" | "toml" | "ini" | "file";
+
 /** What the file list calls each allowed file extension. */
-const FILE_KIND_LABELS: Record<string, string> = {
-  pdf: "PDF document",
-  txt: "Plain text",
-  md: "Markdown",
-  json: "JSON",
-  yaml: "YAML",
-  yml: "YAML",
-  xml: "XML",
-  csv: "CSV spreadsheet",
-  toml: "TOML config",
-  ini: "INI config",
+const FILE_KINDS: Record<string, Exclude<FileKind, "file">> = {
+  pdf: "pdf",
+  txt: "text",
+  md: "markdown",
+  json: "json",
+  yaml: "yaml",
+  yml: "yaml",
+  xml: "xml",
+  csv: "csv",
+  toml: "toml",
+  ini: "ini",
 };
 
 /** MIME types a browser may report for an allowed file, on top of the stored ones. */
@@ -70,9 +73,9 @@ export function extensionOf(fileName: string) {
   return dot > 0 ? fileName.slice(dot + 1).toLowerCase() : "";
 }
 
-/** A plain-language name for the file's kind, from its extension; "File" when unknown. */
-export function fileKindLabel(fileName: string) {
-  return FILE_KIND_LABELS[extensionOf(fileName)] ?? "File";
+/** The file's kind, from its extension; "file" when unknown. The UI words it per language. */
+export function fileKind(fileName: string): FileKind {
+  return Object.hasOwn(FILE_KINDS, extensionOf(fileName)) ? FILE_KINDS[extensionOf(fileName)]! : "file";
 }
 
 function acceptedMimes(kind: UploadKind) {

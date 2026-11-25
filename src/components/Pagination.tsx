@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { ReactNode } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
@@ -22,6 +23,7 @@ function pageHref(basePath: string, page: number): string {
 
 /** Prev, numbered page links and next, under a listing. Renders nothing for a single page. */
 export function Pagination({ basePath, page, pageCount, rowIds }: PaginationProps) {
+  const t = useTranslations("pagination");
   if (pageCount <= 1) return null;
 
   const hasPrevious = page > 1;
@@ -29,7 +31,7 @@ export function Pagination({ basePath, page, pageCount, rowIds }: PaginationProp
 
   return (
     <nav
-      aria-label="Pagination"
+      aria-label={t("label")}
       className="flex justify-center"
       data-pagination=""
       data-page={page}
@@ -40,7 +42,7 @@ export function Pagination({ basePath, page, pageCount, rowIds }: PaginationProp
         <li>
           <StepLink
             href={hasPrevious ? pageHref(basePath, page - 1) : null}
-            label="Previous"
+            label={t("previous")}
             icon={<ChevronLeft aria-hidden />}
           />
         </li>
@@ -55,7 +57,7 @@ export function Pagination({ basePath, page, pageCount, rowIds }: PaginationProp
               <Link
                 href={pageHref(basePath, link)}
                 aria-current={link === page ? "page" : undefined}
-                aria-label={`Page ${link}`}
+                aria-label={t("page", { page: link })}
                 className={cn(
                   buttonVariants({ variant: link === page ? "outline" : "ghost", size: "icon" }),
                   "tabular-nums",
@@ -70,7 +72,7 @@ export function Pagination({ basePath, page, pageCount, rowIds }: PaginationProp
         <li>
           <StepLink
             href={hasNext ? pageHref(basePath, page + 1) : null}
-            label="Next"
+            label={t("next")}
             icon={<ChevronRight aria-hidden />}
             iconAfter
           />

@@ -1,6 +1,7 @@
 "use client";
 
 import { ImageOff } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { CardContent } from "@/components/ui/card";
@@ -23,6 +24,7 @@ type Size = { width: number; height: number };
  * a file that fails to load shows a placeholder instead of a broken-image icon.
  */
 export function ImageCardBody({ src, alt, heading, time, description }: ImageCardBodyProps) {
+  const tc = useTranslations("common");
   const imgRef = useRef<HTMLImageElement>(null);
   const [failed, setFailed] = useState(false);
   const [size, setSize] = useState<Size | null>(null);
@@ -41,7 +43,7 @@ export function ImageCardBody({ src, alt, heading, time, description }: ImageCar
       <div className="relative aspect-video overflow-hidden bg-muted">
         {failed ? (
           <span className="flex size-full items-center justify-center text-muted-foreground">
-            <ImageOff className="size-6" aria-label="Image unavailable" />
+            <ImageOff className="size-6" aria-label={tc("imageUnavailable")} />
           </span>
         ) : (
           // From the download route, which next/image's optimiser could not reach with the session.

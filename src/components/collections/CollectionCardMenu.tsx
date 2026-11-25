@@ -1,6 +1,7 @@
 "use client";
 
 import { MoreHorizontal, Pencil, Star, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { DeleteCollectionDialog } from "@/components/collections/DeleteCollectionDialog";
@@ -26,6 +27,7 @@ interface CollectionCardMenuProps {
  * popup unmounts when it closes and would take them with it.
  */
 export function CollectionCardMenu({ collection }: CollectionCardMenuProps) {
+  const t = useTranslations();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const favorite = useFavoriteToggle("collection", collection.id, collection.isFavorite);
@@ -39,7 +41,7 @@ export function CollectionCardMenu({ collection }: CollectionCardMenuProps) {
               variant="ghost"
               size="icon-sm"
               className="relative z-20 -mt-1 -mr-2 text-muted-foreground"
-              aria-label={`Actions for ${collection.name}`}
+              aria-label={t("collections.actionsFor", { name: collection.name })}
             />
           }
         >
@@ -48,16 +50,16 @@ export function CollectionCardMenu({ collection }: CollectionCardMenuProps) {
         <DropdownMenuContent align="end" className="min-w-40">
           <DropdownMenuItem onClick={() => setEditOpen(true)}>
             <Pencil aria-hidden />
-            Edit
+            {t("common.edit")}
           </DropdownMenuItem>
           <DropdownMenuItem disabled={favorite.pending} onClick={favorite.toggle}>
             <Star aria-hidden className={cn(favorite.isFavorite && "fill-amber-400 text-amber-400")} />
-            {favorite.isFavorite ? "Remove from favorites" : "Add to favorites"}
+            {favorite.isFavorite ? t("favorites.remove") : t("favorites.add")}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>
             <Trash2 aria-hidden />
-            Delete
+            {t("common.delete")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

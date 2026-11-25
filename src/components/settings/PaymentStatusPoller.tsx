@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -22,6 +23,7 @@ interface PaymentStatusPollerProps {
 }
 
 export function PaymentStatusPoller({ reference, awaitSuccess = false }: PaymentStatusPollerProps) {
+  const t = useTranslations("billing");
   const router = useRouter();
   const [gaveUp, setGaveUp] = useState(false);
 
@@ -54,7 +56,7 @@ export function PaymentStatusPoller({ reference, awaitSuccess = false }: Payment
 
   return gaveUp ? (
     <p className="text-sm text-muted-foreground">
-      This is taking longer than usual. You can leave this page: Pro is added as soon as the payment is confirmed.
+      {t("slowConfirmation")}
     </p>
   ) : null;
 }

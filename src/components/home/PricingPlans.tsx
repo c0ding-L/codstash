@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { BillingPeriodSwitch } from "@/components/billing/BillingPeriodSwitch";
@@ -16,6 +17,8 @@ import { cn } from "@/lib/utils";
  * Settings, not stored.
  */
 export function PricingPlans() {
+  // Only the payment line is translated here; the rest of the homepage is Phase 4.
+  const t = useTranslations("billing");
   const [plan, setPlan] = useState<Plan>("MONTHLY");
   const [currency, setCurrency] = useState<Currency>(DEFAULT_CURRENCY);
 
@@ -26,8 +29,8 @@ export function PricingPlans() {
         <CurrencySwitch value={currency} onChange={setCurrency} />
       </div>
       <p className="mt-3 text-center text-xs text-muted-foreground">
-        {PAYMENT_METHODS[currency]}
-        {currency === "XOF" ? " (West Africa)" : null}
+        {t(`paymentMethods.${PAYMENT_METHODS[currency]}`)}
+        {currency === "XOF" ? t("westAfrica") : null}
       </p>
 
       <div className="mx-auto mt-12 grid max-w-4xl gap-5 md:grid-cols-2">

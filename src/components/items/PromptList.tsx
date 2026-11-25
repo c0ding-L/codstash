@@ -1,9 +1,10 @@
 import { Pin, Star } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { ItemCopyButton } from "@/components/items/ItemCopyButton";
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
 import type { DashboardItem, PromptPreview } from "@/lib/db/items";
-import { formatRelativeTime } from "@/lib/format";
+import { useRelativeTime } from "@/i18n/labels";
 
 interface PromptListProps {
   items: DashboardItem[];
@@ -26,6 +27,9 @@ export function PromptList({ items, previews, now }: PromptListProps) {
 }
 
 function PromptEntry({ item, preview, now }: { item: DashboardItem; preview: PromptPreview; now: string }) {
+  const tc = useTranslations("common");
+  const t = useTranslations("items");
+  const relativeTime = useRelativeTime();
   const quote = preview.excerpt || item.description;
 
   return (
@@ -35,10 +39,10 @@ function PromptEntry({ item, preview, now }: { item: DashboardItem; preview: Pro
       <div className="flex items-center gap-1.5">
         <h2 className="truncate font-medium">{item.title}</h2>
         {item.isPinned ? (
-          <Pin className="size-3 shrink-0 text-muted-foreground" aria-label="Pinned" />
+          <Pin className="size-3 shrink-0 text-muted-foreground" aria-label={tc("pinned")} />
         ) : null}
         {item.isFavorite ? (
-          <Star className="size-3 shrink-0 fill-amber-400 text-amber-400" aria-label="Favorite" />
+          <Star className="size-3 shrink-0 fill-amber-400 text-amber-400" aria-label={tc("favorite")} />
         ) : null}
       </div>
 
@@ -62,20 +66,21 @@ function PromptEntry({ item, preview, now }: { item: DashboardItem; preview: Pro
             </span>
           ))}
           <span className="whitespace-nowrap">
-            {preview.words === 1 ? "1 word" : `${preview.words} words`}
-          </span>
-          <span className="whitespace-nowrap">
-            <span aria-hidden>/ </span>~{preview.tokens} tokens
+            {t("wordCount", { count: preview.words })}
           </span>
           <span className="whitespace-nowrap">
             <span aria-hidden>/ </span>
-            {formatRelativeTime(item.updatedAt.toISOString(), now)}
+            {t("tokenCount", { count: preview.tokens })}
+          </span>
+          <span className="whitespace-nowrap">
+            <span aria-hidden>/ </span>
+            {relativeTime(item.updatedAt.toISOString(), now)}
           </span>
         </p>
         <ItemCopyButton
           itemId={item.id}
           title={item.title}
-          label="Copy prompt"
+          label={t("copyPrompt")}
           // Hidden until hover only with a mouse: a touch screen, even a wide one, never hovers.
           className="shrink-0 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:focus-visible:opacity-100"
         />

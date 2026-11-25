@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useId, useMemo, useState } from "react";
 
 import { FavoriteCollectionRow, FavoriteItemRow, FavoritesSection } from "@/components/favorites/FavoritesList";
@@ -18,6 +19,7 @@ export function FavoritesView({
   collections: RecentCollection[];
   now: string;
 }) {
+  const t = useTranslations("favorites");
   const [sort, setSort] = useState<FavoritesSort>("date");
   const sortedItems = useMemo(() => sortFavoriteItems(items, sort), [items, sort]);
   const sortedCollections = useMemo(() => sortFavoriteCollections(collections, sort), [collections, sort]);
@@ -26,7 +28,7 @@ export function FavoritesView({
     <div className="flex flex-col gap-8">
       <SortControl value={sort} onChange={setSort} />
 
-      <FavoritesSection title="Items" count={items.length}>
+      <FavoritesSection title={t("items")} count={items.length}>
         {sortedItems.length > 0 ? (
           <ul className="flex flex-col">
             {sortedItems.map((item) => (
@@ -34,11 +36,11 @@ export function FavoritesView({
             ))}
           </ul>
         ) : (
-          <p className="px-2 py-1.5 font-mono text-xs text-muted-foreground">No favorite items.</p>
+          <p className="px-2 py-1.5 font-mono text-xs text-muted-foreground">{t("noItems")}</p>
         )}
       </FavoritesSection>
 
-      <FavoritesSection title="Collections" count={collections.length}>
+      <FavoritesSection title={t("collections")} count={collections.length}>
         {sortedCollections.length > 0 ? (
           <ul className="flex flex-col">
             {sortedCollections.map((collection) => (
@@ -46,7 +48,7 @@ export function FavoritesView({
             ))}
           </ul>
         ) : (
-          <p className="px-2 py-1.5 font-mono text-xs text-muted-foreground">No favorite collections.</p>
+          <p className="px-2 py-1.5 font-mono text-xs text-muted-foreground">{t("noCollections")}</p>
         )}
       </FavoritesSection>
     </div>
@@ -54,18 +56,20 @@ export function FavoritesView({
 }
 
 function SortControl({ value, onChange }: { value: FavoritesSort; onChange: (sort: FavoritesSort) => void }) {
+  const t = useTranslations("favorites");
   const id = useId();
+  const items = FAVORITES_SORTS.map((sort) => ({ value: sort, label: t(`sort.${sort}`) }));
   return (
     <div className="flex items-center gap-2 font-mono text-xs">
       <label id={id} className="text-muted-foreground">
-        Sort by
+        {t("sortBy")}
       </label>
-      <Select items={FAVORITES_SORTS} value={value} onValueChange={(next) => next !== null && onChange(next)}>
+      <Select items={items} value={value} onValueChange={(next) => next !== null && onChange(next)}>
         <SelectTrigger aria-labelledby={id} size="sm" className="w-28 font-mono text-xs">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {FAVORITES_SORTS.map((option) => (
+          {items.map((option) => (
             <SelectItem key={option.value} value={option.value} className="font-mono text-xs">
               {option.label}
             </SelectItem>

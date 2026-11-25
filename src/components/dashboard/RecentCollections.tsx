@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { connection } from "next/server";
 
 import { CollectionCard } from "@/components/dashboard/CollectionCard";
@@ -11,7 +12,7 @@ export async function RecentCollections({ userId }: { userId: string }) {
   // headers.
   await connection();
 
-  const collections = await getRecentCollections(userId);
+  const [collections, t] = await Promise.all([getRecentCollections(userId), getTranslations("dashboard")]);
   // Real rows, so labels measure against the wall clock. The default anchors to
   // MOCK_NOW, which only suits the mock's fixed timestamps.
   const now = new Date().toISOString();
@@ -19,9 +20,9 @@ export async function RecentCollections({ userId }: { userId: string }) {
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-baseline justify-between">
-        <h2 className="text-lg font-semibold">Recent collections</h2>
+        <h2 className="text-lg font-semibold">{t("recentCollections")}</h2>
         <span className="text-sm text-muted-foreground">
-          {collections.length} collections
+          {t("collectionCount", { count: collections.length })}
         </span>
       </div>
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import { CodeEditor } from "@/components/items/CodeEditor";
 import type { ItemDetailState } from "@/components/items/ItemDetails";
 import type { SavedItem } from "@/components/items/ItemEditForm";
@@ -28,9 +30,10 @@ export function ItemBody({
   /** Gets the prompt once the user accepts its optimized version. */
   onSaved: (saved: SavedItem) => void;
 }) {
+  const t = useTranslations("drawer");
   if (state.status === "loading") {
     return (
-      <div role="status" aria-label="Loading item">
+      <div role="status" aria-label={t("loadingItem")}>
         <Skeleton className="h-40 w-full" />
       </div>
     );
@@ -39,7 +42,7 @@ export function ItemBody({
   if (state.status === "error") {
     return (
       <p role="alert" className="text-muted-foreground">
-        The rest of this item could not be loaded.
+        {t("loadFailed")}
       </p>
     );
   }
@@ -70,7 +73,7 @@ export function ItemBody({
           key={itemId}
           value={content}
           language={language}
-          ariaLabel="Content"
+          ariaLabel={t("content")}
           explain={{ itemId, aiAllowed }}
         />
       ) : content ? (
@@ -78,7 +81,7 @@ export function ItemBody({
         <MarkdownEditor
           key={itemId}
           value={content}
-          ariaLabel="Content"
+          ariaLabel={t("content")}
           optimize={slug === "prompt" ? { itemId, aiAllowed, onApplied: onSaved } : undefined}
         />
       ) : null}

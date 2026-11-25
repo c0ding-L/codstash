@@ -1,6 +1,7 @@
 import { FolderOpen, Layers } from "lucide-react";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { connection } from "next/server";
 
 import { auth } from "@/auth";
@@ -8,13 +9,12 @@ import { UserAvatar } from "@/components/auth/UserAvatar";
 import { TypeIconTile } from "@/components/items/TypeIconTile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getProfile, getProfileStats } from "@/lib/db/profile";
-import { typePluralNames } from "@/lib/item-type-ui";
+import { getItemTypeLabel } from "@/i18n/labels-server";
+import { pageMetadata } from "@/i18n/labels-server";
 
-export const metadata: Metadata = {
-  title: "Profile · Cortex",
-};
-
-const memberSince = new Intl.DateTimeFormat("en-US", { dateStyle: "long", timeZone: "UTC" });
+export function generateMetadata(): Promise<Metadata> {
+  return pageMetadata("profile.title");
+}
 
 export default async function ProfilePage() {
   // Rendered per request, like every other page.
@@ -26,17 +26,23 @@ export default async function ProfilePage() {
   const profile = session?.user?.id ? await getProfile(session.user.id) : null;
   if (!profile) redirect("/sign-in?callbackUrl=/profile");
 
-  const stats = await getProfileStats(profile.id);
+  const [stats, t, typeLabel, locale] = await Promise.all([
+    getProfileStats(profile.id),
+    getTranslations("profile"),
+    getItemTypeLabel(),
+    getLocale(),
+  ]);
+  const memberSince = new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "UTC" });
   const totals = [
-    { label: "Items", value: stats.totalItems, icon: Layers },
-    { label: "Collections", value: stats.collectionCount, icon: FolderOpen },
+    { label: t("items"), value: stats.totalItems, icon: Layers },
+    { label: t("collections"), value: stats.collectionCount, icon: FolderOpen },
   ];
 
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold">Profile</h1>
-        <p className="text-sm text-muted-foreground">Your account and your usage.</p>
+        <h1 className="text-2xl font-semibold">{t("title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       <Card>
@@ -51,14 +57,14 @@ export default async function ProfilePage() {
             <span className="truncate text-lg font-semibold">{profile.name ?? profile.email}</span>
             <span className="truncate text-sm text-muted-foreground">{profile.email}</span>
             <span className="text-xs text-muted-foreground">
-              Member since {memberSince.format(profile.createdAt)}
+              {t("memberSince", { date: memberSince.format(profile.createdAt) })}
             </span>
           </div>
         </CardContent>
       </Card>
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-lg font-semibold">Usage</h2>
+        <h2 className="text-lg font-semibold">{t("usage")}</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           {totals.map(({ label, value, icon: Icon }) => (
             <Card key={label}>
@@ -76,14 +82,14 @@ export default async function ProfilePage() {
         </div>
         <Card>
           <CardHeader>
-            <CardTitle>By type</CardTitle>
+            <CardTitle>{t("byType")}</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="grid gap-2 sm:grid-cols-2">
               {stats.byType.map(({ slug, color, count }) => (
                 <li key={slug} className="flex items-center gap-3 rounded-lg px-2 py-1.5">
                   <TypeIconTile slug={slug} color={color} className="size-8 rounded-md" iconClassName="size-4" mutedFallback />
-                  <span className="flex-1">{typePluralNames[slug]}</span>
+                  <span className="flex-1">{typeLabel({ slug, name: slug }, "other")}</span>
                   <span className="font-medium tabular-nums">{count}</span>
                 </li>
               ))}

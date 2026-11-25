@@ -1,9 +1,10 @@
 "use client";
 
 import { Copy } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
-import { copyToClipboard } from "@/lib/clipboard";
+import { useClipboard } from "@/i18n/labels";
 import type { ItemDetailJson } from "@/lib/db/items";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +23,10 @@ interface CommandCopyButtonProps {
  * only a command too long to send with the page is fetched first.
  */
 export function CommandCopyButton({ itemId, title, text, isCut, className }: CommandCopyButtonProps) {
+  const tc = useTranslations("common");
+  const t = useTranslations("items");
+  const { copyToClipboard } = useClipboard();
+
   async function copy() {
     if (!isCut) return copyToClipboard(text);
 
@@ -31,14 +36,14 @@ export function CommandCopyButton({ itemId, title, text, isCut, className }: Com
       const detail = (await response.json()) as ItemDetailJson;
       await copyToClipboard(detail.content ?? "");
     } catch {
-      toast.error("Could not load the command to copy.");
+      toast.error(t("commandCopyFailed"));
     }
   }
 
   return (
     <button
       type="button"
-      aria-label={`Copy ${title}`}
+      aria-label={tc("copyItem", { name: title })}
       onClick={copy}
       className={cn(
         "relative z-20 inline-flex size-7 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",

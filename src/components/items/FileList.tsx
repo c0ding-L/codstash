@@ -1,9 +1,10 @@
 import { Pin, Star } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
 import type { DashboardItem } from "@/lib/db/items";
-import { extensionOf, fileKindLabel } from "@/lib/files";
-import { formatFileSize, formatRelativeTime } from "@/lib/format";
+import { useFileSize, useRelativeTime } from "@/i18n/labels";
+import { extensionOf, fileKind } from "@/lib/files";
 
 interface FileListProps {
   items: DashboardItem[];
@@ -16,6 +17,7 @@ const MIN_BAR_PERCENT = 3;
 
 /** The file list: a table of name, kind, size and last update, like a file explorer. */
 export function FileList({ items, now }: FileListProps) {
+  const t = useTranslations("items.fileTable");
   const largest = Math.max(1, ...items.map((item) => item.fileSize ?? 0));
 
   return (
@@ -24,16 +26,16 @@ export function FileList({ items, now }: FileListProps) {
         <thead className="border-b border-border text-left text-xs text-muted-foreground">
           <tr>
             <th scope="col" className="px-3 py-2.5 font-medium sm:px-4">
-              Name
+              {t("name")}
             </th>
             <th scope="col" className="hidden w-44 px-4 py-2.5 font-medium sm:table-cell">
-              Kind
+              {t("kind")}
             </th>
             <th scope="col" className="w-18 px-3 py-2.5 text-right font-medium sm:w-44 sm:px-4">
-              Size
+              {t("size")}
             </th>
             <th scope="col" className="w-18 px-3 py-2.5 font-medium sm:w-28 sm:px-4">
-              Updated
+              {t("updated")}
             </th>
           </tr>
         </thead>
@@ -48,6 +50,10 @@ export function FileList({ items, now }: FileListProps) {
 }
 
 function FileRow({ item, largest, now }: { item: DashboardItem; largest: number; now: string }) {
+  const tc = useTranslations("common");
+  const tk = useTranslations("fileKinds");
+  const relativeTime = useRelativeTime();
+  const fileSize = useFileSize();
   const name = item.fileName ?? item.title;
   const extension = extensionOf(name).slice(0, 4).toUpperCase() || "FILE";
   const barPercent = item.fileSize
@@ -70,12 +76,12 @@ function FileRow({ item, largest, now }: { item: DashboardItem; largest: number;
             <div className="flex items-center gap-1.5">
               <span className="truncate font-mono text-sm">{name}</span>
               {item.isPinned ? (
-                <Pin className="size-3 shrink-0 text-muted-foreground" aria-label="Pinned" />
+                <Pin className="size-3 shrink-0 text-muted-foreground" aria-label={tc("pinned")} />
               ) : null}
               {item.isFavorite ? (
                 <Star
                   className="size-3 shrink-0 fill-amber-400 text-amber-400"
-                  aria-label="Favorite"
+                  aria-label={tc("favorite")}
                 />
               ) : null}
             </div>
@@ -86,12 +92,12 @@ function FileRow({ item, largest, now }: { item: DashboardItem; largest: number;
         </div>
       </td>
       <td className="hidden truncate px-4 py-3 text-muted-foreground sm:table-cell">
-        {fileKindLabel(name)}
+        {tk(fileKind(name))}
       </td>
       <td className="px-3 py-3 sm:px-4">
         <div className="flex items-center justify-end gap-3">
           <span className="whitespace-nowrap tabular-nums">
-            {item.fileSize ? formatFileSize(item.fileSize) : "—"}
+            {item.fileSize ? fileSize(item.fileSize) : "—"}
           </span>
           <span className="hidden h-1 w-16 shrink-0 overflow-hidden rounded-full bg-muted sm:block" aria-hidden>
             <span className="block h-full rounded-full bg-rose-400" style={{ width: `${barPercent}%` }} />
@@ -99,7 +105,7 @@ function FileRow({ item, largest, now }: { item: DashboardItem; largest: number;
         </div>
       </td>
       <td className="px-3 py-3 text-xs whitespace-nowrap text-muted-foreground sm:px-4">
-        {formatRelativeTime(item.updatedAt.toISOString(), now)}
+        {relativeTime(item.updatedAt.toISOString(), now)}
       </td>
     </tr>
   );

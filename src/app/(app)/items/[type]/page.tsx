@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { connection } from "next/server";
 
 import { auth } from "@/auth";
@@ -16,7 +17,7 @@ import { TypeEmptyState } from "@/components/items/TypeEmptyState";
 import { TypeIconTile } from "@/components/items/TypeIconTile";
 import { getPlanStatus } from "@/lib/db/billing";
 import { getCommandTexts, getItemsByType, getPromptPreviews, getSnippetPreviews } from "@/lib/db/items";
-import { itemTypeFromSegment, itemTypeHref, typeColors, typePluralNames, typeSingularNames } from "@/lib/item-type-ui";
+import { itemTypeFromSegment, itemTypeHref, typeColors } from "@/lib/item-type-ui";
 import { loadAiAllowed } from "@/lib/load-ai-allowed";
 import { loadUploadsAllowed } from "@/lib/load-uploads-allowed";
 import { ITEMS_PER_PAGE, pageCount, pageOffset, parsePageParam } from "@/lib/pagination";
@@ -29,7 +30,9 @@ interface ItemsPageProps {
 
 export async function generateMetadata({ params }: ItemsPageProps): Promise<Metadata> {
   const slug = itemTypeFromSegment((await params).type);
-  return slug ? { title: `${typePluralNames[slug]} · Cortex` } : {};
+  if (!slug) return {};
+  const [t, tm] = await Promise.all([getTranslations("itemTypes"), getTranslations("metadata")]);
+  return { title: tm("page", { page: t(`${slug}.other`) }) };
 }
 
 export default async function ItemsPage({ params, searchParams }: ItemsPageProps) {
@@ -62,7 +65,8 @@ export default async function ItemsPage({ params, searchParams }: ItemsPageProps
   const commandTexts = slug === "command" ? await getCommandTexts(session.user.id, ids) : {};
   const promptPreviews = slug === "prompt" ? await getPromptPreviews(session.user.id, ids) : {};
   const snippetPreviews = slug === "snippet" ? await getSnippetPreviews(session.user.id, ids) : {};
-  const label = typePluralNames[slug];
+  const t = await getTranslations();
+  const label = t(`itemTypes.${slug}.other`);
   const color = typeColors[slug];
   const now = new Date().toISOString();
   // For the New Item dialog's type picker. Only Pro users reach the upload pages;
@@ -80,13 +84,13 @@ export default async function ItemsPage({ params, searchParams }: ItemsPageProps
         <div className="flex items-center gap-4">
           {items.length > 0 ? (
             <span className="text-sm text-muted-foreground">
-              {first}–{first + items.length - 1} of {totalCount}
+              {t("items.range", { first, last: first + items.length - 1, total: totalCount })}
             </span>
           ) : null}
           <NewItemDialog
             uploadsAllowed={uploadsAllowed}
             aiAllowed={aiAllowed}
-            label={`New ${typeSingularNames[slug]}`}
+            label={t(`itemTypes.${slug}.new`)}
             iconOnlyOnMobile={false}
           />
         </div>

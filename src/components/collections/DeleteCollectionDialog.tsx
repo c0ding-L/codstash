@@ -1,6 +1,7 @@
 "use client";
 
 import { TriangleAlert } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useTransition } from "react";
 import { toast } from "sonner";
 
@@ -33,6 +34,8 @@ export function DeleteCollectionDialog({
   onOpenChange,
   redirectToList = false,
 }: DeleteCollectionDialogProps) {
+  const t = useTranslations("collections.delete");
+  const tc = useTranslations("common");
   const refreshAfterRemoval = useRefreshAfterRemoval();
   const [pending, startDeleting] = useTransition();
 
@@ -45,7 +48,7 @@ export function DeleteCollectionDialog({
         return;
       }
 
-      toast.success("Collection deleted.");
+      toast.success(t("deleted"));
       onOpenChange(false);
       refreshAfterRemoval(collection.id);
     });
@@ -59,14 +62,16 @@ export function DeleteCollectionDialog({
           <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20">
             <TriangleAlert aria-hidden />
           </AlertDialogMedia>
-          <AlertDialogTitle>Delete this collection?</AlertDialogTitle>
+          <AlertDialogTitle>{t("title")}</AlertDialogTitle>
           <AlertDialogDescription>
-            <span className="font-medium break-words text-foreground">{collection.name}</span> will be deleted.
-            Its items are kept; they just leave this collection. This cannot be undone.
+            {t.rich("body", {
+              collection: collection.name,
+              name: (chunks) => <span className="font-medium break-words text-foreground">{chunks}</span>,
+            })}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={pending}>{tc("cancel")}</AlertDialogCancel>
           {/* Solid red, like the item delete: the `destructive` variant is only a tint. */}
           <Button
             variant="destructive"
@@ -74,7 +79,7 @@ export function DeleteCollectionDialog({
             disabled={pending}
             onClick={handleDelete}
           >
-            {pending ? "Deleting…" : "Delete"}
+            {pending ? tc("deleting") : tc("delete")}
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

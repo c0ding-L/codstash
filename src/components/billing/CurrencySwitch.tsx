@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 import { CURRENCIES, type Currency } from "@/lib/billing-plans";
 import { cn } from "@/lib/utils";
 
@@ -11,10 +13,11 @@ interface CurrencySwitchProps {
 
 /** USD / EUR / XOF, styled like the pricing page's billing-period switch. */
 export function CurrencySwitch({ value, onChange, className }: CurrencySwitchProps) {
+  const t = useTranslations("billing");
   return (
     <div
       role="group"
-      aria-label="Currency"
+      aria-label={t("currency")}
       className={cn("inline-flex rounded-lg border border-border bg-card p-1 text-sm", className)}
     >
       {CURRENCIES.map((currency) => (

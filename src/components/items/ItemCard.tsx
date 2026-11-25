@@ -1,11 +1,13 @@
 import { Pin } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { FavoriteButton } from "@/components/favorites/FavoriteButton";
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
 import { Card, CardContent } from "@/components/ui/card";
 import { TypeIconTile } from "@/components/items/TypeIconTile";
 import type { DashboardItem } from "@/lib/db/items";
-import { formatCollectionNames, formatFileSize, formatRelativeTime } from "@/lib/format";
+import { useFileSize, useRelativeTime } from "@/i18n/labels";
+import { formatCollectionNames } from "@/lib/format";
 import { ringClasses, toColorToken, toItemTypeSlug, washClasses } from "@/lib/item-type-ui";
 import { cn } from "@/lib/utils";
 
@@ -16,6 +18,9 @@ interface ItemCardProps {
 }
 
 export function ItemCard({ item, now }: ItemCardProps) {
+  const tc = useTranslations("common");
+  const relativeTime = useRelativeTime();
+  const fileSize = useFileSize();
   const collectionNames = formatCollectionNames(item.collections);
   const slug = toItemTypeSlug(item.type.slug);
   const color = toColorToken(item.type.color);
@@ -39,7 +44,7 @@ export function ItemCard({ item, now }: ItemCardProps) {
           <div className="flex items-center gap-1.5">
             <h2 className="truncate font-medium">{item.title}</h2>
             {item.isPinned ? (
-              <Pin className="size-3 shrink-0 text-muted-foreground" aria-label="Pinned" />
+              <Pin className="size-3 shrink-0 text-muted-foreground" aria-label={tc("pinned")} />
             ) : null}
           </div>
 
@@ -49,8 +54,8 @@ export function ItemCard({ item, now }: ItemCardProps) {
 
           <div className="mt-auto flex flex-wrap items-center gap-x-2 pt-1 text-xs text-muted-foreground">
             {collectionNames ? <span>{collectionNames}</span> : null}
-            {item.fileSize ? <span>{formatFileSize(item.fileSize)}</span> : null}
-            <span>{formatRelativeTime(item.updatedAt.toISOString(), now)}</span>
+            {item.fileSize ? <span>{fileSize(item.fileSize)}</span> : null}
+            <span>{relativeTime(item.updatedAt.toISOString(), now)}</span>
           </div>
         </div>
 
