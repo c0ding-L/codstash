@@ -1,52 +1,22 @@
-# Current Feature: i18n (French) — Phase 4: Homepage and AI
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- The public homepage (`src/components/home`, about 570 lines) and its metadata are in French,
-  using the `home` namespace, with an EN / FR toggle in the header or the footer.
-- `HomeNav`, shared by the homepage, `/sign-in` and `/register`, is translated.
-- Explain and Description answer in French when the locale is `fr` (one line appended to the
-  system prompt); Optimize and Tags keep the language of the content. System prompts stay in
-  English.
-- `src/actions/ai.ts` passes the locale to the message builders.
-- `ai-prompts.test.ts` and `actions/ai.test.ts` cover `fr`; `npm test`, `npm run build` and
-  `npm run lint` pass.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Spec: `context/features/i18n-phase-4-spec.md`. Plan: `docs/i18n-plan.md` §5.6 and §8.
-- Draft French with DeepL (`DEEPL_API_KEY` in `.env`, glossary `codstash-ui-en-fr`), then review.
-- Branch: `feature/i18n-phase-4` (the plan's `feature/i18n-home-ai` name is superseded by the spec).
-- Scope found: `src/app/page.tsx` (176 lines, server, plus its `metadata`) and
-  `src/components/home` (~630 lines): `home-content.ts` (preview items, type labels, collections,
-  feature cards), `AiSection`, `DashboardPreview`, `HomeNav`, `PricingPlans` (already French since
-  Phase 2), `ChaosBox` (icons only). No `home` namespace yet. Client components: `HomeNav`,
-  `ChaosBox`, `PricingPlans`, `Reveal`.
-- `HomeNav` also sits on `/sign-in` and `/register`, which already show the `AuthCard` toggle:
-  one toggle per page, not two.
-- Decisions (author, 2026-11-25):
-  - AI language: the plan's choice. Explain and Description answer in the UI language; Optimize
-    keeps the prompt's language, Tags the content's.
-  - Toggle: in `HomeNav`. On `/sign-in` and `/register` (which show `HomeNav`), the `AuthCard`
-    toggle is hidden so there is only one; the other auth pages keep the card's toggle.
-  - Rule: what a user types is never translated; what comes from us is. The preview samples are
-    ours, so their prose titles, details and collection names are translated; code, commands,
-    file and product names are not language and stay as written.
-  - French strings come from DeepL with the glossary; only typography and the app's fixed terms
-    are adjusted afterwards.
-  - Hand-worded with the author's OK, where DeepL changed the meaning, broke the grammar or cut
-    the preview cards: hero "Retrouvez-le à tout moment.", AI subtitle (tags, not "thèmes"), CTA
-    subtitle, the page title, and the preview titles "Hook useDebounce", "Revue de code",
-    "Doc Tailwind" (no card is cut at 1280 or 375 px, as in English).
-  - Mobile: below `sm` (640 px), `HomeNav` drops "Get Started" (the hero's call to action sits
-    right under it). English already overflowed by 4 px at 320 px before the toggle.
-- Found while building: with the toggle, the centred "Features / Pricing" links ran into the
-  buttons between 640 and ~830 px in French, so they show from `lg` (1024 px); the hero and the
-  footer link to both sections.
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — i18n Phase 4: the homepage in French with an EN / FR toggle in its
+top bar, and Explain and Description answering in the UI language. Last phase of the i18n plan.
+Outcome in the History below.
 
 ---
 
@@ -2468,3 +2438,22 @@ Environment notes that outlive any one feature:
   an inbox (verification is off in dev). `HomeNav` and the homepage stay English until Phase 4.
   999 tests, build and lint green. Merged into `main` (`5c27b14`, fast-forward), then `36864c0`
   restored CRLF in `ai-interaction.md`; branch deleted. Feature completed.
+- 2026-11-25 — i18n Phase 4 (homepage and AI). Homepage, its metadata (`generateMetadata`,
+  `metadata.home`) and `HomeNav` translated: `home` is server-only (`SERVER_ONLY_NAMESPACES`),
+  `HomeNav` reads a small client `homeNav`. `home-content.ts` keeps data in code and keys for text;
+  the preview's type names come from `itemTypes`, its file size from `formatFileSize`. Rule set by
+  the author: what a user types is never translated, what comes from us is (the preview samples
+  included); code, commands and file names stay as written. French from DeepL (glossary
+  `codstash-ui-en-fr`, `prefer_more`), typography and the app's terms fixed after; the hero end,
+  AI and CTA subtitles, page title and three preview titles reworded by hand with the author's OK.
+  EN / FR toggle in `HomeNav`; `AuthCard` drops its own when `withNav` is set. Below `sm`,
+  "Get Started" is hidden; the centred Features / Pricing links show from `lg` (they overlapped
+  the toggle in French up to ~830 px), English included. AI: `FRENCH_ANSWER_INSTRUCTION`
+  ("Write the answer in French. Keep code, identifiers and commands unchanged.") appended to the
+  Explain and Description system prompts when the UI is French; Optimize and Tags unchanged;
+  `parseDescription` also strips "Résumé :". Browser-checked: homepage FR / EN with no raw key or
+  console warning, toggle, one toggle per auth page, no overflow or overlap from 320 to 1280 px;
+  Explain (33 s; one earlier call timed out at 60 s) and Description answered in French on the
+  Test FR account, made Pro on develop for the check and set back to Free. 1008 tests, build and
+  lint green. Merged into `main` (`f42bdc6`, fast-forward); branch deleted. Feature completed,
+  and with it the i18n plan.
