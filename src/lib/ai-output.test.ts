@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { parseTagSuggestions } from "@/lib/ai-output";
+import { parseDescription, parseTagSuggestions } from "@/lib/ai-output";
 
 describe("parseTagSuggestions", () => {
   it("reads a comma-separated line", () => {
@@ -46,5 +46,39 @@ describe("parseTagSuggestions", () => {
     expect(parseTagSuggestions("", [])).toEqual([]);
     expect(parseTagSuggestions("```\n```", [])).toEqual([]);
     expect(parseTagSuggestions(", ,", [])).toEqual([]);
+  });
+});
+
+describe("parseDescription", () => {
+  it("keeps a plain answer as it is", () => {
+    expect(parseDescription("A React hook that debounces a value. Handy for search inputs.")).toBe(
+      "A React hook that debounces a value. Handy for search inputs.",
+    );
+  });
+
+  it("strips a prefix, code fences, wrapping quotes and bold", () => {
+    expect(parseDescription('```text\nDescription: "A **fast** grep wrapper."\n```')).toBe("A fast grep wrapper.");
+    expect(parseDescription("Summary: “Lists open ports.”")).toBe("Lists open ports.");
+  });
+
+  it("keeps quotes inside the text", () => {
+    expect(parseDescription('Runs "npm test" on save.')).toBe('Runs "npm test" on save.');
+  });
+
+  it("joins lines into one paragraph", () => {
+    expect(parseDescription("  First line.\n\n  Second line.  ")).toBe("First line. Second line.");
+  });
+
+  it("cuts an overlong answer at a word, within the description limit", () => {
+    const text = parseDescription("word ".repeat(1_000));
+
+    expect(text.length).toBeLessThanOrEqual(2_000);
+    expect(text.endsWith("word…")).toBe(true);
+  });
+
+  it("is empty when nothing usable is left", () => {
+    expect(parseDescription("")).toBe("");
+    expect(parseDescription("```\n```")).toBe("");
+    expect(parseDescription('""')).toBe("");
   });
 });

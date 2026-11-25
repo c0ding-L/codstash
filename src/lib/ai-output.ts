@@ -30,3 +30,31 @@ export function parseTagSuggestions(answer: string, existing: string[]): string[
   }
   return suggestions.slice(0, room);
 }
+
+export const NO_DESCRIPTION = "Could not write a description for this item.";
+
+/**
+ * The description in a model's answer, ready for the form: one paragraph of
+ * plain text, at most `ITEM_LIMITS.description` characters. Tolerates code
+ * fences, a `Description:` or `Summary:` prefix, wrapping quotes and markdown
+ * emphasis. Empty when nothing usable is left.
+ */
+export function parseDescription(answer: string): string {
+  let text = answer
+    .replace(/```[\w-]*/g, "")
+    .trim()
+    .replace(/^(?:description|summary)\s*:\s*/i, "")
+    .replace(/(\*\*|__)(.+?)\1/g, "$2")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // Quotes around the whole answer, not ones inside it.
+  const quoted = /^(["'`“‘])(.*)(["'`”’])$/.exec(text);
+  if (quoted) text = quoted[2]!.trim();
+
+  if (text.length <= ITEM_LIMITS.description) return text;
+  // Cut at the last word that fits, never mid-word.
+  const cut = text.slice(0, ITEM_LIMITS.description - 1);
+  const space = cut.lastIndexOf(" ");
+  return `${(space > 0 ? cut.slice(0, space) : cut).trimEnd()}…`;
+}

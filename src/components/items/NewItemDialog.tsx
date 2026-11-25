@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { type CreatableType, createItem, type CreateItemField, type CreateItemInput } from "@/actions/items";
 import { FileUpload } from "@/components/items/FileUpload";
+import { GenerateDescriptionButton } from "@/components/items/GenerateDescription";
 import { SuggestTagsButton, TagSuggestionList, useTagSuggestions } from "@/components/items/SuggestTags";
 import { CollectionsField, ContentField, Field, LanguageField, TagsField, useFieldErrors } from "@/components/items/item-form-fields";
 import { Button } from "@/components/ui/button";
@@ -202,7 +203,30 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed
         <Input value={title} autoFocus {...fieldProps("title", setTitle)} />
       </Field>
 
-      <Field id={`${id}-description`} label="Description" error={messageFor("description")}>
+      <Field
+        id={`${id}-description`}
+        label="Description"
+        error={messageFor("description")}
+        action={
+          <GenerateDescriptionButton
+            aiAllowed={aiAllowed}
+            disabled={saving}
+            input={{
+              type,
+              title,
+              content: hasContent ? content : null,
+              language: hasLanguage ? language : null,
+              url: hasUrl ? url : null,
+              fileName: uploadKind ? (file?.name ?? null) : null,
+              tags: toTags(tags),
+            }}
+            onGenerated={(text) => {
+              setDescription(text);
+              clearFor("description");
+            }}
+          />
+        }
+      >
         <Textarea value={description} className="resize-none" {...fieldProps("description", setDescription)} />
       </Field>
 

@@ -4,8 +4,8 @@ import { z } from "zod";
 
 import { auth } from "@/auth";
 import { AiProviderError, aiErrorMessage, complete } from "@/lib/ai-client";
-import { NO_TAG_SUGGESTIONS, parseTagSuggestions } from "@/lib/ai-output";
-import { TAG_MAX_TOKENS, tagSuggestionMessages } from "@/lib/ai-prompts";
+import { NO_DESCRIPTION, NO_TAG_SUGGESTIONS, parseDescription, parseTagSuggestions } from "@/lib/ai-output";
+import { DESCRIPTION_MAX_TOKENS, TAG_MAX_TOKENS, descriptionMessages, tagSuggestionMessages } from "@/lib/ai-prompts";
 import { getPlanStatus } from "@/lib/db/billing";
 import { ITEM_LIMITS } from "@/lib/item-limits";
 import { checkRateLimit, tooManyAttemptsMessage } from "@/lib/rate-limit";
@@ -92,5 +92,59 @@ export async function generateAutoTags(input: AutoTagsInput): Promise<AiResult<s
   } catch (error) {
     console.error("[ai] generateAutoTags failed:", error);
     return failure("Could not suggest tags. Try again.");
+  }
+}
+
+/** What the item forms send for a description: whatever fields the item's type has, saved or not. */
+export interface DescriptionInput {
+  /** The item type's slug, as a hint to the model. */
+  type?: string | null;
+  title: string;
+  content?: string | null;
+  language?: string | null;
+  url?: string | null;
+  /** The uploaded or chosen file's name, for files and images. */
+  fileName?: string | null;
+  tags: string[];
+}
+
+const shortText = (max: number) => z.string().max(max).nullable().optional();
+
+// The URL is only context: a half-typed one is still worth sending, so it is capped, not validated.
+const descriptionSchema = autoTagsSchema.extend({
+  type: shortText(50),
+  language: shortText(ITEM_LIMITS.language),
+  url: shortText(2_048),
+  fileName: shortText(255),
+});
+
+/** A 1-2 sentence description of the item in the form. Nothing is saved: the form fills its Description field. */
+export async function generateDescription(input: DescriptionInput): Promise<AiResult<string>> {
+  const parsed = descriptionSchema.safeParse(input);
+  if (!parsed.success) return failure(parsed.error.issues[0]?.message ?? "Invalid input.");
+
+  try {
+    const session = await auth();
+    if (!session?.user?.id) return failure("You are not signed in.");
+
+    const blocked = await aiGate(session.user.id);
+    if (blocked) return failure(blocked);
+
+    let answer: string;
+    try {
+      answer = await complete(descriptionMessages(parsed.data), { maxTokens: DESCRIPTION_MAX_TOKENS });
+    } catch (error) {
+      if (!(error instanceof AiProviderError)) {
+        console.error("[ai] generateDescription could not call the AI:", error);
+      }
+      return failure(aiErrorMessage(error));
+    }
+
+    const description = parseDescription(answer);
+    if (!description) return failure(NO_DESCRIPTION);
+    return { success: true, data: description, error: null };
+  } catch (error) {
+    console.error("[ai] generateDescription failed:", error);
+    return failure("Could not write a description. Try again.");
   }
 }

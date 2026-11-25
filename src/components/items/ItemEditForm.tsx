@@ -5,6 +5,7 @@ import { useId, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { updateItem, type UpdateItemField, type UpdateItemInput } from "@/actions/items";
+import { GenerateDescriptionButton } from "@/components/items/GenerateDescription";
 import { SuggestTagsButton, TagSuggestionList, useTagSuggestions } from "@/components/items/SuggestTags";
 import { CollectionsField, ContentField, Field, LanguageField, TagsField, useFieldErrors } from "@/components/items/item-form-fields";
 import { Button } from "@/components/ui/button";
@@ -103,7 +104,30 @@ export function ItemEditForm({ card, detail, slug, onCancel, onSaved, aiAllowed,
           <Input value={title} {...fieldProps("title", setTitle)} />
         </Field>
 
-        <Field id={`${id}-description`} label="Description" error={messageFor("description")}>
+        <Field
+          id={`${id}-description`}
+          label="Description"
+          error={messageFor("description")}
+          action={
+            <GenerateDescriptionButton
+              aiAllowed={aiAllowed}
+              disabled={saving}
+              input={{
+                type: slug,
+                title,
+                content: hasContent ? content : null,
+                language: hasLanguage ? language : null,
+                url: hasUrl ? url : null,
+                fileName: detail.fileName,
+                tags: toTags(tags),
+              }}
+              onGenerated={(text) => {
+                setDescription(text);
+                clearFor("description");
+              }}
+            />
+          }
+        >
           <Textarea value={description} className="resize-none" {...fieldProps("description", setDescription)} />
         </Field>
 

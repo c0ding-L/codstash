@@ -67,6 +67,7 @@ export function SuggestTagsButton({ aiAllowed, state, disabled }: SuggestTagsPro
           type="button"
           variant="ghost"
           size="xs"
+          className="text-muted-foreground"
           disabled={state.pending || disabled || !state.canSuggest}
           title={state.canSuggest ? undefined : "Add a title first."}
           onClick={state.suggest}
@@ -79,7 +80,8 @@ export function SuggestTagsButton({ aiAllowed, state, disabled }: SuggestTagsPro
   );
 }
 
-function ShownIf({ allowed, children }: { allowed: Promise<boolean>; children: React.ReactNode }) {
+/** Its children once the plan check allows AI; nothing otherwise. */
+export function ShownIf({ allowed, children }: { allowed: Promise<boolean>; children: React.ReactNode }) {
   return use(allowed) ? children : null;
 }
 

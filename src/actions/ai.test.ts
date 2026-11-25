@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
-import { generateAutoTags } from "@/actions/ai";
+import { generateAutoTags, generateDescription } from "@/actions/ai";
 import { auth } from "@/auth";
 import { AiProviderError, complete } from "@/lib/ai-client";
 import { getPlanStatus } from "@/lib/db/billing";
@@ -156,5 +156,101 @@ describe("generateAutoTags", () => {
     planStatus.mockRejectedValue(new Error("db down"));
 
     expect(await generateAutoTags(INPUT)).toMatchObject({ success: false, error: "Could not suggest tags. Try again." });
+  });
+});
+
+describe("generateDescription", () => {
+  const LINK = { type: "link", title: "Next.js docs", url: "https://nextjs.org/docs", tags: [] };
+
+  beforeEach(() => {
+    ai.mockResolvedValue("Description: The official Next.js documentation, covering routing and data fetching.");
+  });
+
+  it("returns the cleaned-up description", async () => {
+    expect(await generateDescription(LINK)).toEqual({
+      success: true,
+      data: "The official Next.js documentation, covering routing and data fetching.",
+      error: null,
+    });
+    expect(ai).toHaveBeenCalledWith(expect.any(Array), { maxTokens: 500 });
+  });
+
+  it("sends the fields the item has", async () => {
+    await generateDescription({ ...INPUT, type: "snippet", language: "typescript" });
+
+    const [, user] = ai.mock.calls[0]![0];
+    expect(user.content).toBe(
+      "Type: snippet\nTitle: Debounce hook\nLanguage: typescript\nTags: React\n<content>\nexport function useDebounce() {}\n</content>",
+    );
+  });
+
+  it("sends a file's name when there is no content", async () => {
+    await generateDescription({ type: "file", title: "Q3 report", fileName: "q3-report.pdf", tags: [] });
+
+    expect(ai.mock.calls[0]![0][1].content).toBe("Type: file\nTitle: Q3 report\nFile name: q3-report.pdf");
+  });
+
+  it("rejects invalid input before anything else", async () => {
+    expect(await generateDescription({ ...LINK, title: "" })).toMatchObject({ success: false, error: "Add a title first." });
+    expect(await generateDescription({ ...LINK, url: "a".repeat(2_049) })).toMatchObject({ success: false });
+    expect(await generateDescription({ ...LINK, fileName: "a".repeat(256) })).toMatchObject({ success: false });
+    expect(await generateDescription({ ...LINK, language: "a".repeat(51) })).toMatchObject({ success: false });
+    expect(session).not.toHaveBeenCalled();
+    expect(ai).not.toHaveBeenCalled();
+  });
+
+  it("refuses when signed out", async () => {
+    session.mockResolvedValue(null);
+
+    expect(await generateDescription(LINK)).toMatchObject({ success: false, error: "You are not signed in." });
+    expect(ai).not.toHaveBeenCalled();
+  });
+
+  it("refuses Free users before the rate limits", async () => {
+    planStatus.mockResolvedValue({ proUntil: null, isPro: false, items: 0, collections: 0 });
+
+    expect(await generateDescription(LINK)).toMatchObject({ success: false, error: LIMIT_MESSAGES.ai });
+    expect(rateLimit).not.toHaveBeenCalled();
+    expect(ai).not.toHaveBeenCalled();
+  });
+
+  it("shares the AI rate limits", async () => {
+    rateLimit.mockResolvedValueOnce(allowed).mockResolvedValueOnce(blocked);
+
+    expect(await generateDescription(LINK)).toMatchObject({
+      success: false,
+      error: "You've used today's AI requests. Try again tomorrow.",
+    });
+    expect(rateLimit.mock.calls).toEqual([
+      ["ai", USER_ID],
+      ["aiDaily", USER_ID],
+    ]);
+    expect(ai).not.toHaveBeenCalled();
+  });
+
+  it("turns a provider error into a friendly message", async () => {
+    ai.mockRejectedValue(
+      new AiProviderError({ provider: "openrouter", status: 429, code: null, retryAfter: 20, message: "x" }),
+    );
+
+    expect(await generateDescription(LINK)).toMatchObject({ success: false, error: "AI is busy. Try again in 20 seconds." });
+  });
+
+  it("says so when the answer is empty", async () => {
+    ai.mockResolvedValue("```\n```");
+
+    expect(await generateDescription(LINK)).toMatchObject({
+      success: false,
+      error: "Could not write a description for this item.",
+    });
+  });
+
+  it("fails gracefully when the plan cannot be read", async () => {
+    planStatus.mockRejectedValue(new Error("db down"));
+
+    expect(await generateDescription(LINK)).toMatchObject({
+      success: false,
+      error: "Could not write a description. Try again.",
+    });
   });
 });
