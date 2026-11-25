@@ -94,7 +94,7 @@ export const ringClasses: Record<ColorToken, string> = {
   lime: "hover:ring-lime-400/40",
 };
 
-/** Sidebar labels and href segments — the schema has no `pluralName` column. */
+/** English plurals: the `/items/<segment>` URLs, and labels not yet translated. */
 export const typePluralNames: Record<ItemTypeSlug, string> = {
   snippet: "Snippets",
   prompt: "Prompts",
@@ -130,15 +130,15 @@ export const typeDescriptions: Record<ItemTypeSlug, string> = {
 /** Item types gated behind the Pro plan — surfaced with a "PRO" badge. */
 export const proTypeSlugs: ReadonlySet<ItemTypeSlug> = new Set(["file", "image"]);
 
-/** Fixed sidebar order and display labels (plural, leading cap). */
-export const sidebarTypes: { slug: ItemTypeSlug; label: string }[] = [
-  { slug: "snippet", label: "Snippets" },
-  { slug: "prompt", label: "Prompts" },
-  { slug: "note", label: "Notes" },
-  { slug: "command", label: "Commands" },
-  { slug: "file", label: "Files" },
-  { slug: "image", label: "Images" },
-  { slug: "link", label: "Links" },
+/** Fixed sidebar order. The labels come from the `itemTypes` messages, in the UI language. */
+export const sidebarTypes: { slug: ItemTypeSlug }[] = [
+  { slug: "snippet" },
+  { slug: "prompt" },
+  { slug: "note" },
+  { slug: "command" },
+  { slug: "file" },
+  { slug: "image" },
+  { slug: "link" },
 ];
 
 const CONTENT_FIELD_TYPES: ReadonlySet<ItemTypeSlug> = new Set(["snippet", "prompt", "command", "note"]);

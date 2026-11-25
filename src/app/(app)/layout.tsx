@@ -1,6 +1,9 @@
+import { Suspense } from "react";
+
 import { AppSidebar } from "@/components/dashboard/AppSidebar";
 import { TopBar } from "@/components/dashboard/TopBar";
 import { EditorPreferencesProvider } from "@/components/editor/EditorPreferencesContext";
+import { LocaleCookieSync } from "@/components/i18n/LocaleCookieSync";
 import { ItemDrawerProvider } from "@/components/items/ItemDrawerProvider";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -50,6 +53,10 @@ export default function AppLayout({
           </SidebarInset>
         </SidebarProvider>
       </TooltipProvider>
+      {/* Behind its own boundary: this layout must not wait on data (see above). */}
+      <Suspense fallback={null}>
+        <LocaleCookieSync />
+      </Suspense>
     </EditorPreferencesProvider>
   );
 }

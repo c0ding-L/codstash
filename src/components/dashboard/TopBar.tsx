@@ -1,5 +1,6 @@
 import { Star } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Suspense } from "react";
 
 import { NewCollectionDialog } from "@/components/collections/NewCollectionDialog";
@@ -25,6 +26,8 @@ export function TopBar({
   aiAllowed: Promise<boolean>;
   showUpgrade: Promise<boolean>;
 }) {
+  const t = useTranslations("nav");
+
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border px-4">
       <SidebarTrigger />
@@ -37,14 +40,14 @@ export function TopBar({
         </Suspense>
         <Link
           href="/favorites"
-          aria-label="Favorites"
-          title="Favorites"
+          aria-label={t("favorites")}
+          title={t("favorites")}
           className={buttonVariants({ variant: "ghost", size: "icon-lg" })}
         >
           <Star aria-hidden />
         </Link>
         <NewCollectionDialog />
-        <NewItemDialog uploadsAllowed={uploadsAllowed} aiAllowed={aiAllowed} />
+        <NewItemDialog uploadsAllowed={uploadsAllowed} aiAllowed={aiAllowed} label={t("newItem")} />
       </div>
     </header>
   );

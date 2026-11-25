@@ -1,16 +1,39 @@
-# Current Feature
+# Current Feature: i18n (French) — Phase 1: Infrastructure and App Shell
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- next-intl is installed with no locale prefix in the URLs. `proxy.ts` does not change.
+- The locale is chosen in this order: the `NEXT_LOCALE` cookie, then `User.locale`, then
+  `Accept-Language`, then `en`. The pure function `resolveLocale` lives in `src/lib/locale.ts`.
+- The `User.locale` column exists, added with `prisma migrate dev` on the develop DB.
+- The `setLocale` action writes the cookie and `User.locale`. `LocaleCookieSync` writes the
+  cookie again on a new device.
+- `messages/en.json` and `messages/fr.json` exist and their keys are typed.
+- `<html lang>` is dynamic, and `NextIntlClientProvider` only receives the namespaces the client
+  needs.
+- The app shell is translated: sidebar, top bar, user menu, and type labels (Snippet, Prompt,
+  Note, Commande, Fichier, Image, Lien).
+- There is a language switcher in `/settings` and in the user menu.
+- Tests cover `resolveLocale`, key parity and `setLocale`. `npm test`, `npm run build` and
+  `npm run lint` pass.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Spec: `context/features/i18n-phase-1-spec.md`. Plan: `docs/i18n-plan.md`.
+- Decided on 2026-11-25:
+  - no prefix
+  - `Accept-Language` on a first visit
+  - vous
+  - mixed type names
+- Install `next-intl` through Windows npm. Before migrating, check that `DATABASE_URL` points to
+  develop. Production is off-limits.
+- The pages stay in English until Phase 2 (`i18n-phase-2-spec.md`). Phase 3 covers errors, auth
+  and emails, and Phase 4 the homepage and the AI.
+- Branch: `feature/i18n-phase-1`.
 
 ---
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { Folder, Search } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -109,6 +110,7 @@ function useSearchData() {
  * drawer, choosing a collection opens its page.
  */
 export function CommandPalette() {
+  const t = useTranslations("search");
   const [open, setOpen] = useState(false);
   const { state, reload } = useSearchData();
   const openItem = useOpenItemDrawer();
@@ -151,8 +153,8 @@ export function CommandPalette() {
       >
         <Search className="size-4 shrink-0" aria-hidden />
         <span className="flex-1 truncate">
-          <span className="sm:hidden">Search…</span>
-          <span className="hidden sm:inline">Search collections and items…</span>
+          <span className="sm:hidden">{t("triggerShort")}</span>
+          <span className="hidden sm:inline">{t("trigger")}</span>
         </span>
         <kbd className="pointer-events-none hidden rounded border border-border bg-muted px-1.5 font-mono text-[0.7rem] font-medium sm:inline-block">
           ⌘K
@@ -162,21 +164,21 @@ export function CommandPalette() {
       <CommandDialog
         open={open}
         onOpenChange={setOpen}
-        title="Search"
-        description="Search your items and collections"
+        title={t("title")}
+        description={t("description")}
         className="sm:max-w-xl"
       >
         <Command filter={filterByKeywords}>
-          <CommandInput placeholder="Search items and collections…" />
+          <CommandInput placeholder={t("placeholder")} />
           <CommandList className="max-h-96">
             {state.status === "ready" ? (
               <>
-                <CommandEmpty>No results.</CommandEmpty>
+                <CommandEmpty>{t("empty")}</CommandEmpty>
                 <PaletteResults data={state.data} onSelectItem={selectItem} onSelectCollection={selectCollection} />
               </>
             ) : (
               <p className="py-6 text-center text-sm text-muted-foreground">
-                {state.status === "loading" ? "Loading…" : "Could not load your items. Close and try again."}
+                {state.status === "loading" ? t("loading") : t("loadFailed")}
               </p>
             )}
           </CommandList>
@@ -193,10 +195,12 @@ interface PaletteResultsProps {
 }
 
 function PaletteResults({ data, onSelectItem, onSelectCollection }: PaletteResultsProps) {
+  const t = useTranslations();
+
   return (
     <>
       {data.items.length > 0 ? (
-        <CommandGroup heading="Items">
+        <CommandGroup heading={t("search.items")}>
           {data.items.map(({ entry: item, keywords }) => (
             <CommandItem
               key={item.id}
@@ -217,14 +221,20 @@ function PaletteResults({ data, onSelectItem, onSelectCollection }: PaletteResul
                   <span className="truncate text-xs text-muted-foreground">{item.preview}</span>
                 ) : null}
               </span>
-              <CommandShortcut className="tracking-normal">{item.type.name}</CommandShortcut>
+              <CommandShortcut className="tracking-normal">
+                {/* System types by slug, in the UI language; a custom type keeps its own name. */}
+                {(() => {
+                  const slug = toItemTypeSlug(item.type.slug);
+                  return slug ? t(`itemTypes.${slug}.one`) : item.type.name;
+                })()}
+              </CommandShortcut>
             </CommandItem>
           ))}
         </CommandGroup>
       ) : null}
 
       {data.collections.length > 0 ? (
-        <CommandGroup heading="Collections">
+        <CommandGroup heading={t("search.collections")}>
           {data.collections.map(({ entry: collection, keywords }) => (
             <CommandItem
               key={collection.id}
@@ -237,7 +247,7 @@ function PaletteResults({ data, onSelectItem, onSelectCollection }: PaletteResul
               </span>
               <span className="truncate">{collection.name}</span>
               <CommandShortcut className="tracking-normal">
-                {collection.itemCount} {collection.itemCount === 1 ? "item" : "items"}
+                {t("search.itemCount", { count: collection.itemCount })}
               </CommandShortcut>
             </CommandItem>
           ))}

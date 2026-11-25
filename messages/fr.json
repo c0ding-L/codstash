@@ -1,0 +1,52 @@
+{
+  "locales": {
+    "en": "English",
+    "fr": "Français"
+  },
+  "itemTypes": {
+    "snippet": { "one": "Snippet", "other": "Snippets" },
+    "prompt": { "one": "Prompt", "other": "Prompts" },
+    "note": { "one": "Note", "other": "Notes" },
+    "command": { "one": "Commande", "other": "Commandes" },
+    "file": { "one": "Fichier", "other": "Fichiers" },
+    "image": { "one": "Image", "other": "Images" },
+    "link": { "one": "Lien", "other": "Liens" }
+  },
+  "nav": {
+    "types": "Types",
+    "favorites": "Favoris",
+    "recent": "Récents",
+    "viewAllCollections": "Voir toutes les collections",
+    "upgrade": "Passer à Pro",
+    "newItem": "Nouvel élément",
+    "newCollection": "Nouvelle collection"
+  },
+  "search": {
+    "triggerShort": "Rechercher…",
+    "trigger": "Rechercher des collections et des éléments…",
+    "title": "Recherche",
+    "description": "Recherchez parmi vos éléments et vos collections",
+    "placeholder": "Rechercher des éléments et des collections…",
+    "empty": "Aucun résultat.",
+    "loading": "Chargement…",
+    "loadFailed": "Impossible de charger vos éléments. Fermez et réessayez.",
+    "items": "Éléments",
+    "collections": "Collections",
+    "itemCount": "{count, plural, one {# élément} other {# éléments}}"
+  },
+  "userMenu": {
+    "account": "Compte",
+    "profile": "Profil",
+    "settings": "Paramètres",
+    "language": "Langue",
+    "signOut": "Se déconnecter"
+  },
+  "settings": {
+    "language": {
+      "heading": "Langue",
+      "title": "Langue d’affichage",
+      "description": "La langue de l’interface. Vos éléments ne sont jamais traduits.",
+      "saveFailed": "Impossible de changer la langue. Réessayez."
+    }
+  }
+}

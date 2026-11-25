@@ -1,5 +1,6 @@
 import { Sparkles } from "lucide-react";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -10,14 +11,15 @@ import { cn } from "@/lib/utils";
  */
 export async function UpgradeLink({ show }: { show: Promise<boolean> }) {
   if (!(await show)) return null;
+  const t = await getTranslations("nav");
   return (
     <Link
       href="/upgrade"
-      aria-label="Upgrade"
+      aria-label={t("upgrade")}
       className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-muted-foreground")}
     >
       <Sparkles aria-hidden />
-      <span className="hidden sm:inline">Upgrade</span>
+      <span className="hidden sm:inline">{t("upgrade")}</span>
     </Link>
   );
 }

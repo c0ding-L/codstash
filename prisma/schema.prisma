@@ -29,6 +29,8 @@ model User {
   passwordChangedAt DateTime?
   // Monaco settings from /settings; null or missing keys fall back to the defaults.
   editorPreferences Json?
+  // "en" | "fr", set from /settings. Null: follow the cookie, then the browser.
+  locale            String?
 
   // Mirror of `proUntil`, a readable flag only: every gate reads `isProActive(proUntil)`.
   isPro    Boolean   @default(false)

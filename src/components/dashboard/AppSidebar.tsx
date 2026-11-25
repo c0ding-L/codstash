@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Clock, Folders, Layers, Star } from "lucide-react";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { connection } from "next/server";
 import { Suspense } from "react";
 
@@ -35,6 +36,7 @@ import {
   proTypeSlugs,
   sidebarTypes,
   toColorToken,
+  toItemTypeSlug,
   typeIcons,
 } from "@/lib/item-type-ui";
 import { cn } from "@/lib/utils";
@@ -79,18 +81,25 @@ async function AppSidebarBody() {
   if (!session?.user?.id) redirect("/sign-in");
   const user = session.user;
   const userId = session.user.id;
-  const [itemTypes, favoriteCollections, recentCollections] = await Promise.all([
+  const [itemTypes, favoriteCollections, recentCollections, t] = await Promise.all([
     getItemTypes(userId),
     getFavoriteCollections(userId),
     getSidebarRecentCollections(userId),
+    getTranslations(),
   ]);
 
   return (
     <>
       <SidebarContent>
-        <SidebarTypesGroup itemTypes={itemTypes} />
-        <SidebarCollectionsGroup variant="favorite" collections={favoriteCollections} />
-        <SidebarCollectionsGroup variant="recent" collections={recentCollections} />
+        <SidebarTypesGroup
+          label={t("nav.types")}
+          itemTypes={itemTypes.map((type) => {
+            const slug = toItemTypeSlug(type.slug);
+            return { ...type, label: slug ? t(`itemTypes.${slug}.other`) : type.name };
+          })}
+        />
+        <SidebarCollectionsGroup label={t("nav.favorites")} variant="favorite" collections={favoriteCollections} />
+        <SidebarCollectionsGroup label={t("nav.recent")} variant="recent" collections={recentCollections} />
 
         {/* In a group like the entries above, so it gets their padding and lines up. */}
         <SidebarGroup>
@@ -98,11 +107,11 @@ async function AppSidebarBody() {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  tooltip="View all collections"
+                  tooltip={t("nav.viewAllCollections")}
                   render={<Link href="/collections" />}
                 >
                   <Folders aria-hidden />
-                  <span>View all collections</span>
+                  <span>{t("nav.viewAllCollections")}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -126,17 +135,18 @@ async function AppSidebarBody() {
 }
 
 /** The system types, each linking to its list, with a PRO badge where it applies. */
-function SidebarTypesGroup({ itemTypes }: { itemTypes: ItemTypeRow[] }) {
+function SidebarTypesGroup({ label, itemTypes }: { label: string; itemTypes: (ItemTypeRow & { label: string })[] }) {
   const typeBySlug = new Map(itemTypes.map((type) => [type.slug, type]));
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Types</SidebarGroupLabel>
+      <SidebarGroupLabel>{label}</SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
-          {sidebarTypes.map(({ slug, label }) => {
+          {sidebarTypes.map(({ slug }) => {
             const type = typeBySlug.get(slug);
             if (!type) return null;
+            const { label } = type;
 
             const color = toColorToken(type.color);
             const Icon = typeIcons[slug];
@@ -171,20 +181,21 @@ function SidebarTypesGroup({ itemTypes }: { itemTypes: ItemTypeRow[] }) {
 }
 
 interface SidebarCollectionsGroupProps {
+  label: string;
   /** Favorite: the primary type's plain icon. Recent: the icon on its tinted disc. */
   variant: "favorite" | "recent";
   collections: SidebarCollection[];
 }
 
 /** The favorite or recent collections, each marked by its most used type. */
-function SidebarCollectionsGroup({ variant, collections }: SidebarCollectionsGroupProps) {
+function SidebarCollectionsGroup({ label, variant, collections }: SidebarCollectionsGroupProps) {
   const LabelIcon = variant === "favorite" ? Star : Clock;
 
   return (
     <SidebarGroup>
       <SidebarGroupLabel>
         <LabelIcon className="mr-1.5" aria-hidden />
-        {variant === "favorite" ? "Favorites" : "Recent"}
+        {label}
       </SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>

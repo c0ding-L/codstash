@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { connection } from "next/server";
 import { Suspense } from "react";
 
@@ -7,6 +8,7 @@ import { auth } from "@/auth";
 import { ChangePasswordDialog } from "@/components/profile/ChangePasswordDialog";
 import { DeleteAccountDialog } from "@/components/profile/DeleteAccountDialog";
 import { EditorPreferencesForm } from "@/components/settings/EditorPreferencesForm";
+import { LanguageForm } from "@/components/settings/LanguageForm";
 import { UpgradeButtons } from "@/components/settings/UpgradeButtons";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -35,7 +37,11 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   if (!profile) redirect("/sign-in?callbackUrl=/settings");
 
   // `?currency=` comes from the pricing page's "Get Pro" link.
-  const [plan, { currency }] = await Promise.all([getPlanStatus(profile.id), searchParams]);
+  const [plan, { currency }, t] = await Promise.all([
+    getPlanStatus(profile.id),
+    searchParams,
+    getTranslations("settings.language"),
+  ]);
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
@@ -72,6 +78,18 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             <Suspense fallback={<Skeleton className="h-64 w-full" />}>
               <EditorPreferencesForm />
             </Suspense>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="flex flex-col gap-4">
+        <h2 className="text-lg font-semibold">{t("heading")}</h2>
+        <Card>
+          <CardHeader>
+            <CardDescription>{t("description")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <LanguageForm />
           </CardContent>
         </Card>
       </section>
