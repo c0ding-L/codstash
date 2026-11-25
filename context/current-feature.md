@@ -1,29 +1,31 @@
-# Current Feature: i18n (French) — Phase 3: Errors, Auth and Emails
+# Current Feature: i18n (French) — Phase 4: Homepage and AI
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- zod schemas become factories taking a translator; limits formatted for the locale.
-- Every `error: "…"` in server actions and API routes, and `LIMIT_MESSAGES`, is translated.
-- Auth error codes (`email_not_verified`, `rate_limited`) are mapped to translated messages on
-  the client.
-- Sign-in, register, verify-email, forgot and reset password pages are in French, with an EN / FR
-  toggle (cookie only when signed out).
-- The 3 emails and their subjects follow the requester's cookie (AccountExists: the target
-  `User.locale`).
-- Action tests mock `next-intl/server` with an English translator; existing assertions unchanged.
-- `npm test`, `npm run build` and `npm run lint` pass.
+- The public homepage (`src/components/home`, about 570 lines) and its metadata are in French,
+  using the `home` namespace, with an EN / FR toggle in the header or the footer.
+- `HomeNav`, shared by the homepage, `/sign-in` and `/register`, is translated.
+- Explain and Description answer in French when the locale is `fr` (one line appended to the
+  system prompt); Optimize and Tags keep the language of the content. System prompts stay in
+  English.
+- `src/actions/ai.ts` passes the locale to the message builders.
+- `ai-prompts.test.ts` and `actions/ai.test.ts` cover `fr`; `npm test`, `npm run build` and
+  `npm run lint` pass.
 
 ## Notes
 
-- Spec: `context/features/i18n-phase-3-spec.md`. Plan: `docs/i18n-plan.md`.
-- Client messages: every namespace except `SERVER_ONLY_NAMESPACES` (`src/i18n/client-messages.ts`);
-  `errors` and `emails` go there if only the server reads them.
+- Spec: `context/features/i18n-phase-4-spec.md`. Plan: `docs/i18n-plan.md` §5.6 and §8.
 - Draft French with DeepL (`DEEPL_API_KEY` in `.env`, glossary `codstash-ui-en-fr`), then review.
-- Branch: `feature/i18n-phase-3`.
+- Branch: `feature/i18n-phase-4`.
+
+---
+
+Previous feature (completed) — i18n Phase 3: action and route errors, the auth pages with an
+EN / FR toggle, and the three emails in French. Outcome in the History below.
 
 ---
 
@@ -2421,3 +2423,22 @@ Environment notes that outlive any one feature:
   `LIMIT_MESSAGES`, AI fallbacks. Browser-checked in FR and EN (13 routes, drawer, dialogs; no
   MISSING_MESSAGE, no hydration error). 968 tests, build and lint green. Merged into `main`
   (`ebffa37`, fast-forward); branch deleted. Feature completed.
+- 2026-11-25 — i18n Phase 3 (errors, auth pages, emails). zod schemas stay at module level with
+  typed message keys (`errKey`, `ErrorKey` from `Messages["errors"]`); actions call `getErrors()`
+  and `e.issue(issue)` fills `{max}` / `{min}` from the zod issue (deviation from the spec's
+  factories, noted there). Errors translated in `src/actions/*`, `/api/upload` and `/api/auth/*`;
+  `tooManyAttemptsMessage` / `tooManyAttemptsResponse` and `aiErrorMessage` are async;
+  `LIMIT_MESSAGES` and the `NO_*` constants removed; `validateUpload` returns `{ key, values }`
+  and each side words it. Auth pages translated, `LanguageToggle` in `AuthCard` (not on
+  `/verify-email`: switching refreshes the page, which spent the token again and showed "invalid").
+  Emails via `emailTranslator(locale)` (no request context): the requester's language, read before
+  `after()`; AccountExists in the owner's `User.locale`. Registration now saves the registrant's
+  language in `User.locale` (null when it was only the default). Tests: `setupFiles` mocks
+  `next-intl/server` with the real catalogs (`setTestLocale("fr")`), Vitest now also runs
+  `src/app/api/**` route tests, catalog parity uses `@formatjs/icu-messageformat-parser` (arguments
+  and rich-text tags). Browser-checked in FR on develop: register (locale saved), verify-email,
+  wrong password, too-long collection name, password reset, route errors via curl; the Test FR
+  account (`baye.abdoulaye.jeng@gmail.com`) replaced the earlier one. Not checked: a real email in
+  an inbox (verification is off in dev). `HomeNav` and the homepage stay English until Phase 4.
+  999 tests, build and lint green. Merged into `main` (`5c27b14`, fast-forward), then `36864c0`
+  restored CRLF in `ai-interaction.md`; branch deleted. Feature completed.
