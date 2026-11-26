@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
+import { Box, Bug, Code2 } from "lucide-react";
+
 import {
+  fieldsSlugOf,
+  isReservedTypeSlug,
+  resolveTypeView,
+  slugify,
+  typeSegmentFromPathname,
   hasContentField,
   hasLanguageField,
   hasUrlField,
@@ -8,7 +15,6 @@ import {
   itemTypeFromPathname,
   itemTypeFromSegment,
   itemTypeHref,
-  primaryTypeOf,
   sidebarTypes,
   toColorToken,
   toItemTypeSlug,
@@ -121,28 +127,98 @@ describe("item form field sets", () => {
   });
 });
 
-describe("primaryTypeOf", () => {
-  it("takes the first type, with its slug and colour checked", () => {
-    expect(
-      primaryTypeOf({
-        types: [
-          { slug: "snippet", name: "Snippet", color: "emerald" },
-          { slug: "note", name: "Note", color: "blue" },
-        ],
-      }),
-    ).toEqual({ name: "Snippet", slug: "snippet", color: "emerald" });
-  });
 
-  it("keeps the name when the slug or colour is unknown here", () => {
-    expect(primaryTypeOf({ types: [{ slug: "custom", name: "Custom", color: "pink" }] })).toEqual({
-      name: "Custom",
-      slug: null,
-      color: null,
+describe("resolveTypeView", () => {
+  const translate = (slug: ItemTypeSlug) => `t:${slug}`;
+
+  it("gives a system type its own icon, translated label and plural URL", () => {
+    const view = resolveTypeView({ slug: "snippet", name: "Snippet", icon: null, color: "emerald", isSystem: true }, translate);
+
+    expect(view).toEqual({
+      slug: "snippet",
+      systemSlug: "snippet",
+      label: "t:snippet",
+      Icon: Code2,
+      color: "emerald",
+      href: "/items/snippets",
+      isSystem: true,
     });
-    expect(primaryTypeOf({ types: [{ slug: "note", name: "Note", color: null }] })?.color).toBeNull();
   });
 
-  it("is null for a collection with no items", () => {
-    expect(primaryTypeOf({ types: [] })).toBeNull();
+  it("shows a custom type's name as typed, with its icon and its slug's URL", () => {
+    const view = resolveTypeView({ slug: "probleme", name: "Problème", icon: "bug", color: "rose", isSystem: false }, translate);
+
+    expect(view).toEqual({
+      slug: "probleme",
+      systemSlug: null,
+      label: "Problème",
+      Icon: Bug,
+      color: "rose",
+      href: "/items/probleme",
+      isSystem: false,
+    });
+  });
+
+  it("falls back to Box and indigo for an unknown icon or colour", () => {
+    const view = resolveTypeView({ slug: "x-y", name: "X Y", icon: "rocket-ship", color: "pink", isSystem: false }, translate);
+
+    expect(view.Icon).toBe(Box);
+    expect(view.color).toBe("indigo");
+  });
+
+  it("never treats a custom row as a system type, whatever its slug", () => {
+    const view = resolveTypeView({ slug: "note", name: "My notes", icon: null, color: null, isSystem: false }, translate);
+
+    expect(view).toMatchObject({ systemSlug: null, label: "My notes", Icon: Box, href: "/items/note" });
+  });
+
+  it("gives a custom type a note's fields", () => {
+    expect(fieldsSlugOf({ systemSlug: null })).toBe("note");
+    expect(fieldsSlugOf({ systemSlug: "command" })).toBe("command");
+  });
+});
+
+describe("slugify", () => {
+  it.each([
+    ["Problème", "probleme"],
+    ["  Error Vault  ", "error-vault"],
+    ["C# / .NET tips!", "c-net-tips"],
+    ["Ça--marche__bien", "ca-marche-bien"],
+    ["DB 2024", "db-2024"],
+  ])("turns %j into %j", (name, slug) => {
+    expect(slugify(name)).toBe(slug);
+  });
+
+  it.each([[""], ["   "], ["C"], ["+++"], ["🚀"]])("returns null for %j (fewer than 2 characters left)", (name) => {
+    expect(slugify(name)).toBeNull();
+  });
+
+  it("caps the slug at 40 characters without a trailing dash", () => {
+    const slug = slugify(`${"a".repeat(39)} ${"b".repeat(60)}`);
+    expect(slug).toBe("a".repeat(39));
+    expect(slugify("x".repeat(100))).toBe("x".repeat(40));
+  });
+});
+
+describe("isReservedTypeSlug", () => {
+  it.each(["snippet", "snippets", "link", "links", "image", "images", "new", "custom", "all"])("reserves %j", (slug) => {
+    expect(isReservedTypeSlug(slug)).toBe(true);
+  });
+
+  it.each(["problem", "error-vault", "notes-2"])("allows %j", (slug) => {
+    expect(isReservedTypeSlug(slug)).toBe(false);
+  });
+});
+
+describe("typeSegmentFromPathname", () => {
+  it("reads and decodes the segment after /items/", () => {
+    expect(typeSegmentFromPathname("/items/problem")).toBe("problem");
+    expect(typeSegmentFromPathname("/items/snippets/extra")).toBe("snippets");
+    expect(typeSegmentFromPathname("/items/caf%C3%A9")).toBe("café");
+  });
+
+  it("is null elsewhere, or for a malformed segment", () => {
+    expect(typeSegmentFromPathname("/dashboard")).toBeNull();
+    expect(typeSegmentFromPathname("/items/%E0%A4%A")).toBeNull();
   });
 });

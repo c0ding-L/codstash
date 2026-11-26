@@ -8,6 +8,7 @@ import { UpgradeLink } from "@/components/dashboard/UpgradeLink";
 import { NewItemDialog } from "@/components/items/NewItemDialog";
 import { CommandPalette } from "@/components/search/CommandPalette";
 import { buttonVariants } from "@/components/ui/button";
+import type { CustomTypeChoices } from "@/lib/load-custom-types";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
 /**
@@ -20,10 +21,12 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 export function TopBar({
   uploadsAllowed,
   aiAllowed,
+  customTypes,
   showUpgrade,
 }: {
   uploadsAllowed: Promise<boolean>;
   aiAllowed: Promise<boolean>;
+  customTypes: Promise<CustomTypeChoices>;
   showUpgrade: Promise<boolean>;
 }) {
   const t = useTranslations("nav");
@@ -47,7 +50,12 @@ export function TopBar({
           <Star aria-hidden />
         </Link>
         <NewCollectionDialog />
-        <NewItemDialog uploadsAllowed={uploadsAllowed} aiAllowed={aiAllowed} label={t("newItem")} />
+        <NewItemDialog
+          uploadsAllowed={uploadsAllowed}
+          aiAllowed={aiAllowed}
+          customTypes={customTypes}
+          label={t("newItem")}
+        />
       </div>
     </header>
   );

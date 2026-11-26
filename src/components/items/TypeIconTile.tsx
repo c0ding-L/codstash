@@ -1,17 +1,18 @@
 import { Clock, type LucideIcon } from "lucide-react";
 
-import { colorClasses, surfaceClasses, typeIcons } from "@/lib/item-type-ui";
+import { colorClasses, surfaceClasses } from "@/lib/item-type-ui";
 import { cn } from "@/lib/utils";
-import type { ColorToken, ItemTypeSlug } from "@/types/item-type";
+import type { ColorToken } from "@/types/item-type";
 
 interface TypeIconTileProps {
-  slug: ItemTypeSlug | null;
+  /** The type's icon (a `TypeView`'s `Icon`); null when there is no type. */
+  icon: LucideIcon | null;
   color: ColorToken | null;
   /** The square's size and radius, and `shrink-0` where it sits in a flex row. */
   className?: string;
   /** The icon's size. */
   iconClassName?: string;
-  /** Shown when the slug is unknown. */
+  /** Shown when there is no icon. */
   fallbackIcon?: LucideIcon;
   /** Without a colour, grey the icon instead of leaving it in the text colour. */
   mutedFallback?: boolean;
@@ -22,14 +23,14 @@ interface TypeIconTileProps {
  * the tile appears at several sizes, and Tailwind needs the classes written out.
  */
 export function TypeIconTile({
-  slug,
+  icon,
   color,
   className,
   iconClassName,
   fallbackIcon = Clock,
   mutedFallback = false,
 }: TypeIconTileProps) {
-  const Icon = slug ? typeIcons[slug] : fallbackIcon;
+  const Icon = icon ?? fallbackIcon;
 
   return (
     <span

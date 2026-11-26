@@ -4,7 +4,6 @@ import {
   Braces,
   CalendarClock,
   CalendarPlus,
-  Clock,
   Folder,
   HardDrive,
   type LucideIcon,
@@ -25,9 +24,9 @@ import { SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TypeIconTile } from "@/components/items/TypeIconTile";
 import type { DashboardItem, ItemDetailJson } from "@/lib/db/items";
-import { useFileSize, useItemTypeLabel } from "@/i18n/labels";
+import { useFileSize, useTypeView } from "@/i18n/labels";
 import { formatCollectionNames } from "@/lib/format";
-import { colorClasses, toColorToken, toItemTypeSlug, typeIcons } from "@/lib/item-type-ui";
+import { colorClasses, fieldsSlugOf } from "@/lib/item-type-ui";
 import { cn } from "@/lib/utils";
 
 export type ItemDetailState =
@@ -41,17 +40,24 @@ function formatDate(date: Date | string, locale: string) {
 }
 
 /** The drawer's title, next to the type's icon in the type's color, as on the cards. */
-function DrawerHeader({ card, title }: { card: DashboardItem; title: string }) {
+function DrawerHeader({ card, title, language = null }: { card: DashboardItem; title: string; language?: string | null }) {
+  const { Icon, color } = useTypeView()(card.type);
   return (
     <SheetHeader className="flex-row items-center gap-3 pr-12">
       <TypeIconTile
-        slug={toItemTypeSlug(card.type.slug)}
-        color={toColorToken(card.type.color)}
+        icon={Icon}
+        color={color}
         className="size-9 shrink-0 rounded-lg"
         iconClassName="size-4.5"
         mutedFallback
       />
       <SheetTitle className="min-w-0 text-lg leading-snug font-semibold break-words">{title}</SheetTitle>
+      {/* A custom item's language, when set: its content is Markdown, so nothing else shows it up top. */}
+      {language ? (
+        <span className="shrink-0 rounded-sm border border-border px-1.5 font-mono text-xs text-muted-foreground">
+          {language}
+        </span>
+      ) : null}
     </SheetHeader>
   );
 }
@@ -84,20 +90,22 @@ export function ItemDetails({ card, state, aiAllowed, onSaved, onDeleted, onFavo
   const tc = useTranslations("common");
   const tTypes = useTranslations("itemTypes");
   const locale = useLocale();
-  const typeLabel = useItemTypeLabel();
+  const typeView = useTypeView();
   const formatFileSize = useFileSize();
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const slug = toItemTypeSlug(card.type.slug);
-  const color = toColorToken(card.type.color);
-  const TypeIcon = slug ? typeIcons[slug] : Clock;
+  const view = typeView(card.type);
+  const { systemSlug, color, Icon: TypeIcon } = view;
+  // A custom item has a note's fields, plus a language.
+  const slug = fieldsSlugOf(view);
+  const isCustom = !view.isSystem;
   const detail = state.status === "ready" ? state.detail : null;
 
   const typeRow = (
     <DetailRow icon={Shapes} label={t("type")}>
-      <span className={cn("inline-flex items-center gap-1.5", color && colorClasses[color])}>
+      <span className={cn("inline-flex items-center gap-1.5", colorClasses[color])}>
         <TypeIcon className="size-3.5" aria-hidden />
-        {typeLabel(card.type)}
+        {view.label}
       </span>
     </DetailRow>
   );
@@ -118,12 +126,13 @@ export function ItemDetails({ card, state, aiAllowed, onSaved, onDeleted, onFavo
       <>
         <DrawerHeader
           card={card}
-          title={slug ? tTypes(`${slug}.edit`) : t("editTitle", { type: card.type.name })}
+          title={systemSlug ? tTypes(`${systemSlug}.edit`) : t("editTitle", { type: view.label })}
         />
         <ItemEditForm
           card={card}
           detail={detail}
           slug={slug}
+          isCustom={isCustom}
           aiAllowed={aiAllowed}
           onCancel={() => setEditing(false)}
           onSaved={(saved) => {
@@ -146,7 +155,7 @@ export function ItemDetails({ card, state, aiAllowed, onSaved, onDeleted, onFavo
 
   return (
     <>
-      <DrawerHeader card={card} title={card.title} />
+      <DrawerHeader card={card} title={card.title} language={isCustom ? (detail?.language ?? null) : null} />
 
       <ItemActionBar
         card={card}

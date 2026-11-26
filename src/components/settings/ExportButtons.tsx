@@ -41,11 +41,13 @@ export function ExportButtons() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = filenameFromDisposition(
+      const fileName = filenameFromDisposition(
         response.headers.get("Content-Disposition"),
         exportFileName(format, new Date()),
       );
+      link.download = fileName;
       link.click();
+      toast.success(t("done", { file: fileName }));
       // After the click has handed the URL to the download.
       setTimeout(() => URL.revokeObjectURL(url), 10_000);
     } catch {

@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { Crown, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, use, useId, useState, useTransition, type TransitionStartFunction } from "react";
@@ -23,18 +23,24 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { isUploadKind } from "@/lib/files";
 import {
   colorClasses,
+  customTypeIcon,
+  DEFAULT_CUSTOM_COLOR,
   hasContentField,
   hasLanguageField,
   hasUrlField,
-  itemTypeFromPathname,
+  itemTypeFromSegment,
   surfaceClasses,
+  toColorToken,
   typeColors,
   typeIcons,
+  typeSegmentFromPathname,
 } from "@/lib/item-type-ui";
+import type { CustomTypeChoices, CustomTypeOption } from "@/lib/load-custom-types";
 import { addTag, toTags } from "@/lib/tags";
 import { uploadFile } from "@/lib/upload-client";
 import { cn } from "@/lib/utils";
@@ -55,6 +61,8 @@ interface NewItemDialogProps {
   uploadsAllowed: Promise<boolean>;
   /** From the server's plan check; the Suggest Tags button is hidden while it is false. */
   aiAllowed: Promise<boolean>;
+  /** The user's custom types, listed after the system ones; disabled once Pro has lapsed. */
+  customTypes: Promise<CustomTypeChoices>;
   /** The button's text. The top bar's is "New Item"; type pages say "New Snippet" and so on. */
   label?: string;
   /** The top bar shows only the icon on narrow screens; the type pages always show the text. */
@@ -65,7 +73,7 @@ interface NewItemDialogProps {
  * A "New Item" button and the dialog it opens: in the top bar, and on the type
  * pages, where the dialog starts on the page's type.
  */
-export function NewItemDialog({ uploadsAllowed, aiAllowed, label, iconOnlyOnMobile = true }: NewItemDialogProps) {
+export function NewItemDialog({ uploadsAllowed, aiAllowed, customTypes, label, iconOnlyOnMobile = true }: NewItemDialogProps) {
   const t = useTranslations("newItem");
   const tn = useTranslations("nav");
   const triggerLabel = label ?? tn("newItem");
@@ -94,6 +102,7 @@ export function NewItemDialog({ uploadsAllowed, aiAllowed, label, iconOnlyOnMobi
             onCreated={() => setOpen(false)}
             uploadsAllowed={uploadsAllowed}
             aiAllowed={aiAllowed}
+            customTypes={customTypes}
           />
         </Suspense>
       </DialogContent>
@@ -107,37 +116,48 @@ interface NewItemFormProps {
   onCreated: () => void;
   uploadsAllowed: Promise<boolean>;
   aiAllowed: Promise<boolean>;
+  customTypes: Promise<CustomTypeChoices>;
 }
 
-function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed }: NewItemFormProps) {
+function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed, customTypes }: NewItemFormProps) {
   const t = useTranslations("newItem");
   const te = useTranslations("errors.upload");
   const tf = useTranslations("itemForm");
   const tc = useTranslations("common");
   const tTypes = useTranslations("itemTypes");
   const canUpload = use(uploadsAllowed);
+  const custom = use(customTypes);
   const router = useRouter();
   const id = useId();
   const { setError, isInvalid, messageFor, clearFor, fieldProps } = useFieldErrors<CreateItemField>(id);
 
   // Starts on the type of the listing page it was opened from, when that type can be created here.
-  const pageType = itemTypeFromPathname(usePathname());
+  const pageSegment = typeSegmentFromPathname(usePathname());
+  const pageType = pageSegment ? itemTypeFromSegment(pageSegment) : null;
+  const [pageCustomType] = useState(() =>
+    custom.canCreate ? (custom.types.find(({ slug }) => slug === pageSegment) ?? null) : null,
+  );
   const [type, setType] = useState<CreatableType>(
     () => TYPES.find(({ slug }) => slug === pageType && (canUpload || !isUploadKind(slug)))?.slug ?? "snippet",
   );
+  /** Set when a custom type is picked; `type` is then ignored. */
+  const [customTypeId, setCustomTypeId] = useState<string | null>(pageCustomType?.id ?? null);
+  const customType = custom.types.find(({ id: typeId }) => typeId === customTypeId) ?? null;
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");
   const [collectionIds, setCollectionIds] = useState<string[]>([]);
-  const [content, setContent] = useState("");
+  const [content, setContent] = useState(pageCustomType?.template ?? "");
   const [language, setLanguage] = useState("");
   const [url, setUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
 
-  const hasContent = hasContentField(type);
-  const hasLanguage = hasLanguageField(type);
-  const hasUrl = hasUrlField(type);
+  // A custom type is a text type: a note's Markdown content, plus a language.
+  const fieldsSlug = customType ? "note" : type;
+  const hasContent = hasContentField(fieldsSlug);
+  const hasLanguage = customType !== null || hasLanguageField(fieldsSlug);
+  const hasUrl = hasUrlField(fieldsSlug);
   const tagSuggestions = useTagSuggestions({
     title,
     content: hasContent ? content : null,
@@ -147,7 +167,7 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed
       clearFor("tags");
     },
   });
-  const uploadKind = isUploadKind(type) ? type : null;
+  const uploadKind = !customType && isUploadKind(type) ? type : null;
   const canSubmit = title.trim() !== "" && (!hasUrl || url.trim() !== "") && (!uploadKind || file !== null);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -156,7 +176,7 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed
 
     // Only the fields this type shows: text typed under another type is not sent.
     const input: CreateItemInput = {
-      type,
+      ...(customType ? { type: "custom", typeId: customType.id } : { type }),
       title,
       description,
       tags: toTags(tags),
@@ -199,12 +219,22 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed
     <form onSubmit={handleSubmit} noValidate className="flex min-w-0 flex-col gap-4">
       <TypePicker
         value={type}
+        customValue={customTypeId}
         disabled={saving}
         canUpload={canUpload}
+        custom={custom}
         onChange={(slug) => {
           // A file chosen as one kind is not valid as the other.
-          if (slug !== type) setFile(null);
+          if (slug !== type || customTypeId) setFile(null);
           setType(slug);
+          setCustomTypeId(null);
+          setError(null);
+        }}
+        onCustomChange={(option) => {
+          setFile(null);
+          setCustomTypeId(option.id);
+          // The template fills the content only while nothing has been typed there.
+          if (!content.trim() && option.template) setContent(option.template);
           setError(null);
         }}
       />
@@ -222,7 +252,8 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed
             aiAllowed={aiAllowed}
             disabled={saving}
             input={{
-              type,
+              // A custom type's name tells the model more than "note".
+              type: customType ? customType.name : type,
               title,
               content: hasContent ? content : null,
               language: hasLanguage ? language : null,
@@ -280,7 +311,7 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed
       {hasContent ? (
         <ContentField
           id={id}
-          slug={type}
+          slug={fieldsSlug}
           value={content}
           language={language}
           error={messageFor("content")}
@@ -325,14 +356,18 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed
 
 interface TypePickerProps {
   value: CreatableType;
+  /** The picked custom type's id; when set, it is the selection rather than `value`. */
+  customValue: string | null;
   disabled: boolean;
   /** False for Free accounts: File and Image stay visible but disabled, marked Pro. */
   canUpload: boolean;
+  custom: CustomTypeChoices;
   onChange: (slug: CreatableType) => void;
+  onCustomChange: (option: CustomTypeOption) => void;
 }
 
-/** The types the dialog can create, as a row of radio buttons in each type's colour. */
-function TypePicker({ value, disabled, canUpload, onChange }: TypePickerProps) {
+/** The types the dialog can create, as a row of radio buttons in each type's colour; custom ones after a line. */
+function TypePicker({ value, customValue, disabled, canUpload, custom, onChange, onCustomChange }: TypePickerProps) {
   const t = useTranslations("newItem");
   const tTypes = useTranslations("itemTypes");
   return (
@@ -340,7 +375,7 @@ function TypePicker({ value, disabled, canUpload, onChange }: TypePickerProps) {
       {TYPES.map(({ slug }) => {
         const Icon = typeIcons[slug];
         const color = typeColors[slug];
-        const selected = slug === value;
+        const selected = customValue === null && slug === value;
         const proOnly = !canUpload && isUploadKind(slug);
         return (
           <Button
@@ -361,6 +396,36 @@ function TypePicker({ value, disabled, canUpload, onChange }: TypePickerProps) {
           </Button>
         );
       })}
+
+      {custom.types.length > 0 ? (
+        <>
+          <Separator className="my-1 basis-full" />
+          {custom.types.map((option) => {
+            const Icon = customTypeIcon(option.icon);
+            const color = toColorToken(option.color) ?? DEFAULT_CUSTOM_COLOR;
+            const selected = option.id === customValue;
+            return (
+              <Button
+                key={option.id}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                variant="ghost"
+                size="sm"
+                className={cn(selected && ["ring-1 ring-foreground/20", surfaceClasses[color]])}
+                disabled={disabled || !custom.canCreate}
+                title={custom.canCreate ? undefined : t("customProOnly")}
+                onClick={() => onCustomChange(option)}
+              >
+                <Icon className={colorClasses[color]} aria-hidden />
+                {/* The author's own name, never translated. */}
+                {option.name}
+                {custom.canCreate ? null : <Crown className="text-amber-400" aria-hidden />}
+              </Button>
+            );
+          })}
+        </>
+      ) : null}
     </div>
   );
 }

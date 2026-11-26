@@ -9,7 +9,7 @@ import { UserAvatar } from "@/components/auth/UserAvatar";
 import { TypeIconTile } from "@/components/items/TypeIconTile";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getProfile, getProfileStats } from "@/lib/db/profile";
-import { getItemTypeLabel } from "@/i18n/labels-server";
+import { getTypeView } from "@/i18n/labels-server";
 import { pageMetadata } from "@/i18n/labels-server";
 
 export function generateMetadata(): Promise<Metadata> {
@@ -26,10 +26,10 @@ export default async function ProfilePage() {
   const profile = session?.user?.id ? await getProfile(session.user.id) : null;
   if (!profile) redirect("/sign-in?callbackUrl=/profile");
 
-  const [stats, t, typeLabel, locale] = await Promise.all([
+  const [stats, t, typeView, locale] = await Promise.all([
     getProfileStats(profile.id),
     getTranslations("profile"),
-    getItemTypeLabel(),
+    getTypeView(),
     getLocale(),
   ]);
   const memberSince = new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "UTC" });
@@ -86,13 +86,16 @@ export default async function ProfilePage() {
           </CardHeader>
           <CardContent>
             <ul className="grid gap-2 sm:grid-cols-2">
-              {stats.byType.map(({ slug, color, count }) => (
-                <li key={slug} className="flex items-center gap-3 rounded-lg px-2 py-1.5">
-                  <TypeIconTile slug={slug} color={color} className="size-8 rounded-md" iconClassName="size-4" mutedFallback />
-                  <span className="flex-1">{typeLabel({ slug, name: slug }, "other")}</span>
-                  <span className="font-medium tabular-nums">{count}</span>
-                </li>
-              ))}
+              {stats.byType.map((type) => {
+                const view = typeView(type, "other");
+                return (
+                  <li key={`${type.isSystem}-${type.slug}`} className="flex items-center gap-3 rounded-lg px-2 py-1.5">
+                    <TypeIconTile icon={view.Icon} color={view.color} className="size-8 rounded-md" iconClassName="size-4" />
+                    <span className="flex-1">{view.label}</span>
+                    <span className="font-medium tabular-nums">{type.count}</span>
+                  </li>
+                );
+              })}
             </ul>
           </CardContent>
         </Card>

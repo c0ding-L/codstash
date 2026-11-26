@@ -44,7 +44,7 @@ function row(overrides: Partial<ExportItemRow> = {}): ExportItemRow {
 
 const header = exportHeader({
   user: { name: "Demo", email: "demo@example.com", locale: "fr" },
-  types: [{ slug: "problem", name: "Problem", icon: "Bug", color: "rose" }],
+  types: [{ slug: "problem", name: "Problem", icon: "Bug", color: "rose", template: "## Steps\n" }],
   collections: [
     { id: "col_1", name: "DevOps", description: null, isFavorite: true, createdAt: NOW, updatedAt: NOW },
   ],
@@ -101,6 +101,9 @@ describe("exportJsonChunks", () => {
     expect(document.items.map((item: { id: string }) => item.id)).toEqual(["a1", "a2", "a3"]);
     expect(document.items[2].title).toBe('Quote " and \\');
     expect(document.collections).toHaveLength(1);
+    expect(document.types).toEqual([
+      { slug: "problem", name: "Problem", icon: "Bug", color: "rose", template: "## Steps\n" },
+    ]);
   });
 
   it("writes an empty item list for an empty stash", async () => {

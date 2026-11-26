@@ -2,7 +2,66 @@
 
 ## Status
 
-In Progress
+Implemented on `feature/custom-item-types`. The schema move is committed (`6a3b675`); the rest is not
+committed yet. Defaults kept: a custom type is a text type, at most 20 per user.
+
+- Migration `20261126210956_custom_item_types` (`ItemType.template`), applied to develop.
+- New files:
+  - `src/lib/db/item-types.ts`: owner-scoped queries, `resolveTypeSegment` (React `cache`).
+  - `src/actions/item-types.ts`: create, update and delete.
+  - `src/lib/load-custom-types.ts`: streamed to the New Item dialog.
+  - `src/components/settings/ItemTypesManager.tsx` and `ItemTypeDialog.tsx`: the `#types` section.
+- `item-type-ui.ts`:
+  - `CUSTOM_TYPE_ICONS` (24 icons), `resolveTypeView`, `fieldsSlugOf`, `slugify`,
+    `isReservedTypeSlug` and `typeSegmentFromPathname`.
+  - `useTypeView` / `getTypeView` wrap the view with the UI-language labels.
+  - `TypeIconTile` now takes an `icon` instead of a slug.
+  - `primaryTypeOf` and `useItemTypeLabel` removed (unused).
+- `DashboardItem.type` and `CollectionType` now carry `id`, `icon` and `isSystem`.
+- The profile breakdown lists the custom types after the seven system ones.
+- The drawer shows a custom item's language as a small label next to its title (and in the
+  Language row).
+- The palette previews a custom item's content as Markdown, like a note (`getSearchItems`).
+- The icon picker's labels are translated (`settings.types.icons`).
+- `/feature review` fix: the export now includes each custom type's `template` (the header's `types`).
+- Author's adjustments:
+  - A custom type picks from six colours that no system type uses: orange, brown, fuchsia,
+    indigo, white and slate (`CUSTOM_COLOR_TOKENS`, new `ColorToken`s). The action refuses the
+    others. The default is indigo. Red and teal were tried first and dropped as too close to
+    rose and emerald. Brown is `#b9805a` (arbitrary value), white is `stone-200`. French
+    « Marron » / « Blanc » from DeepL, with its "(couleur)" hint dropped.
+  - Toasts show at the top right (`components/ui/sonner.tsx`).
+  - The export shows "Export complete: {file}" once the file is handed to the browser.
+  - French from DeepL, unchanged except for the no-break space before `:`.
+- Account deletion checked on develop: a throwaway user with a custom type and two items was
+  deleted in `deleteAccount`'s order, items first, with no error. No `NoAction` migration needed.
+  `scripts/delete-all-users-except-demo` already deleted items first, so it is unchanged.
+- French from DeepL (glossary `codstash-ui-en-fr`, `prefer_more`). Changes to its output:
+  - curly apostrophes, and no-break spaces before `? :`
+  - « version Pro » → « formule Pro »
+  - « langue » → « langage »
+  - « Personnalisé » → « Personnalisés »
+  - « déjà pris » → « réservé »
+  - word order of `atCap`
+  - the `inUse` plural, whose count DeepL broke; « d’abord » used in both branches
+  - icon names translated out of context: « Clé » → « Clé à molette » (wrench), « Livre ouvert »,
+    « Cadenas », « Fusée », « Fiole », « Étoile », « Éclair », « Paquet »
+- Browser check on develop with the demo account, in FR and EN:
+  - "Problème" created with a template; reserved name and duplicate name refused.
+  - On `/items/probleme`, "Nouveau Problème" preselects the type and pre-fills the template.
+  - The item shows in the sidebar's Custom group with its count, on the dashboard, in the
+    palette and on the profile.
+  - The drawer renders Markdown; the edit form has Language and Content.
+  - Delete refused while the type has an item.
+  - Renamed to "Bug report": the old URL answers 404, the new one 200.
+  - Set Free (lapsed Pro): the type stays listed, it is disabled with a Crown in New Item, and
+    Settings shows the upsell. The item and then the type were deleted.
+  - Demo reset to Pro (until 2026-12-26) for the author's tests; it owns no custom types.
+  - At 375 px (mobile emulation), FR: the type dialog, Settings, New Item and the type page do
+    not overflow. The drawer shows the language label next to the title (language set on
+    develop by SQL).
+  - Every test item and type was deleted afterwards: the demo owns no custom types, 14 items.
+- 1,124 tests, lint and build green.
 
 ## Goals
 

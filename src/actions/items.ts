@@ -8,11 +8,12 @@ import { errKey } from "@/i18n/error-keys";
 import { getErrors } from "@/i18n/errors-server";
 import { getPlanStatus } from "@/lib/db/billing";
 import { ownsCollections } from "@/lib/db/collections";
+import { ownsCustomType } from "@/lib/db/item-types";
 import { fromObjectMetadata, isOwnKey } from "@/lib/files";
 import { ITEM_LIMITS } from "@/lib/item-limits";
 import { createItemSchema, updateItemSchema } from "@/lib/item-schemas";
 import { deleteObjectsQuietly, headObject } from "@/lib/r2";
-import { FREE_LIMITS, LimitReachedError, canCreateItem, canUploadFiles } from "@/lib/usage-limits";
+import { FREE_LIMITS, LimitReachedError, canCreateItem, canUploadFiles, canUseCustomTypes } from "@/lib/usage-limits";
 import {
   createItem as createItemQuery,
   deleteItem as deleteItemQuery,
@@ -126,7 +127,10 @@ export type CreatableType = "snippet" | "prompt" | "command" | "note" | "link" |
 
 /** What the dialog sends: the type, plus only the fields that type uses. */
 export interface CreateItemInput {
-  type: CreatableType;
+  /** `"custom"` with `typeId` for one of the user's own types. */
+  type: CreatableType | "custom";
+  /** Custom types only: the id of one of the user's own types. */
+  typeId?: string;
   title: string;
   description?: string | null;
   content?: string | null;
@@ -143,6 +147,7 @@ export type CreateItemField = keyof CreateItemInput;
 
 const CREATE_ITEM_FIELDS: ReadonlySet<string> = new Set<CreateItemField>([
   "type",
+  "typeId",
   "title",
   "description",
   "content",
@@ -193,6 +198,9 @@ export async function createItem(input: CreateItemInput): Promise<CreateItemResu
       await discardUpload();
       return { success: false, data: null, error: e.message("limits.uploads") };
     }
+    if (parsed.data.type === "custom" && !canUseCustomTypes(plan)) {
+      return { success: false, data: null, error: e.message("limits.customTypes") };
+    }
     if (!canCreateItem(plan)) {
       await discardUpload();
       return { success: false, data: null, error: e.message("limits.items", { max: FREE_LIMITS.items }) };
@@ -204,6 +212,17 @@ export async function createItem(input: CreateItemInput): Promise<CreateItemResu
     if (!(await ownsCollections(userId, parsed.data.collectionIds))) {
       await discardUpload();
       return { success: false, data: null, error: e.message("items.unknownCollection"), field: "collectionIds" };
+    }
+
+    if (parsed.data.type === "custom") {
+      // Only the user's own custom types: a system type's id or another user's is refused.
+      const { typeId, title, description, content, language, tags, collectionIds } = parsed.data;
+      const fields = { title, description, content, language, tags, collectionIds };
+      if (!(await ownsCustomType(userId, typeId))) {
+        return { success: false, data: null, error: e.message("items.unknownType"), field: "typeId" };
+      }
+      const card = await createItemQuery(userId, { ...fields, type: { customTypeId: typeId } }, limits);
+      return { success: true, data: card, error: null };
     }
 
     if (parsed.data.type !== "file" && parsed.data.type !== "image") {

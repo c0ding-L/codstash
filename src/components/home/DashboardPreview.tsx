@@ -19,6 +19,12 @@ const cardClasses: Record<ColorToken, string> = {
   rose: "border-rose-400/20 bg-rose-400/[0.06]",
   violet: "border-violet-400/20 bg-violet-400/[0.06]",
   lime: "border-lime-400/20 bg-lime-400/[0.06]",
+  orange: "border-orange-400/20 bg-orange-400/[0.06]",
+  fuchsia: "border-fuchsia-400/20 bg-fuchsia-400/[0.06]",
+  indigo: "border-indigo-400/20 bg-indigo-400/[0.06]",
+  brown: "border-[#b9805a]/20 bg-[#b9805a]/[0.06]",
+  white: "border-stone-200/20 bg-stone-200/[0.06]",
+  slate: "border-slate-400/20 bg-slate-400/[0.06]",
 };
 
 /** A small, static copy of the dashboard: types and collections, search, item cards. */

@@ -16,4 +16,20 @@ export type ColorToken =
   | "cyan"
   | "rose"
   | "violet"
-  | "lime";
+  | "lime"
+  | "orange"
+  | "fuchsia"
+  | "indigo"
+  | "brown"
+  | "white"
+  | "slate";
+
+/** A type row as the queries return it, system or custom. `resolveTypeView` turns it into what the UI shows. */
+export interface TypeRef {
+  slug: string;
+  name: string;
+  /** A key of `CUSTOM_TYPE_ICONS` for a custom type; system types use their own icon. */
+  icon: string | null;
+  color: string | null;
+  isSystem: boolean;
+}

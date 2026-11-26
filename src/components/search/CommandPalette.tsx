@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/command";
 import type { SearchCollection } from "@/lib/db/collections";
 import type { SearchItem, SearchItemJson } from "@/lib/db/items";
-import { toColorToken, toItemTypeSlug } from "@/lib/item-type-ui";
+import { useTypeView } from "@/i18n/labels";
 import { normalizeSearchText, searchScore } from "@/lib/search-match";
 
 /** An entry with its search text: the label first, normalised once when the data loads. */
@@ -196,12 +196,16 @@ interface PaletteResultsProps {
 
 function PaletteResults({ data, onSelectItem, onSelectCollection }: PaletteResultsProps) {
   const t = useTranslations();
+  const typeView = useTypeView();
 
   return (
     <>
       {data.items.length > 0 ? (
         <CommandGroup heading={t("search.items")}>
-          {data.items.map(({ entry: item, keywords }) => (
+          {data.items.map(({ entry: item, keywords }) => {
+            // System types in the UI language; a custom type keeps its own name.
+            const view = typeView(item.type);
+            return (
             <CommandItem
               key={item.id}
               value={`item-${item.id}`}
@@ -209,8 +213,8 @@ function PaletteResults({ data, onSelectItem, onSelectCollection }: PaletteResul
               onSelect={() => onSelectItem(item)}
             >
               <TypeIconTile
-                slug={toItemTypeSlug(item.type.slug)}
-                color={toColorToken(item.type.color)}
+                icon={view.Icon}
+                color={view.color}
                 className="size-7 shrink-0 rounded-md"
                 iconClassName="size-4"
                 mutedFallback
@@ -221,15 +225,10 @@ function PaletteResults({ data, onSelectItem, onSelectCollection }: PaletteResul
                   <span className="truncate text-xs text-muted-foreground">{item.preview}</span>
                 ) : null}
               </span>
-              <CommandShortcut className="tracking-normal">
-                {/* System types by slug, in the UI language; a custom type keeps its own name. */}
-                {(() => {
-                  const slug = toItemTypeSlug(item.type.slug);
-                  return slug ? t(`itemTypes.${slug}.one`) : item.type.name;
-                })()}
-              </CommandShortcut>
+              <CommandShortcut className="tracking-normal">{view.label}</CommandShortcut>
             </CommandItem>
-          ))}
+            );
+          })}
         </CommandGroup>
       ) : null}
 

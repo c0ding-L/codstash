@@ -29,6 +29,8 @@ interface ItemEditFormProps {
   card: DashboardItem;
   detail: ItemDetailJson;
   slug: ItemTypeSlug | null;
+  /** A custom type's item: a note's fields plus a language. */
+  isCustom: boolean;
   onCancel: () => void;
   onSaved: (saved: SavedItem) => void;
   /** From the server's plan check; the Suggest Tags button is hidden while it is false. */
@@ -37,7 +39,7 @@ interface ItemEditFormProps {
   children: React.ReactNode;
 }
 
-export function ItemEditForm({ card, detail, slug, onCancel, onSaved, aiAllowed, children }: ItemEditFormProps) {
+export function ItemEditForm({ card, detail, slug, isCustom, onCancel, onSaved, aiAllowed, children }: ItemEditFormProps) {
   const t = useTranslations("itemForm");
   const tc = useTranslations("common");
   const pathname = usePathname();
@@ -55,7 +57,7 @@ export function ItemEditForm({ card, detail, slug, onCancel, onSaved, aiAllowed,
   const [url, setUrl] = useState(detail.url ?? "");
 
   const hasContent = hasContentField(slug);
-  const hasLanguage = hasLanguageField(slug);
+  const hasLanguage = isCustom || hasLanguageField(slug);
   const hasUrl = hasUrlField(slug);
   const tagSuggestions = useTagSuggestions({
     title,
@@ -116,7 +118,8 @@ export function ItemEditForm({ card, detail, slug, onCancel, onSaved, aiAllowed,
               aiAllowed={aiAllowed}
               disabled={saving}
               input={{
-                type: slug,
+                // A custom type's name tells the model more than "note".
+                type: isCustom ? card.type.name : slug,
                 title,
                 content: hasContent ? content : null,
                 language: hasLanguage ? language : null,

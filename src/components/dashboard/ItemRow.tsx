@@ -4,26 +4,25 @@ import { useTranslations } from "next-intl";
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
 import { TypeIconTile } from "@/components/items/TypeIconTile";
 import type { DashboardItem } from "@/lib/db/items";
-import { useFileSize, useItemTypeLabel, useRelativeTime } from "@/i18n/labels";
+import { useFileSize, useRelativeTime, useTypeView } from "@/i18n/labels";
 import { formatCollectionNames } from "@/lib/format";
-import { colorClasses, toColorToken, toItemTypeSlug } from "@/lib/item-type-ui";
+import { colorClasses } from "@/lib/item-type-ui";
 import { cn } from "@/lib/utils";
 
 /** `now` is passed in so labels measure against the wall clock, not MOCK_NOW. */
 export function ItemRow({ item, now }: { item: DashboardItem; now: string }) {
   const t = useTranslations("common");
-  const typeLabel = useItemTypeLabel();
+  const typeView = useTypeView();
   const relativeTime = useRelativeTime();
   const fileSize = useFileSize();
   const collectionNames = formatCollectionNames(item.collections);
-  const slug = toItemTypeSlug(item.type.slug);
-  const color = toColorToken(item.type.color);
+  const { Icon, color, label } = typeView(item.type);
 
   return (
     <li className="relative flex items-start gap-3 rounded-lg border border-border p-3 transition-colors hover:bg-muted/50">
       <ItemDrawerTrigger item={item} />
 
-      <TypeIconTile slug={slug} color={color} className="size-8 shrink-0 rounded-lg" iconClassName="size-4" />
+      <TypeIconTile icon={Icon} color={color} className="size-8 shrink-0 rounded-lg" iconClassName="size-4" />
 
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <div className="flex items-center gap-1.5">
@@ -44,7 +43,7 @@ export function ItemRow({ item, now }: { item: DashboardItem; now: string }) {
         ) : null}
 
         <div className="flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
-          <span className={cn(color && colorClasses[color])}>{typeLabel(item.type)}</span>
+          <span className={cn(colorClasses[color])}>{label}</span>
           {collectionNames ? <span>· {collectionNames}</span> : null}
           {item.fileSize ? <span>· {fileSize(item.fileSize)}</span> : null}
         </div>

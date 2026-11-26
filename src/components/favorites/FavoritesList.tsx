@@ -1,14 +1,14 @@
-import { Folder } from "lucide-react";
+import { Folder, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
 import type { RecentCollection } from "@/lib/db/collections";
 import type { DashboardItem } from "@/lib/db/items";
-import { useItemTypeLabel, useRelativeTime } from "@/i18n/labels";
-import { colorClasses, primaryTypeOf, toColorToken, toItemTypeSlug, typeIcons } from "@/lib/item-type-ui";
+import { useRelativeTime, useTypeView } from "@/i18n/labels";
+import { colorClasses } from "@/lib/item-type-ui";
 import { cn } from "@/lib/utils";
-import type { ColorToken, ItemTypeSlug } from "@/types/item-type";
+import type { ColorToken } from "@/types/item-type";
 
 /** One dense, editor-style row: icon, title, type badge, date. */
 const ROW_CLASS =
@@ -35,8 +35,8 @@ export function FavoritesSection({
   );
 }
 
-function RowIcon({ slug, color }: { slug: ItemTypeSlug | null; color: ColorToken | null }) {
-  const Icon = slug ? typeIcons[slug] : Folder;
+function RowIcon({ icon, color }: { icon: LucideIcon | null; color: ColorToken | null }) {
+  const Icon = icon ?? Folder;
   return (
     <Icon
       className={cn("size-3.5 shrink-0", color ? colorClasses[color] : "text-muted-foreground")}
@@ -72,16 +72,15 @@ function RowDate({ date, now }: { date: Date; now: string }) {
 
 /** Opens the item in the layout's drawer; the trigger covers the row. */
 export function FavoriteItemRow({ item, now }: { item: DashboardItem; now: string }) {
-  const typeLabel = useItemTypeLabel();
-  const slug = toItemTypeSlug(item.type.slug);
-  const color = toColorToken(item.type.color);
+  const typeView = useTypeView();
+  const { Icon, color, label } = typeView(item.type);
 
   return (
     <li className={ROW_CLASS}>
       <ItemDrawerTrigger item={item} />
-      <RowIcon slug={slug} color={color} />
+      <RowIcon icon={Icon} color={color} />
       <span className="min-w-0 flex-1 truncate">{item.title}</span>
-      <TypeBadge label={typeLabel(item.type)} color={color} />
+      <TypeBadge label={label} color={color} />
       <RowDate date={item.updatedAt} now={now} />
     </li>
   );
@@ -90,8 +89,9 @@ export function FavoriteItemRow({ item, now }: { item: DashboardItem; now: strin
 /** Links to the collection; its icon and badge come from its most used type. */
 export function FavoriteCollectionRow({ collection, now }: { collection: RecentCollection; now: string }) {
   const t = useTranslations();
-  const typeLabel = useItemTypeLabel();
-  const primary = primaryTypeOf(collection);
+  const typeView = useTypeView();
+  // The types come sorted by count, so the first is the most used.
+  const primary = collection.types[0] ? typeView(collection.types[0]) : null;
   const color = primary?.color ?? null;
 
   return (
@@ -100,12 +100,12 @@ export function FavoriteCollectionRow({ collection, now }: { collection: RecentC
         href={`/collections/${collection.id}`}
         className={cn(ROW_CLASS, "outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset")}
       >
-        <RowIcon slug={primary?.slug ?? null} color={color} />
+        <RowIcon icon={primary?.Icon ?? null} color={color} />
         <span className="min-w-0 flex-1 truncate">{collection.name}</span>
         <span className="shrink-0 text-[0.7rem] text-muted-foreground tabular-nums">
           {t("common.itemCount", { count: collection.itemCount })}
         </span>
-        <TypeBadge label={primary ? typeLabel(primary) : t("favorites.emptyCollection")} color={color} />
+        <TypeBadge label={primary?.label ?? t("favorites.emptyCollection")} color={color} />
         <RowDate date={collection.updatedAt} now={now} />
       </Link>
     </li>

@@ -53,8 +53,8 @@ const findTypes = asMock(prisma.itemType.findMany);
 
 const USER = "user_a";
 
-const SNIPPET = { id: "typ_snippet", slug: "snippet", name: "Snippet", color: "emerald" };
-const LINK = { id: "typ_link", slug: "link", name: "Link", color: "lime" };
+const SNIPPET = { id: "typ_snippet", slug: "snippet", name: "Snippet", icon: null, color: "emerald", isSystem: true };
+const LINK = { id: "typ_link", slug: "link", name: "Link", icon: null, color: "lime", isSystem: true };
 const COLLECTION = {
   id: "col_1",
   name: "DevOps",

@@ -74,7 +74,12 @@ describe("account isolation", () => {
     ["getFavoriteItems", () => getFavoriteItems(USER), { userId: USER, isFavorite: true }],
     ["getRecentItems", () => getRecentItems(USER), { userId: USER }],
     ["getSearchItems", () => getSearchItems(USER), { userId: USER }],
-    ["getItemsByType", () => getItemsByType(USER, "snippet"), { userId: USER, type: { slug: "snippet" } }],
+    ["getItemsByType", () => getItemsByType(USER, { slug: "snippet" }), { userId: USER, type: { slug: "snippet" } }],
+    [
+      "getItemsByType (custom)",
+      () => getItemsByType(USER, { customTypeId: "typ_custom" }),
+      { userId: USER, typeId: "typ_custom" },
+    ],
     [
       "getItemsByCollection",
       () => getItemsByCollection(USER, "col_1"),
@@ -88,7 +93,7 @@ describe("account isolation", () => {
 
   it.each([
     ["getRecentItems", () => getRecentItems(USER), { userId: USER }],
-    ["getItemsByType", () => getItemsByType(USER, "note"), { userId: USER, type: { slug: "note" } }],
+    ["getItemsByType", () => getItemsByType(USER, { slug: "note" }), { userId: USER, type: { slug: "note" } }],
     [
       "getItemsByCollection",
       () => getItemsByCollection(USER, "col_1"),
@@ -115,7 +120,7 @@ describe("getSearchItems", () => {
         id: "a",
         content,
         language: null,
-        type: { slug: "prompt", name: "Prompt", color: "amber" },
+        type: { slug: "prompt", name: "Prompt", icon: null, color: "amber", isSystem: true },
         collections: [{ collection: { id: "col_1", name: "AI" } }],
         tags: [{ tag: { name: "llm" } }, { tag: { name: "review" } }],
       },
@@ -128,6 +133,23 @@ describe("getSearchItems", () => {
     expect(item!.preview.length).toBeLessThanOrEqual(151);
     expect(item!.tags).toEqual(["llm", "review"]);
     expect(item!.collections).toEqual([{ id: "col_1", name: "AI" }]);
+  });
+
+  it("previews a custom type's item as Markdown, like a note", async () => {
+    findMany.mockResolvedValue([
+      {
+        id: "c",
+        content: "## Symptoms\n\n- build fails",
+        language: null,
+        type: { slug: "problem", name: "Problem", icon: "bug", color: "rose", isSystem: false },
+        collections: [],
+        tags: [],
+      },
+    ]);
+
+    const [item] = await getSearchItems(USER);
+
+    expect(item!.preview).toBe("Symptoms build fails");
   });
 
   it("gives an empty preview to an item without content", async () => {
@@ -180,7 +202,7 @@ describe("getItemsByType", () => {
   it("reads the first page, pinned then favorites then newest, and reports the full total", async () => {
     count.mockResolvedValue(250);
 
-    const { totalCount } = await getItemsByType(USER, "link");
+    const { totalCount } = await getItemsByType(USER, { slug: "link" });
 
     expect(totalCount).toBe(250);
     expect(findMany.mock.calls[0]![0]).toMatchObject({
@@ -191,13 +213,13 @@ describe("getItemsByType", () => {
   });
 
   it("reads only the rows of the page asked for", async () => {
-    await getItemsByType(USER, "link", 3);
+    await getItemsByType(USER, { slug: "link" }, 3);
 
     expect(findMany.mock.calls[0]![0]).toMatchObject({ skip: 2 * ITEMS_PER_PAGE, take: ITEMS_PER_PAGE });
   });
 
   it("rejects page 0 before querying", async () => {
-    await expect(getItemsByType(USER, "link", 0)).rejects.toThrow(RangeError);
+    await expect(getItemsByType(USER, { slug: "link" }, 0)).rejects.toThrow(RangeError);
     expect(findMany).not.toHaveBeenCalled();
   });
 
@@ -207,7 +229,7 @@ describe("getItemsByType", () => {
       { id: "b", collections: [] },
     ]);
 
-    const { items } = await getItemsByType(USER, "link");
+    const { items } = await getItemsByType(USER, { slug: "link" });
 
     expect(items.map(({ collections }) => collections)).toEqual([
       [
@@ -221,7 +243,7 @@ describe("getItemsByType", () => {
   it("reads the collections by name", async () => {
     findMany.mockResolvedValue([]);
 
-    await getItemsByType(USER, "link");
+    await getItemsByType(USER, { slug: "link" });
 
     expect(findMany.mock.calls[0]![0].select.collections).toMatchObject({ orderBy: { collection: { name: "asc" } } });
   });

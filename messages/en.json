@@ -59,6 +59,11 @@
       "empty": "No links yet",
       "description": "Bookmark the docs, articles and tools you come back to.",
       "edit": "Edit link"
+    },
+    "custom": {
+      "new": "New {name}",
+      "empty": "No {name} items yet",
+      "description": "A type of your own: Markdown content, an optional language, and a template to start from."
     }
   },
   "nav": {
@@ -68,7 +73,8 @@
     "viewAllCollections": "View all collections",
     "upgrade": "Upgrade",
     "newItem": "New Item",
-    "newCollection": "New Collection"
+    "newCollection": "New Collection",
+    "customTypes": "Custom"
   },
   "search": {
     "triggerShort": "Search…",
@@ -131,7 +137,8 @@
       "preparing": "Preparing the export…",
       "failed": "The export failed. Check your connection and try again.",
       "proOnly": "Exporting your data is a Pro feature.",
-      "upgrade": "Upgrade to Pro"
+      "upgrade": "Upgrade to Pro",
+      "done": "Export complete: {file}"
     },
     "account": {
       "heading": "Account",
@@ -140,6 +147,69 @@
       "githubOnly": "You sign in with GitHub, so there is no password to change.",
       "delete": "Delete account",
       "deleteDescription": "Permanently deletes your account, your items, collections and tags. This cannot be undone."
+    },
+    "types": {
+      "heading": "Item types",
+      "title": "Custom types",
+      "description": "Your own item types, each with a name, an icon, a color and an optional template. Up to {max, number}.",
+      "empty": "No custom types yet.",
+      "new": "New type",
+      "edit": "Edit {name}",
+      "delete": "Delete {name}",
+      "proOnly": "Custom item types are a Pro feature.",
+      "upgrade": "Upgrade to Pro",
+      "atCap": "You have reached the limit of {max, number} custom types.",
+      "newTitle": "New item type",
+      "editTitle": "Edit item type",
+      "dialogDescription": "Items of this type have Markdown content and an optional language.",
+      "name": "Name",
+      "nameHint": "The type's URL comes from its name, so renaming it changes the link.",
+      "icon": "Icon",
+      "color": "Color",
+      "colors": {
+        "orange": "Orange",
+        "brown": "Brown",
+        "fuchsia": "Fuchsia",
+        "indigo": "Indigo",
+        "white": "White",
+        "slate": "Slate"
+      },
+      "template": "Template",
+      "templateHint": "Optional. Fills the content of each new item of this type.",
+      "create": "Create type",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "created": "Type created.",
+      "saved": "Type saved.",
+      "deleted": "Type deleted.",
+      "deleteTitle": "Delete this type?",
+      "deleteBody": "<name>{type}</name> will be deleted. A type that items still use cannot be deleted.",
+      "icons": {
+        "box": "Box",
+        "bug": "Bug",
+        "wrench": "Wrench",
+        "book-open": "Open book",
+        "database": "Database",
+        "server": "Server",
+        "cloud": "Cloud",
+        "lock": "Lock",
+        "key": "Key",
+        "rocket": "Rocket",
+        "lightbulb": "Light bulb",
+        "brain": "Brain",
+        "cpu": "Processor",
+        "git-branch": "Git branch",
+        "globe": "Globe",
+        "package": "Package",
+        "layers": "Layers",
+        "list-checks": "Checklist",
+        "flask": "Flask",
+        "palette": "Palette",
+        "flag": "Flag",
+        "star": "Star",
+        "heart": "Heart",
+        "zap": "Lightning"
+      }
     }
   },
   "time": {
@@ -381,7 +451,8 @@
     "created": "Item created.",
     "uploading": "Uploading…",
     "creating": "Creating…",
-    "create": "Create item"
+    "create": "Create item",
+    "customProOnly": "Creating items of a custom type is a Pro feature."
   },
   "upload": {
     "remove": "Remove file",
@@ -531,14 +602,16 @@
       "invalidFavorite": "Invalid favorite value.",
       "favoriteFailed": "Could not update the favorite. Try again.",
       "invalidPin": "Invalid pin value.",
-      "pinFailed": "Could not update the pin. Try again."
+      "pinFailed": "Could not update the pin. Try again.",
+      "unknownType": "This type no longer exists. Choose another."
     },
     "limits": {
       "items": "Free accounts can have {max, number} items. Upgrade to Pro in Settings.",
       "collections": "Free accounts can have {max, number} collections. Upgrade to Pro in Settings.",
       "uploads": "File and image uploads are a Pro feature.",
       "ai": "AI features are a Pro feature.",
-      "export": "Exporting your data is a Pro feature."
+      "export": "Exporting your data is a Pro feature.",
+      "customTypes": "Custom item types are a Pro feature."
     },
     "tooManyAttempts": "Too many attempts. Please try again in {minutes, plural, one {# minute} other {# minutes}}.",
     "somethingWrong": "Something went wrong. Try again.",
@@ -633,6 +706,22 @@
     },
     "export": {
       "badFormat": "Choose JSON or ZIP for the export."
+    },
+    "itemTypes": {
+      "nameRequired": "Name is required.",
+      "nameTooLong": "Name can be at most {max, number} characters.",
+      "nameNoSlug": "Use at least two letters or digits in the name.",
+      "nameReserved": "This name is reserved. Choose another.",
+      "nameTaken": "You already have a type with this name.",
+      "invalidIcon": "Choose an icon from the list.",
+      "invalidColor": "Choose a color from the list.",
+      "templateTooLong": "Template can be at most {max, number} characters.",
+      "tooMany": "You can have at most {max, number} custom types.",
+      "notFound": "This type no longer exists.",
+      "saveFailed": "Could not save the type. Try again.",
+      "inUse": "{count, plural, one {# item still uses this type. Delete it first.} other {# items still use this type. Delete them first.}}",
+      "inUseNow": "Items still use this type. Delete them first.",
+      "deleteFailed": "Could not delete the type. Try again."
     }
   },
   "emails": {

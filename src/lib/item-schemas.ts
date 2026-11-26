@@ -70,7 +70,8 @@ const fileKeyField = z.string({ error: errKey("items.chooseFile") }).min(1, errK
 
 /**
  * One shape per type, so a field the type does not use is stripped rather than
- * stored, and a type outside the list (a custom one) is refused.
+ * stored, and a type outside the list is refused. A custom type comes as
+ * `type: "custom"` with its id, never as a slug.
  */
 export const createItemSchema = z.discriminatedUnion(
   "type",
@@ -90,6 +91,14 @@ export const createItemSchema = z.discriminatedUnion(
     }),
     z.object({ type: z.literal("file"), ...baseFields, fileKey: fileKeyField }),
     z.object({ type: z.literal("image"), ...baseFields, fileKey: fileKeyField }),
+    // One of the user's own types: a note's fields plus a language. The action checks the id.
+    z.object({
+      type: z.literal("custom"),
+      typeId: z.string({ error: errKey("items.chooseType") }).trim().min(1, errKey("items.chooseType")).max(100, errKey("items.chooseType")),
+      ...baseFields,
+      content: contentField,
+      language: languageField,
+    }),
   ],
   { error: errKey("items.chooseType") },
 );

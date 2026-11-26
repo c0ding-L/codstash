@@ -7,17 +7,17 @@ import { FavoriteButton } from "@/components/favorites/FavoriteButton";
 import { TypeIconTile } from "@/components/items/TypeIconTile";
 import { Card, CardContent } from "@/components/ui/card";
 import type { CollectionType, RecentCollection } from "@/lib/db/collections";
-import { useItemTypeLabel, useRelativeTime } from "@/i18n/labels";
-import { colorClasses, primaryTypeOf, ringClasses, toColorToken, toItemTypeSlug, washClasses } from "@/lib/item-type-ui";
+import { useRelativeTime, useTypeView } from "@/i18n/labels";
+import { colorClasses, ringClasses, washClasses } from "@/lib/item-type-ui";
 import { cn } from "@/lib/utils";
 
 /** A collection card linking to its page, accented by its most used type. `now` is the page's moment. */
 export function CollectionCard({ collection, now }: { collection: RecentCollection; now: string }) {
   const t = useTranslations("common");
-  const typeLabel = useItemTypeLabel();
+  const typeView = useTypeView();
   const relativeTime = useRelativeTime();
-  // Most-used type first, so it sets the card's accent.
-  const primary = primaryTypeOf(collection);
+  // Most-used type first (the types come sorted by count), so it sets the card's accent.
+  const primary = collection.types[0] ? typeView(collection.types[0]) : null;
   const primaryColor = primary?.color ?? null;
 
   return (
@@ -42,7 +42,7 @@ export function CollectionCard({ collection, now }: { collection: RecentCollecti
       <CardContent className="relative flex h-full flex-col gap-3">
         <div className="flex items-start justify-between">
           <TypeIconTile
-            slug={primary?.slug ?? null}
+            icon={primary?.Icon ?? null}
             color={primaryColor}
             className="size-9 rounded-lg"
             iconClassName="size-4"
@@ -79,7 +79,7 @@ export function CollectionCard({ collection, now }: { collection: RecentCollecti
 
         <div className="mt-auto flex items-center justify-between border-t border-border pt-3 text-xs">
           <span className="flex items-center gap-1.5">
-            {primary ? <span className={cn(primaryColor && colorClasses[primaryColor])}>{typeLabel(primary)}</span> : null}
+            {primary ? <span className={colorClasses[primary.color]}>{primary.label}</span> : null}
             <span className="text-muted-foreground">
               {primary ? "· " : null}
               {t("itemCount", { count: collection.itemCount })}
@@ -97,23 +97,21 @@ export function CollectionCard({ collection, now }: { collection: RecentCollecti
 
 /** One small tile per type in the collection, with its count for screen readers. */
 function CollectionTypeChips({ types }: { types: CollectionType[] }) {
-  const typeLabel = useItemTypeLabel();
+  const typeView = useTypeView();
 
   return (
     <ul className="flex flex-wrap items-center gap-1.5">
-      {types.map((type) => (
-        <li key={type.slug}>
-          <TypeIconTile
-            slug={toItemTypeSlug(type.slug)}
-            color={toColorToken(type.color)}
-            className="size-6 rounded-md"
-            iconClassName="size-3"
-          />
-          <span className="sr-only">
-            {type.count} {typeLabel(type, type.count === 1 ? "one" : "other")}
-          </span>
-        </li>
-      ))}
+      {types.map((type) => {
+        const view = typeView(type, type.count === 1 ? "one" : "other");
+        return (
+          <li key={type.slug}>
+            <TypeIconTile icon={view.Icon} color={view.color} className="size-6 rounded-md" iconClassName="size-3" />
+            <span className="sr-only">
+              {type.count} {view.label}
+            </span>
+          </li>
+        );
+      })}
     </ul>
   );
 }

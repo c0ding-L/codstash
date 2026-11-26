@@ -15,10 +15,13 @@ import { PromptList } from "@/components/items/PromptList";
 import { SnippetList } from "@/components/items/SnippetList";
 import { TypeEmptyState } from "@/components/items/TypeEmptyState";
 import { TypeIconTile } from "@/components/items/TypeIconTile";
+import { getTypeView } from "@/i18n/labels-server";
 import { getPlanStatus } from "@/lib/db/billing";
+import { resolveTypeSegment, type TypeSegment } from "@/lib/db/item-types";
 import { getCommandTexts, getItemsByType, getPromptPreviews, getSnippetPreviews } from "@/lib/db/items";
-import { itemTypeFromSegment, itemTypeHref, typeColors } from "@/lib/item-type-ui";
+import { itemTypeFromSegment } from "@/lib/item-type-ui";
 import { loadAiAllowed } from "@/lib/load-ai-allowed";
+import { loadCustomTypes } from "@/lib/load-custom-types";
 import { loadUploadsAllowed } from "@/lib/load-uploads-allowed";
 import { ITEMS_PER_PAGE, pageCount, pageOffset, parsePageParam } from "@/lib/pagination";
 import { canUploadFiles } from "@/lib/usage-limits";
@@ -28,24 +31,44 @@ interface ItemsPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
+/** The system type of a URL segment without the database; else the user's custom type, if any. */
+async function segmentFor(segment: string): Promise<TypeSegment | null> {
+  const slug = itemTypeFromSegment(segment);
+  if (slug) return { kind: "system", slug };
+  await connection();
+  const session = await auth();
+  return session?.user?.id ? resolveTypeSegment(session.user.id, segment) : null;
+}
+
 export async function generateMetadata({ params }: ItemsPageProps): Promise<Metadata> {
-  const slug = itemTypeFromSegment((await params).type);
-  if (!slug) return {};
+  const resolved = await segmentFor((await params).type);
+  if (!resolved) return {};
   const [t, tm] = await Promise.all([getTranslations("itemTypes"), getTranslations("metadata")]);
-  return { title: tm("page", { page: t(`${slug}.other`) }) };
+  const page = resolved.kind === "system" ? t(`${resolved.slug}.other`) : resolved.type.name;
+  return { title: tm("page", { page }) };
 }
 
 export default async function ItemsPage({ params, searchParams }: ItemsPageProps) {
   // Rendered per request, like every other page.
   await connection();
 
-  // `layout.tsx` has already answered 404 for an unknown type. This narrows the slug.
-  const slug = itemTypeFromSegment((await params).type);
-  if (!slug) notFound();
-
   // The proxy already guards `/items`; this also narrows the session's type.
+  const segment = (await params).type;
   const session = await auth();
-  if (!session?.user?.id) redirect(`/sign-in?callbackUrl=${itemTypeHref(slug)}`);
+  if (!session?.user?.id) redirect(`/sign-in?callbackUrl=/items/${encodeURIComponent(segment)}`);
+
+  // `layout.tsx` has already answered 404 for an unknown type. This narrows it.
+  const resolved = await resolveTypeSegment(session.user.id, segment);
+  if (!resolved) notFound();
+  // A custom type lists like notes, with the generic card.
+  const slug = resolved.kind === "system" ? resolved.slug : null;
+  const typeView = await getTypeView();
+  const view = typeView(
+    resolved.kind === "system"
+      ? { slug: resolved.slug, name: resolved.slug, icon: null, color: null, isSystem: true }
+      : resolved.type,
+    "other",
+  );
 
   // A page that is not a number, or past the last one, does not exist.
   const page = parsePageParam((await searchParams).page);
@@ -56,7 +79,11 @@ export default async function ItemsPage({ params, searchParams }: ItemsPageProps
   const isUploadType = slug === "file" || slug === "image";
   if (isUploadType && !canUploadFiles(await getPlanStatus(session.user.id))) redirect("/upgrade");
 
-  const { items, totalCount } = await getItemsByType(session.user.id, slug, page);
+  const { items, totalCount } = await getItemsByType(
+    session.user.id,
+    resolved.kind === "system" ? { slug: resolved.slug } : { customTypeId: resolved.type.id },
+    page,
+  );
   const pages = pageCount(totalCount, ITEMS_PER_PAGE);
   if (page > pages) notFound();
   const first = pageOffset(page, ITEMS_PER_PAGE) + 1;
@@ -66,20 +93,19 @@ export default async function ItemsPage({ params, searchParams }: ItemsPageProps
   const promptPreviews = slug === "prompt" ? await getPromptPreviews(session.user.id, ids) : {};
   const snippetPreviews = slug === "snippet" ? await getSnippetPreviews(session.user.id, ids) : {};
   const t = await getTranslations();
-  const label = t(`itemTypes.${slug}.other`);
-  const color = typeColors[slug];
   const now = new Date().toISOString();
   // For the New Item dialog's type picker. Only Pro users reach the upload pages;
   // the others read the plan without waiting, as the layout does for the top bar.
   const uploadsAllowed = isUploadType ? Promise.resolve(true) : loadUploadsAllowed();
   const aiAllowed = loadAiAllowed();
+  const customTypes = loadCustomTypes();
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="flex items-center gap-3 text-2xl font-semibold">
-          <TypeIconTile slug={slug} color={color} className="size-9 shrink-0 rounded-lg" iconClassName="size-5" />
-          {label}
+          <TypeIconTile icon={view.Icon} color={view.color} className="size-9 shrink-0 rounded-lg" iconClassName="size-5" />
+          {view.label}
         </h1>
         <div className="flex items-center gap-4">
           {items.length > 0 ? (
@@ -90,7 +116,8 @@ export default async function ItemsPage({ params, searchParams }: ItemsPageProps
           <NewItemDialog
             uploadsAllowed={uploadsAllowed}
             aiAllowed={aiAllowed}
-            label={t(`itemTypes.${slug}.new`)}
+            customTypes={customTypes}
+            label={slug ? t(`itemTypes.${slug}.new`) : t("itemTypes.custom.new", { name: view.label })}
             iconOnlyOnMobile={false}
           />
         </div>
@@ -127,10 +154,10 @@ export default async function ItemsPage({ params, searchParams }: ItemsPageProps
           )}
         </>
       ) : (
-        <TypeEmptyState slug={slug} />
+        <TypeEmptyState view={view} />
       )}
 
-      <Pagination basePath={itemTypeHref(slug)} page={page} pageCount={pages} rowIds={ids} />
+      <Pagination basePath={view.href} page={page} pageCount={pages} rowIds={ids} />
     </div>
   );
 }

@@ -11,3 +11,9 @@ export const ITEM_LIMITS = {
   tags: 20,
   collections: 20,
 } as const;
+
+/** Caps on a custom item type. The template pre-fills an item's content, so it stays well under it. */
+export const CUSTOM_TYPE_LIMITS = {
+  name: 40,
+  template: 10_000,
+} as const;

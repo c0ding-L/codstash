@@ -59,6 +59,11 @@
       "empty": "Aucun lien pour l’instant",
       "description": "Gardez sous la main les docs, articles et outils que vous consultez régulièrement.",
       "edit": "Modifier le lien"
+    },
+    "custom": {
+      "new": "Nouveau {name}",
+      "empty": "Aucun élément {name} pour l’instant",
+      "description": "Un type qui vous est propre : du contenu Markdown, un langage facultatif et un modèle de départ."
     }
   },
   "nav": {
@@ -68,7 +73,8 @@
     "viewAllCollections": "Voir toutes les collections",
     "upgrade": "Passer à Pro",
     "newItem": "Nouvel élément",
-    "newCollection": "Nouvelle collection"
+    "newCollection": "Nouvelle collection",
+    "customTypes": "Personnalisés"
   },
   "search": {
     "triggerShort": "Rechercher…",
@@ -131,7 +137,8 @@
       "preparing": "Préparation de l’exportation…",
       "failed": "L’exportation a échoué. Vérifiez votre connexion et réessayez.",
       "proOnly": "L’exportation de vos données est réservée à la formule Pro.",
-      "upgrade": "Passer à Pro"
+      "upgrade": "Passer à Pro",
+      "done": "Exportation terminée : {file}"
     },
     "account": {
       "heading": "Compte",
@@ -140,6 +147,69 @@
       "githubOnly": "Vous vous connectez via GitHub ; il n’y a donc pas de mot de passe à modifier.",
       "delete": "Supprimer le compte",
       "deleteDescription": "Supprime définitivement votre compte, vos éléments, vos collections et vos tags. Cette action est irréversible."
+    },
+    "types": {
+      "heading": "Types d’éléments",
+      "title": "Types personnalisés",
+      "description": "Vos propres types d’éléments, chacun doté d’un nom, d’une icône, d’une couleur et d’un modèle facultatif. Jusqu’à {max, number}.",
+      "empty": "Il n’y a pas encore de types personnalisés.",
+      "new": "Nouveau type",
+      "edit": "Modifier {name}",
+      "delete": "Supprimer {name}",
+      "proOnly": "Les types d’éléments personnalisés sont réservés à la formule Pro.",
+      "upgrade": "Passer à Pro",
+      "atCap": "Vous avez atteint la limite de {max, number} types personnalisés.",
+      "newTitle": "Nouveau type d’élément",
+      "editTitle": "Modifier le type d’élément",
+      "dialogDescription": "Les éléments de ce type contiennent du contenu au format Markdown et un langage facultatif.",
+      "name": "Nom",
+      "nameHint": "L’URL de ce type provient de son nom ; par conséquent, le renommer modifie le lien.",
+      "icon": "Icône",
+      "color": "Couleur",
+      "colors": {
+        "orange": "Orange",
+        "brown": "Marron",
+        "fuchsia": "Fuchsia",
+        "indigo": "Indigo",
+        "white": "Blanc",
+        "slate": "Ardoise"
+      },
+      "template": "Modèle",
+      "templateHint": "Facultatif. Remplit le contenu de chaque nouvel élément de ce type.",
+      "create": "Créer un type",
+      "save": "Enregistrer les modifications",
+      "saving": "Enregistrement en cours…",
+      "created": "Type créé.",
+      "saved": "Le type a été enregistré.",
+      "deleted": "Type supprimé.",
+      "deleteTitle": "Supprimer ce type ?",
+      "deleteBody": "<name>{type}</name> sera supprimé. Un type encore utilisé par des éléments ne peut pas être supprimé.",
+      "icons": {
+        "box": "Boîte",
+        "bug": "Bug",
+        "wrench": "Clé à molette",
+        "book-open": "Livre ouvert",
+        "database": "Base de données",
+        "server": "Serveur",
+        "cloud": "Cloud",
+        "lock": "Cadenas",
+        "key": "Clé",
+        "rocket": "Fusée",
+        "lightbulb": "Ampoule",
+        "brain": "Cerveau",
+        "cpu": "Processeur",
+        "git-branch": "Branche Git",
+        "globe": "Globe",
+        "package": "Paquet",
+        "layers": "Calques",
+        "list-checks": "Liste de contrôle",
+        "flask": "Fiole",
+        "palette": "Palette",
+        "flag": "Drapeau",
+        "star": "Étoile",
+        "heart": "Cœur",
+        "zap": "Éclair"
+      }
     }
   },
   "time": {
@@ -381,7 +451,8 @@
     "created": "Élément créé.",
     "uploading": "Import en cours…",
     "creating": "Création…",
-    "create": "Créer l’élément"
+    "create": "Créer l’élément",
+    "customProOnly": "La création d’éléments d’un type personnalisé est réservée à la formule Pro."
   },
   "upload": {
     "remove": "Retirer le fichier",
@@ -531,14 +602,16 @@
       "invalidFavorite": "Valeur de favori invalide.",
       "favoriteFailed": "Impossible de mettre à jour le favori. Réessayez.",
       "invalidPin": "Valeur d’épinglage invalide.",
-      "pinFailed": "Impossible de mettre à jour l’épinglage. Réessayez."
+      "pinFailed": "Impossible de mettre à jour l’épinglage. Réessayez.",
+      "unknownType": "Ce type n’existe plus. Veuillez en choisir un autre."
     },
     "limits": {
       "items": "Les comptes gratuits sont limités à {max, number} éléments. Passez à Pro dans les Paramètres.",
       "collections": "Les comptes gratuits sont limités à {max, number} collections. Passez à Pro dans les Paramètres.",
       "uploads": "L’import de fichiers et d’images est réservé à la formule Pro.",
       "ai": "Les fonctionnalités d’IA sont réservées à la formule Pro.",
-      "export": "L’exportation de vos données est réservée à la formule Pro."
+      "export": "L’exportation de vos données est réservée à la formule Pro.",
+      "customTypes": "Les types d’éléments personnalisés sont réservés à la formule Pro."
     },
     "tooManyAttempts": "Trop de tentatives. Réessayez dans {minutes, plural, one {# minute} other {# minutes}}.",
     "somethingWrong": "Une erreur s’est produite. Réessayez.",
@@ -633,6 +706,22 @@
     },
     "export": {
       "badFormat": "Choisissez le format JSON ou ZIP pour l’exportation."
+    },
+    "itemTypes": {
+      "nameRequired": "Le nom est obligatoire.",
+      "nameTooLong": "Le nom ne doit pas dépasser {max, number} caractères.",
+      "nameNoSlug": "Le nom doit comporter au moins deux lettres ou chiffres.",
+      "nameReserved": "Ce nom est réservé. Veuillez en choisir un autre.",
+      "nameTaken": "Un type portant ce nom existe déjà.",
+      "invalidIcon": "Choisissez une icône dans la liste.",
+      "invalidColor": "Choisissez une couleur dans la liste.",
+      "templateTooLong": "Le modèle ne doit pas dépasser {max, number} caractères.",
+      "tooMany": "Vous pouvez avoir au maximum {max, number} types personnalisés.",
+      "notFound": "Ce type n’existe plus.",
+      "saveFailed": "Impossible d’enregistrer le type. Veuillez réessayer.",
+      "inUse": "{count, plural, one {# élément utilise encore ce type. Veuillez d’abord le supprimer.} other {# éléments utilisent encore ce type. Veuillez d’abord les supprimer.}}",
+      "inUseNow": "Certains éléments utilisent encore ce type. Veuillez les supprimer au préalable.",
+      "deleteFailed": "Impossible de supprimer le type. Veuillez réessayer."
     }
   },
   "emails": {

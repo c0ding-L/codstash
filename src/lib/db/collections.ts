@@ -6,6 +6,7 @@ import { clampLimit, MAX_COLLECTION_LIMIT } from "@/lib/db/limits";
 import { COLLECTIONS_PER_PAGE, DASHBOARD_COLLECTIONS_LIMIT, pageOffset } from "@/lib/pagination";
 import { assertBelowLimit } from "@/lib/db/billing";
 import { prisma } from "@/lib/prisma";
+import type { TypeRef } from "@/types/item-type";
 
 /** The seeded demo account, which the profile page refuses to delete. */
 export const DEMO_USER_EMAIL = "demo@codstash.io";
@@ -14,7 +15,9 @@ export interface ItemTypeRow {
   id: string;
   slug: string;
   name: string;
+  icon: string | null;
   color: string | null;
+  isSystem: boolean;
 }
 
 /** System types plus any custom types the user owns. */
@@ -22,20 +25,17 @@ export const getItemTypes = cache(
   async (userId: string): Promise<ItemTypeRow[]> =>
     prisma.itemType.findMany({
       where: { OR: [{ userId: null }, { userId }] },
-      select: { id: true, slug: true, name: true, color: true },
+      select: { id: true, slug: true, name: true, icon: true, color: true, isSystem: true },
       orderBy: { slug: "asc" },
     }),
 );
 
 /** One item type present in a collection, with how many items carry it. */
-export interface CollectionType {
-  slug: string;
-  name: string;
-  color: string | null;
+export interface CollectionType extends TypeRef {
   count: number;
 }
 
-type TypeLookup = Map<string, { slug: string; name: string; color: string | null }>;
+type TypeLookup = Map<string, TypeRef>;
 
 async function loadTypeLookup(userId: string): Promise<TypeLookup> {
   const itemTypes = await getItemTypes(userId);
@@ -88,7 +88,7 @@ export function aggregateCollectionTypes(
   for (const { typeId, count } of counts) {
     const type = typeById.get(typeId);
     if (type) {
-      types.push({ slug: type.slug, name: type.name, color: type.color, count });
+      types.push({ slug: type.slug, name: type.name, icon: type.icon, color: type.color, isSystem: type.isSystem, count });
     }
   }
 

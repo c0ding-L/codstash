@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock, Folders, Layers, Star } from "lucide-react";
+import { Clock, Folders, Layers, type LucideIcon, Star } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { connection } from "next/server";
@@ -29,18 +29,21 @@ import {
   type ItemTypeRow,
   type SidebarCollection,
 } from "@/lib/db/collections";
+import { viewType } from "@/i18n/labels";
+import { getCustomTypes, type CustomType } from "@/lib/db/item-types";
 import {
   colorClasses,
+  customTypeIcon,
+  DEFAULT_CUSTOM_COLOR,
   itemTypeHref,
-  primaryTypeOf,
   proTypeSlugs,
   sidebarTypes,
   toColorToken,
-  toItemTypeSlug,
   typeIcons,
+  type TypeView,
 } from "@/lib/item-type-ui";
 import { cn } from "@/lib/utils";
-import type { ColorToken, ItemTypeSlug } from "@/types/item-type";
+import type { ColorToken } from "@/types/item-type";
 
 /**
  * `Sidebar` stays outside the boundary. It renders differently on phones once
@@ -81,25 +84,38 @@ async function AppSidebarBody() {
   if (!session?.user?.id) redirect("/sign-in");
   const user = session.user;
   const userId = session.user.id;
-  const [itemTypes, favoriteCollections, recentCollections, t] = await Promise.all([
+  const [itemTypes, customTypes, favoriteCollections, recentCollections, t, tTypes] = await Promise.all([
     getItemTypes(userId),
+    getCustomTypes(userId),
     getFavoriteCollections(userId),
     getSidebarRecentCollections(userId),
     getTranslations(),
+    getTranslations("itemTypes"),
   ]);
+  // A collection is marked by its most used type (they come sorted by count).
+  const primaryView = (collection: SidebarCollection) =>
+    collection.types[0] ? viewType(tTypes, collection.types[0], "one") : null;
 
   return (
     <>
       <SidebarContent>
         <SidebarTypesGroup
           label={t("nav.types")}
-          itemTypes={itemTypes.map((type) => {
-            const slug = toItemTypeSlug(type.slug);
-            return { ...type, label: slug ? t(`itemTypes.${slug}.other`) : type.name };
-          })}
+          itemTypes={itemTypes
+            .filter((type) => type.isSystem)
+            .map((type) => ({ ...type, label: viewType(tTypes, type, "other").label }))}
         />
-        <SidebarCollectionsGroup label={t("nav.favorites")} variant="favorite" collections={favoriteCollections} />
-        <SidebarCollectionsGroup label={t("nav.recent")} variant="recent" collections={recentCollections} />
+        {customTypes.length > 0 ? <SidebarCustomTypesGroup label={t("nav.customTypes")} types={customTypes} /> : null}
+        <SidebarCollectionsGroup
+          label={t("nav.favorites")}
+          variant="favorite"
+          collections={favoriteCollections.map((collection) => ({ ...collection, primary: primaryView(collection) }))}
+        />
+        <SidebarCollectionsGroup
+          label={t("nav.recent")}
+          variant="recent"
+          collections={recentCollections.map((collection) => ({ ...collection, primary: primaryView(collection) }))}
+        />
 
         {/* In a group like the entries above, so it gets their padding and lines up. */}
         <SidebarGroup>
@@ -180,11 +196,40 @@ function SidebarTypesGroup({ label, itemTypes }: { label: string; itemTypes: (It
   );
 }
 
+/** The user's custom types, by name, each linking to its list with its item count. Hidden when there are none. */
+function SidebarCustomTypesGroup({ label, types }: { label: string; types: CustomType[] }) {
+  return (
+    <SidebarGroup>
+      <SidebarGroupLabel>{label}</SidebarGroupLabel>
+      <SidebarGroupContent>
+        <SidebarMenu>
+          {types.map((type) => {
+            const Icon = customTypeIcon(type.icon);
+            const color = toColorToken(type.color) ?? DEFAULT_CUSTOM_COLOR;
+            return (
+              <SidebarMenuItem key={type.id}>
+                {/* The author's own name, never translated. */}
+                <SidebarMenuButton tooltip={type.name} render={<Link href={`/items/${type.slug}`} />}>
+                  <Icon className={colorClasses[color]} aria-hidden />
+                  <span>{type.name}</span>
+                  <span className="ml-auto text-xs text-muted-foreground tabular-nums group-data-[collapsible=icon]:hidden">
+                    {type.itemCount}
+                  </span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
+        </SidebarMenu>
+      </SidebarGroupContent>
+    </SidebarGroup>
+  );
+}
+
 interface SidebarCollectionsGroupProps {
   label: string;
   /** Favorite: the primary type's plain icon. Recent: the icon on its tinted disc. */
   variant: "favorite" | "recent";
-  collections: SidebarCollection[];
+  collections: (SidebarCollection & { primary: TypeView | null })[];
 }
 
 /** The favorite or recent collections, each marked by its most used type. */
@@ -200,9 +245,8 @@ function SidebarCollectionsGroup({ label, variant, collections }: SidebarCollect
       <SidebarGroupContent>
         <SidebarMenu>
           {collections.map((collection) => {
-            const primary = primaryTypeOf(collection);
-            const slug = primary?.slug ?? null;
-            const color = primary?.color ?? null;
+            const icon = collection.primary?.Icon ?? null;
+            const color = collection.primary?.color ?? null;
 
             return (
               <SidebarMenuItem key={collection.id}>
@@ -211,10 +255,10 @@ function SidebarCollectionsGroup({ label, variant, collections }: SidebarCollect
                   render={<Link href={`/collections/${collection.id}`} />}
                 >
                   {variant === "favorite" ? (
-                    <FavoriteIcon slug={slug} color={color} />
+                    <FavoriteIcon icon={icon} color={color} />
                   ) : (
                     <TypeIconTile
-                      slug={slug}
+                      icon={icon}
                       color={color}
                       className="size-5 shrink-0 rounded-full"
                       iconClassName="size-3.5"
@@ -231,7 +275,7 @@ function SidebarCollectionsGroup({ label, variant, collections }: SidebarCollect
   );
 }
 
-function FavoriteIcon({ slug, color }: { slug: ItemTypeSlug | null; color: ColorToken | null }) {
-  const Icon = slug ? typeIcons[slug] : Star;
+function FavoriteIcon({ icon, color }: { icon: LucideIcon | null; color: ColorToken | null }) {
+  const Icon = icon ?? Star;
   return <Icon className={cn(color && colorClasses[color])} aria-hidden />;
 }

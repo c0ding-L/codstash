@@ -15,7 +15,7 @@ export async function getExportHeaderData(
     prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true, locale: true } }),
     prisma.itemType.findMany({
       where: { userId, isSystem: false },
-      select: { slug: true, name: true, icon: true, color: true },
+      select: { slug: true, name: true, icon: true, color: true, template: true },
       orderBy: { slug: "asc" },
     }),
     prisma.collection.findMany({

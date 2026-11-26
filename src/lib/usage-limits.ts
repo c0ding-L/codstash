@@ -33,12 +33,17 @@ export function canExport(plan: Pick<PlanUsage, "isPro">) {
   return plan.isPro;
 }
 
+/** Custom item types: creating or editing one, and creating items of one. Existing ones stay readable. */
+export function canUseCustomTypes(plan: Pick<PlanUsage, "isPro">) {
+  return plan.isPro;
+}
+
 /**
  * Thrown by the create queries when, re-counted under a lock, the Free limit
  * is already reached: two requests racing past the action's early check.
  */
 export class LimitReachedError extends Error {
-  constructor(readonly limit: "items" | "collections") {
+  constructor(readonly limit: "items" | "collections" | "customTypes") {
     // Internal: the action that catches it answers with the `errors.limits` message.
     super(`${limit} limit reached`);
     this.name = "LimitReachedError";

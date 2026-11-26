@@ -6,6 +6,7 @@ import { applyOptimizedPrompt, createItem, deleteItem, setItemFavorite, setItemP
 import { auth } from "@/auth";
 import { getPlanStatus } from "@/lib/db/billing";
 import { ownsCollections } from "@/lib/db/collections";
+import { ownsCustomType } from "@/lib/db/item-types";
 import {
   createItem as createItemQuery,
   deleteItem as deleteItemQuery,
@@ -30,6 +31,7 @@ vi.mock("@/lib/db/items", () => ({
   setItemPinned: vi.fn(),
 }));
 vi.mock("@/lib/db/collections", () => ({ ownsCollections: vi.fn() }));
+vi.mock("@/lib/db/item-types", () => ({ ownsCustomType: vi.fn() }));
 vi.mock("@/lib/db/billing", () => ({ getPlanStatus: vi.fn() }));
 vi.mock("@/lib/r2", () => ({ headObject: vi.fn(), deleteObjectsQuietly: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
@@ -42,6 +44,7 @@ const head = headObject as unknown as Mock;
 const deleteObjects = deleteObjectsQuietly as unknown as Mock;
 const keyInUse = isFileKeyInUse as unknown as Mock;
 const owns = ownsCollections as unknown as Mock;
+const ownsType = ownsCustomType as unknown as Mock;
 const favoriteQuery = setItemFavoriteQuery as unknown as Mock;
 const pinQuery = setItemPinnedQuery as unknown as Mock;
 const revalidate = revalidatePath as unknown as Mock;
@@ -76,6 +79,7 @@ beforeEach(() => {
   createQuery.mockResolvedValue(card);
   keyInUse.mockResolvedValue(false);
   owns.mockResolvedValue(true);
+  ownsType.mockResolvedValue(true);
   // Pro by default, so the plan gate only shows up in its own tests.
   planStatus.mockResolvedValue(plan(true, 0));
   vi.spyOn(console, "error").mockImplementation(() => {});
@@ -207,7 +211,8 @@ describe("createItem", () => {
     ["an empty tag", { type: "note", title: "Title", tags: ["a", " "], collectionIds: [] }, "Tags cannot be empty.", "tags"],
     ["a file without an upload", { type: "file", title: "Title", tags: [], collectionIds: [] }, "Choose a file to upload.", "fileKey"],
     ["an image with a blank key", { type: "image", title: "Title", fileKey: "", tags: [], collectionIds: [] }, "Choose a file to upload.", "fileKey"],
-    ["an unknown type", { type: "custom", title: "Title", tags: [], collectionIds: [] }, "Choose a type.", "type"],
+    ["an unknown type", { type: "podcast", title: "Title", tags: [], collectionIds: [] }, "Choose a type.", "type"],
+    ["a custom item without its type id", { type: "custom", title: "Title", tags: [], collectionIds: [] }, "Choose a type.", "typeId"],
     ["a title over 200 characters", { type: "note", title: "a".repeat(201), tags: [], collectionIds: [] }, "Title can be at most 200 characters.", "title"],
     [
       "more than 20 tags",
@@ -227,6 +232,63 @@ describe("createItem", () => {
     expect(result).toEqual({ success: false, data: null, error, field });
     expect(session).not.toHaveBeenCalled();
     expect(createQuery).not.toHaveBeenCalled();
+  });
+
+  describe("of a custom type", () => {
+    const input = {
+      type: "custom" as const,
+      typeId: "typ_own",
+      title: " Bug ",
+      content: "## Steps\n",
+      language: " ts ",
+      url: "https://dropped.example",
+      tags: [],
+      collectionIds: [],
+    };
+
+    it("creates it under the user's own type, with a note's fields plus the language", async () => {
+      const result = await createItem(input);
+
+      expect(result.success).toBe(true);
+      expect(ownsType).toHaveBeenCalledWith(USER_ID, "typ_own");
+      expect(createQuery).toHaveBeenCalledWith(
+        USER_ID,
+        {
+          type: { customTypeId: "typ_own" },
+          title: "Bug",
+          content: "## Steps\n",
+          language: "ts",
+          tags: [],
+          collectionIds: [],
+        },
+        { maxItems: undefined },
+      );
+    });
+
+    // `ownsCustomType` filters on the owner and `isSystem: false`, so both come back false.
+    it.each([["another user's type id"], ["a system type's id passed as custom"]])("refuses %s", async () => {
+      ownsType.mockResolvedValue(false);
+
+      const result = await createItem(input);
+
+      expect(result).toEqual({
+        success: false,
+        data: null,
+        error: "This type no longer exists. Choose another.",
+        field: "typeId",
+      });
+      expect(createQuery).not.toHaveBeenCalled();
+    });
+
+    it("refuses a Free account, even one that kept its types after Pro", async () => {
+      planStatus.mockResolvedValue(plan(false, 0));
+
+      const result = await createItem(input);
+
+      expect(result).toEqual({ success: false, data: null, error: "Custom item types are a Pro feature." });
+      expect(ownsType).not.toHaveBeenCalled();
+      expect(createQuery).not.toHaveBeenCalled();
+    });
   });
 
   it("creates the item as the signed-in user, with the input trimmed", async () => {

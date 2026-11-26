@@ -57,11 +57,12 @@ describe("getProfile", () => {
 });
 
 describe("getProfileStats", () => {
-  const SYSTEM = { userId: null };
+  const SYSTEM = { userId: null, icon: null, isSystem: true };
   const types = [
     { id: "typ_snippet", slug: "snippet", name: "Snippet", color: "emerald", ...SYSTEM },
     { id: "typ_link", slug: "link", name: "Link", color: "lime", ...SYSTEM },
   ];
+  const OWN = { userId: USER, icon: "bug", isSystem: false };
 
   beforeEach(() => {
     countItems.mockResolvedValue(0);
@@ -79,37 +80,40 @@ describe("getProfileStats", () => {
     expect(findTypes.mock.calls[0]![0].where).toEqual({ OR: [{ userId: null }, { userId: USER }] });
   });
 
-  it("lists all seven types in order, zeros included", async () => {
+  it("lists all seven system types in order, zeros included", async () => {
     groupItems.mockResolvedValue([{ typeId: "typ_link", _count: { _all: 6 } }]);
 
     const { byType } = await getProfileStats(USER);
 
     expect(byType.map(({ slug }) => slug)).toEqual(["snippet", "prompt", "note", "command", "link", "file", "image"]);
-    expect(byType.find(({ slug }) => slug === "link")).toEqual({ slug: "link", color: "lime", count: 6 });
-    expect(byType.find(({ slug }) => slug === "note")).toEqual({ slug: "note", color: null, count: 0 });
+    expect(byType.find(({ slug }) => slug === "link")).toEqual({
+      slug: "link",
+      name: "Link",
+      icon: null,
+      color: "lime",
+      isSystem: true,
+      count: 6,
+    });
+    expect(byType.find(({ slug }) => slug === "note")).toMatchObject({ slug: "note", isSystem: true, count: 0 });
   });
 
-  it("adds a custom type reusing a system slug to that row", async () => {
-    findTypes.mockResolvedValue([...types, { id: "own_link", slug: "link", name: "My links", color: null }]);
-    groupItems.mockResolvedValue([
-      { typeId: "typ_link", _count: { _all: 6 } },
-      { typeId: "own_link", _count: { _all: 2 } },
+  it("lists the user's custom types after the system ones, by name, with their counts", async () => {
+    findTypes.mockResolvedValue([
+      ...types,
+      { id: "own_problem", slug: "problem", name: "Problem", color: "rose", ...OWN },
+      { id: "own_bug", slug: "bug", name: "Bug", color: null, ...OWN },
     ]);
-
-    const { byType } = await getProfileStats(USER);
-
-    expect(byType.find(({ slug }) => slug === "link")?.count).toBe(8);
-  });
-
-  it("counts other custom types in the total only", async () => {
-    findTypes.mockResolvedValue([...types, { id: "own_podcast", slug: "podcast", name: "Podcast", color: null }]);
-    groupItems.mockResolvedValue([{ typeId: "own_podcast", _count: { _all: 4 } }]);
+    groupItems.mockResolvedValue([{ typeId: "own_problem", _count: { _all: 4 } }]);
     countItems.mockResolvedValue(4);
 
     const { totalItems, byType } = await getProfileStats(USER);
 
     expect(totalItems).toBe(4);
-    expect(byType.every(({ count }) => count === 0)).toBe(true);
+    expect(byType.slice(7).map(({ slug, isSystem, count }) => ({ slug, isSystem, count }))).toEqual([
+      { slug: "bug", isSystem: false, count: 0 },
+      { slug: "problem", isSystem: false, count: 4 },
+    ]);
+    expect(byType.slice(0, 7).every(({ count }) => count === 0)).toBe(true);
   });
 });
 

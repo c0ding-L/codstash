@@ -50,6 +50,8 @@ export interface ExportTypeRow {
   name: string;
   icon: string | null;
   color: string | null;
+  /** The Markdown that pre-fills a new item of this type; null for none. */
+  template: string | null;
 }
 
 export interface ExportUserRow {
@@ -102,7 +104,7 @@ export function exportHeader({
     version: EXPORT_VERSION,
     exportedAt: exportedAt.toISOString(),
     user: { name: user.name, email: user.email, locale: user.locale },
-    types: types.map(({ slug, name, icon, color }) => ({ slug, name, icon, color })),
+    types: types.map(({ slug, name, icon, color, template }) => ({ slug, name, icon, color, template })),
     collections: collections.map((collection) => ({
       id: collection.id,
       name: collection.name,

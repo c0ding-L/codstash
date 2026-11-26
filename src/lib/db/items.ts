@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { countWords, estimateTokens, markdownToPlainText, promptExcerpt } from "@/lib/prompt-text";
 import { searchPreview } from "@/lib/search-text";
 import { snippetPreview } from "@/lib/snippet-text";
-import type { ItemTypeSlug } from "@/types/item-type";
+import type { ItemTypeSlug, TypeRef } from "@/types/item-type";
 
 /** Everything a row on the dashboard renders, flattened out of the relations. */
 export interface DashboardItem {
@@ -23,7 +23,7 @@ export interface DashboardItem {
   isFavorite: boolean;
   updatedAt: Date;
   /** `Item.typeId` is required, so every item has one. */
-  type: { slug: string; name: string; color: string | null };
+  type: TypeRef & { id: string };
   /** The collections the item is in, by name; empty when it is in none. */
   collections: ItemCollectionRef[];
 }
@@ -47,7 +47,7 @@ const dashboardItemSelect = {
   isPinned: true,
   isFavorite: true,
   updatedAt: true,
-  type: { select: { slug: true, name: true, color: true } },
+  type: { select: { id: true, slug: true, name: true, icon: true, color: true, isSystem: true } },
   collections: {
     select: { collection: { select: { id: true, name: true } } },
     orderBy: { collection: { name: "asc" } },
@@ -133,15 +133,14 @@ const pinnedFirstOrder = [
 
 /**
  * One page of the user's items of one type, pinned first, then favorites, then most recently updated, plus
- * the total so the page can count its pages. Filters on the slug, so a custom
- * type reusing a system slug lists with it, as in the profile counts.
+ * the total so the page can count its pages. A system type by its slug, a custom one by its id.
  */
 export async function getItemsByType(
   userId: string,
-  slug: ItemTypeSlug,
+  type: { slug: ItemTypeSlug } | { customTypeId: string },
   page: number = 1,
 ): Promise<{ items: DashboardItem[]; totalCount: number }> {
-  const where = { userId, type: { slug } };
+  const where = "slug" in type ? { userId, type: { slug: type.slug } } : { userId, typeId: type.customTypeId };
 
   const [items, totalCount] = await Promise.all([
     prisma.item.findMany({
@@ -214,7 +213,8 @@ export async function getSearchItems(userId: string): Promise<SearchItem[]> {
 
   return items.map(({ content, language, tags, ...item }) => ({
     ...toDashboardItem(item),
-    preview: searchPreview(content, item.type.slug),
+    // A custom type is Markdown, like a note.
+    preview: searchPreview(content, item.type.isSystem ? item.type.slug : "note"),
     content,
     language,
     tags: tags.map(({ tag }) => tag.name),
@@ -502,8 +502,8 @@ function toSavedItem(updated: Prisma.ItemGetPayload<{ select: typeof savedItemSe
 
 /** The fields of a new item. Those its type does not use are left out. */
 export interface ItemCreate {
-  /** A system type's slug. */
-  type: ItemTypeSlug;
+  /** A system type's slug, or the id of one of the user's custom types. */
+  type: ItemTypeSlug | { customTypeId: string };
   title: string;
   description?: string | null;
   content?: string | null;
@@ -520,21 +520,27 @@ export interface ItemCreate {
 }
 
 /**
- * Creates the item under the system type of that slug and returns its card.
- * Throws when no such system type exists. The lookup filters on a null owner
- * because the `[userId, slug]` unique cannot be queried with a null.
+ * Creates the item under the system type of that slug, or under the user's custom type of
+ * that id, and returns its card. Throws when no such type exists, or when the custom type is
+ * not this user's. The system lookup filters on a null owner because the `[userId, slug]`
+ * unique cannot be queried with a null.
  */
 export async function createItem(
   userId: string,
-  { type: slug, tags, collectionIds, ...fields }: ItemCreate,
+  { type: typeKey, tags, collectionIds, ...fields }: ItemCreate,
   /** The Free item limit, re-checked under a lock; omitted for Pro. */
   { maxItems }: { maxItems?: number } = {},
 ): Promise<DashboardItem> {
   const type = await prisma.itemType.findFirst({
-    where: { slug, userId: null, isSystem: true },
+    where:
+      typeof typeKey === "string"
+        ? { slug: typeKey, userId: null, isSystem: true }
+        : { id: typeKey.customTypeId, userId, isSystem: false },
     select: { id: true },
   });
-  if (!type) throw new Error(`No system item type "${slug}".`);
+  if (!type) {
+    throw new Error(typeof typeKey === "string" ? `No system item type "${typeKey}".` : "No such custom item type.");
+  }
 
   const args = {
     data: {

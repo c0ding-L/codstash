@@ -1,8 +1,7 @@
 import { getItemTypes } from "@/lib/db/collections";
 import { parseEditorPreferences, type EditorPreferences } from "@/lib/editor-preferences";
 import { prisma } from "@/lib/prisma";
-import { toColorToken, toItemTypeSlug } from "@/lib/item-type-ui";
-import type { ColorToken, ItemTypeSlug } from "@/types/item-type";
+import type { ItemTypeSlug, TypeRef } from "@/types/item-type";
 
 export interface Profile {
   id: string;
@@ -35,16 +34,15 @@ export async function getEditorPreferences(userId: string): Promise<EditorPrefer
 /** The order the spec lists them in. */
 const BREAKDOWN_ORDER: ItemTypeSlug[] = ["snippet", "prompt", "note", "command", "link", "file", "image"];
 
-export interface TypeCount {
-  slug: ItemTypeSlug;
-  color: ColorToken | null;
+/** One row of the breakdown: a type, system or custom, with the user's item count. */
+export interface TypeCount extends TypeRef {
   count: number;
 }
 
 export interface ProfileStats {
   totalItems: number;
   collectionCount: number;
-  /** All seven system types, zeros included. Items of other custom types count in `totalItems` only. */
+  /** All seven system types, zeros included, then the user's custom types by name. */
   byType: TypeCount[];
 }
 
@@ -57,20 +55,30 @@ export async function getProfileStats(userId: string): Promise<ProfileStats> {
   ]);
 
   const countByTypeId = new Map(grouped.map((row) => [row.typeId, row._count._all]));
-  const bySlug = new Map<ItemTypeSlug, TypeCount>();
-  for (const type of types) {
-    const slug = toItemTypeSlug(type.slug);
-    if (!slug) continue;
-    const count = countByTypeId.get(type.id) ?? 0;
-    // A custom type may reuse a system slug; its items join that row.
-    const existing = bySlug.get(slug);
-    if (existing) existing.count += count;
-    else bySlug.set(slug, { slug, color: toColorToken(type.color), count });
-  }
+  const toRow = ({ slug, name, icon, color, isSystem, id }: (typeof types)[number]): TypeCount => ({
+    slug,
+    name,
+    icon,
+    color,
+    isSystem,
+    count: countByTypeId.get(id) ?? 0,
+  });
+
+  const system = new Map(types.filter((type) => type.isSystem).map((type) => [type.slug, type]));
+  const custom = types
+    .filter((type) => !type.isSystem)
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(toRow);
 
   return {
     totalItems,
     collectionCount,
-    byType: BREAKDOWN_ORDER.map((slug) => bySlug.get(slug) ?? { slug, color: null, count: 0 }),
+    byType: [
+      ...BREAKDOWN_ORDER.map((slug) => {
+        const type = system.get(slug);
+        return type ? toRow(type) : { slug, name: slug, icon: null, color: null, isSystem: true, count: 0 };
+      }),
+      ...custom,
+    ],
   };
 }
