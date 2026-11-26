@@ -34,7 +34,7 @@ nor custom types exist. A1 and A2 come first, and the rest of A follows in small
   docs in `node_modules/next/dist/docs/` before choosing.
 - Entry point: a Settings › Data section. Rate limited (Upstash).
 
-### A2. Custom item types (Pro)
+### A2. Custom item types (Pro) — done 2026-11-26 (`089eb1f`)
 - Create, rename and delete a type with a name, an icon (a curated lucide list) and a color (the
   existing tokens). The slug is derived from the name and unique per user (`@@unique([userId,
   slug])` exists already).

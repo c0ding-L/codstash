@@ -1,122 +1,22 @@
-# Current Feature: A2 — Custom item types (Pro)
+# Current Feature
 
 ## Status
 
-Implemented on `feature/custom-item-types`. The schema move is committed (`6a3b675`); the rest is not
-committed yet. Defaults kept: a custom type is a text type, at most 20 per user.
-
-- Migration `20261126210956_custom_item_types` (`ItemType.template`), applied to develop.
-- New files:
-  - `src/lib/db/item-types.ts`: owner-scoped queries, `resolveTypeSegment` (React `cache`).
-  - `src/actions/item-types.ts`: create, update and delete.
-  - `src/lib/load-custom-types.ts`: streamed to the New Item dialog.
-  - `src/components/settings/ItemTypesManager.tsx` and `ItemTypeDialog.tsx`: the `#types` section.
-- `item-type-ui.ts`:
-  - `CUSTOM_TYPE_ICONS` (24 icons), `resolveTypeView`, `fieldsSlugOf`, `slugify`,
-    `isReservedTypeSlug` and `typeSegmentFromPathname`.
-  - `useTypeView` / `getTypeView` wrap the view with the UI-language labels.
-  - `TypeIconTile` now takes an `icon` instead of a slug.
-  - `primaryTypeOf` and `useItemTypeLabel` removed (unused).
-- `DashboardItem.type` and `CollectionType` now carry `id`, `icon` and `isSystem`.
-- The profile breakdown lists the custom types after the seven system ones.
-- The drawer shows a custom item's language as a small label next to its title (and in the
-  Language row).
-- The palette previews a custom item's content as Markdown, like a note (`getSearchItems`).
-- The icon picker's labels are translated (`settings.types.icons`).
-- `/feature review` fix: the export now includes each custom type's `template` (the header's `types`).
-- Author's adjustments:
-  - A custom type picks from six colours that no system type uses: orange, brown, fuchsia,
-    indigo, white and slate (`CUSTOM_COLOR_TOKENS`, new `ColorToken`s). The action refuses the
-    others. The default is indigo. Red and teal were tried first and dropped as too close to
-    rose and emerald. Brown is `#b9805a` (arbitrary value), white is `stone-200`. French
-    « Marron » / « Blanc » from DeepL, with its "(couleur)" hint dropped.
-  - Toasts show at the top right (`components/ui/sonner.tsx`).
-  - The export shows "Export complete: {file}" once the file is handed to the browser.
-  - French from DeepL, unchanged except for the no-break space before `:`.
-- Account deletion checked on develop: a throwaway user with a custom type and two items was
-  deleted in `deleteAccount`'s order, items first, with no error. No `NoAction` migration needed.
-  `scripts/delete-all-users-except-demo` already deleted items first, so it is unchanged.
-- French from DeepL (glossary `codstash-ui-en-fr`, `prefer_more`). Changes to its output:
-  - curly apostrophes, and no-break spaces before `? :`
-  - « version Pro » → « formule Pro »
-  - « langue » → « langage »
-  - « Personnalisé » → « Personnalisés »
-  - « déjà pris » → « réservé »
-  - word order of `atCap`
-  - the `inUse` plural, whose count DeepL broke; « d’abord » used in both branches
-  - icon names translated out of context: « Clé » → « Clé à molette » (wrench), « Livre ouvert »,
-    « Cadenas », « Fusée », « Fiole », « Étoile », « Éclair », « Paquet »
-- Browser check on develop with the demo account, in FR and EN:
-  - "Problème" created with a template; reserved name and duplicate name refused.
-  - On `/items/probleme`, "Nouveau Problème" preselects the type and pre-fills the template.
-  - The item shows in the sidebar's Custom group with its count, on the dashboard, in the
-    palette and on the profile.
-  - The drawer renders Markdown; the edit form has Language and Content.
-  - Delete refused while the type has an item.
-  - Renamed to "Bug report": the old URL answers 404, the new one 200.
-  - Set Free (lapsed Pro): the type stays listed, it is disabled with a Crown in New Item, and
-    Settings shows the upsell. The item and then the type were deleted.
-  - Demo reset to Pro (until 2026-12-26) for the author's tests; it owns no custom types.
-  - At 375 px (mobile emulation), FR: the type dialog, Settings, New Item and the type page do
-    not overflow. The drawer shows the language label next to the title (language set on
-    develop by SQL).
-  - Every test item and type was deleted afterwards: the demo owns no custom types, 14 items.
-- 1,124 tests, lint and build green.
+Not Started
 
 ## Goals
 
-- First commit: the zod schemas of `src/actions/items.ts` move unchanged to
-  `src/lib/item-schemas.ts`; the existing tests still pass.
-- Migration `custom_item_types` (develop only): `ItemType.template String?` (≤ 10,000 chars).
-  No other column; `icon` holds a key of `CUSTOM_TYPE_ICONS`, `color` stays a `ColorToken`.
-- `item-type-ui.ts`: `CUSTOM_TYPE_ICONS` (~24 Lucide icons) and `resolveTypeView(...)` →
-  `{ slug, label, Icon, color, href, isSystem }`. System types keep their icon and translated
-  label; a custom type shows its name as typed; unknown icon/color → `Box` / `blue`.
-- Every `toItemTypeSlug(...)` call site that drops custom types goes through the view
-  (`AppSidebar`, `ItemCard`, `ItemRow`, `CollectionCard`, `FavoritesList`, `ItemDetails`,
-  `NewItemDialog`, `CommandPalette`, `i18n/labels.ts`, `lib/db/profile.ts`; re-grep).
-  `ItemTypeSlug` stays the system union.
-- `/items/[type]` resolves a system plural or the user's custom slug, else 404, in the layout,
-  the page and `generateMetadata` (`resolveTypeSegment(userId, segment)`, React `cache`).
-- `slugify(name)` (pure): lowercase ASCII, `[a-z0-9-]`, collapsed `-`, 2–40 chars. Reserved:
-  system slugs and plurals, `new`, `custom`, `all` → field error.
-- Settings › Item types (`#types`): list (icon, color, name, item count), New / Edit / Delete.
-  Dialog: name (1–40, unique per user case-insensitive), icon grid, color (seven tokens),
-  optional Markdown template. Free users see the Pro upsell.
-- `src/actions/item-types.ts`: `createItemType`, `updateItemType`, `deleteItemType` — zod, auth,
-  Pro gate (`canUseCustomTypes(plan)`) on create/update, max 20 types, owner-scoped queries in
-  `src/lib/db/item-types.ts`. Delete with items → "N items still use this type" (also P2003).
-- `NewItemDialog` lists custom types after the system ones (separator, Pro only); the template
-  pre-fills the content only while it is empty.
-- `createItem` gets a `custom` branch (`typeId`, note fields + `language`); the server checks
-  own type, `isSystem: false`, Pro. `lib/db/items.ts` `createItem` takes a system slug or an
-  owned custom `typeId`. `updateItem` keeps working. The drawer renders custom items like notes,
-  with the language in the header when set.
-- Sidebar: a "Custom" group with counts under the system types, hidden when empty.
-- Account deletion works with custom types (verify on develop);
-  `scripts/delete-all-users-except-demo` deletes items before users.
-- Pro lapse: existing types and items stay readable and editable; creating/editing types and
-  creating custom items need Pro again (Crown in the UI, checks in the actions).
-- Tests: `item-type-ui.test.ts`, `actions/item-types.test.ts`, `items.test.ts` (custom branch),
-  `lib/db/item-types.test.ts`. Browser check in EN and FR.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Spec: `context/features/custom-types-spec.md`. Roadmap: `docs/roadmap-v2.md` § A2.
-- **Defaults to confirm before implementing:** a custom type is a text type (Markdown content
-  via the note editor + optional language, no file/URL variants); at most 20 custom types per
-  user.
-- The schema is already there (`ItemType.userId`, `isSystem`, `@@unique([userId, slug])`); the
-  work is mostly undoing the narrowing to the seven system slugs.
-- Renaming a type changes its slug; the old URL 404s. Accepted.
-- `Item → ItemType` is `onDelete: Restrict`, `ItemType → User` cascades. `deleteAccount` deletes
-  items first, so it should work; if not, switch to `onDelete: NoAction` (needs a migration).
-- New strings in `settings.types` and `itemTypes.custom*`, French from DeepL + glossary. A custom
-  type's own name is never translated.
-- Search: `getSearchItems` already returns the type's name; check the palette shows custom items
-  with their view.
-- A4 (import) and C2 (REST API) will reuse `src/lib/item-schemas.ts`. Error Vault (roadmap E) is
-  a custom type with a template.
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — A2 Custom item types: Pro users create their own item types (name,
+icon, colour, Markdown template) in Settings › Item types and create items of them. Second step of
+`docs/roadmap-v2.md`. Outcome in the History below.
 
 ---
 
@@ -2601,3 +2501,47 @@ Environment notes that outlive any one feature:
     deployment.
   - 1,048 tests, build and lint green. Merged into `main` (`47a1429`, fast-forward).
   - Side task: the Test FR account was deleted from develop at the author's request.
+- 2026-11-26 — A2 Custom item types (Pro).
+  - **Refactor first (`6a3b675`):** the item zod schemas moved unchanged from
+    `src/actions/items.ts` to `src/lib/item-schemas.ts`, for A4 and C2.
+  - **Feature (`089eb1f`):**
+    - Migration `custom_item_types` (`ItemType.template`), applied to develop.
+    - `resolveTypeView` gives every type one view (label, icon, colour, href). A custom name is
+      never translated; an unknown icon or colour falls back to `Box` and indigo. `TypeIconTile`
+      now takes an icon. `primaryTypeOf` and `useItemTypeLabel` were removed.
+    - `/items/[type]` resolves a system plural or the user's custom slug (`resolveTypeSegment`,
+      React `cache`) in the layout, the page and `generateMetadata`, else 404.
+    - `slugify` and the reserved slugs: system slugs and plurals, `new`, `custom`, `all`.
+    - Settings › Item types (`#types`): New, Edit, Delete, at most 20, Pro only. Delete is
+      refused while items use the type, P2003 included. Free users see the upsell.
+    - `createItem` has a `custom` branch, checked for owner, `isSystem: false` and Pro.
+    - New Item lists the custom types after a separator. The template fills an empty content.
+    - The drawer renders custom items as Markdown, with the language next to the title.
+    - The sidebar has a "Custom" group with counts; the profile breakdown lists custom types.
+    - The palette previews custom items as Markdown. The export includes each type's template.
+    - Pro lapse: types and items stay readable and editable; creating needs Pro (Crown).
+  - **Author's adjustments:**
+    - Custom types pick from six colours no system type uses: orange, brown (`#b9805a`),
+      fuchsia, indigo, white (`stone-200`) and slate. Red and teal were dropped as too close
+      to rose and emerald.
+    - Toasts moved to the top right. The export confirms with "Export complete: {file}".
+  - French from DeepL (glossary, `prefer_more`). Fixed by hand:
+    - typography
+    - « formule Pro », « langage »
+    - the `inUse` plural
+    - icon names out of context (« Clé à molette », « Cadenas », « Fusée »…)
+  - Account deletion checked on develop with a throwaway user owning a custom type and items:
+    deleting items first works, so no `NoAction` migration. The deletion script already did that.
+  - **Browser-checked on develop** with the demo account, FR and EN, desktop and 375 px:
+    - create, reserved and duplicate names
+    - template pre-fill
+    - sidebar, type page, palette, dashboard, profile
+    - drawer and edit form
+    - delete refused while in use; rename (old URL 404)
+    - lapsed Pro
+    - export toast
+    - Every test type and item was deleted afterwards.
+  - **Not verified:** the brown and white swatches in the browser (the dev server was stopped).
+  - The demo account is left Pro on develop until 2026-12-26 for the author's tests.
+  - 1,124 tests, build and lint green. Merged into `main` (`089eb1f`, fast-forward); branch
+    deleted.
