@@ -43,7 +43,7 @@ nor custom types exist. A1 and A2 come first, and the rest of A follows in small
 - Delete is refused while items still use the type (`onDelete: Restrict` exists already).
 - After a Pro lapse the types stay readable, and only creating new ones is gated.
 
-### A3. Context export (Free)
+### A3. Context export (Free) — done 2026-11-26 (`91d5347`)
 - An "Export as context" button on a collection produces a `context.md` with the collection's
   description and its items, ready to give to Claude Code, Cursor or Codex.
 - Reuses A1's serialisation code, so it comes right after A1 without growing A1's scope.

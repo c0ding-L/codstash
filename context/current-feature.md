@@ -1,60 +1,22 @@
-# Current Feature: A3 Context export (Free)
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-Spec: `@context/features/context-export-spec.md`. Third step of `docs/roadmap-v2.md` § A3.
-
-- Any user (Free or Pro) turns a collection into one Markdown file for an AI coding assistant:
-  the collection's description, then its items rendered by type.
-- `src/lib/context-export.ts` holds a pure `renderCollectionContext({ collection, items,
-  exportedAt })`. Sections come in a fixed order: Snippets, Commands, Prompts, Notes, custom
-  types, Links, Files. Empty sections are left out, and items in a section sort by `updatedAt`
-  descending.
-- Fences grow longer (````) when the content holds a ``` fence. This is a tested pure helper.
-- Note and custom-type headings shift down two levels. Prompts are fenced as `text`, commands
-  default to `bash`, links render as `- [title](url): description`, and files as
-  `- fileName (size)`, names only.
-- The file has a 400,000-character cap. It stops at an item boundary and adds a
-  `_Truncated: N more items not included._` line.
-- `GET /api/collections/[id]/context` returns 401 without a session and 404 for a missing
-  collection or another user's. It is sent as `text/markdown; charset=utf-8`, as an attachment
-  named `<safe-name>-context.md`, with `no-store`. It is rate-limited by
-  `contextExport: { attempts: 30, window: "1 h" }` per user.
-- `CollectionHeaderActions` gets "Export as context" (`FileDown`, downloads the file) and "Copy
-  as context" (`copyFromPromise`). Copy refuses with a toast that suggests the download when the
-  text is over 200,000 characters.
-- The collection form's description gets a hint ("Describe the stack, conventions and goals:
-  they lead your exported context."), and the description cap goes from 2,000 to 10,000.
-- Tests: `src/lib/context-export.test.ts` and a route test (401, 404, headers, 429). Browser
-  check of the download and the copy.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- **Defaults already confirmed** by the author on 2026-11-26 (`docs/roadmap-v2.md`, table rows
-  3–4): section headings are in English whatever the UI language, and the description cap rises
-  to 10,000.
-- **Never translated**: the collection's description and every item's text go out as written
-  (see memory "Translate ours, never user input"). Only the UI strings (menu entries, toasts and
-  the hint) go into `en.json` and `fr.json`, with the French from DeepL.
-- **Reuse from A1** (`src/lib/export.ts`): `safeFileName` (line 166), `renderItemText`
-  (line 210) and `linksMarkdown` (line 216). `linksMarkdown` already escapes titles and
-  `<>`-wraps URLs, so the Links section should probably use it instead of the spec's plain
-  `- [title](url)`. This is to confirm at implementation time.
-- **Brand**: the spec's footer says "Exported from Cortex". That matches the app title
-  (`src/app/layout.tsx:25`), although the repo is named codstash.
-- **Description cap**: `COLLECTION_LIMITS.description` in `src/actions/collections.ts:30`.
-  `Collection.description` is a plain `String?` (Postgres `text`), so no migration is needed.
-  Check whether the form shows a counter or a `maxLength` that also needs the new value.
-- **Route**: `src/app/api/collections/route.ts` exists. The new handler goes in
-  `src/app/api/collections/[id]/context/route.ts`. Items link to collections through
-  `ItemCollection`, so the query goes through that join, scoped to the user.
-- The rate limit sits next to `export` (5 / 1 h) in `src/lib/rate-limit.ts`.
-- Later: after A6 (secret detection), warn before a download or copy when an item matches, with
-  no block. C3 (MCP) will expose the same rendering as `get_collection_context`.
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — A3 Context export: any user exports a collection as one Markdown
+file for an AI coding assistant, from the collection's `⋯` menu (download or copy). Third step of
+`docs/roadmap-v2.md`. Outcome in the History below.
 
 ---
 
@@ -2588,4 +2550,47 @@ Environment notes that outlive any one feature:
   - **Not verified:** the brown and white swatches in the browser (the dev server was stopped).
   - The demo account is left Pro on develop until 2026-12-26 for the author's tests.
   - 1,124 tests, build and lint green. Merged into `main` (`089eb1f`, fast-forward); branch
+    deleted.
+- 2026-11-26 — A3 Context export (Free).
+  - Spec: `context/features/context-export-spec.md`.
+  - **Rendering:** `src/lib/context-export.ts`, pure.
+    - The collection's name and description come first, then the items in a fixed section
+      order: Snippets, Commands, Prompts, Notes, custom types (by name), Links, Files.
+      Empty sections are left out, and items sort newest first.
+    - Section headings are in English, and the user's text goes out as written.
+    - `fenceFor` lengthens a fence around backticks.
+    - `shiftHeadings` moves ATX headings down two levels, skips fenced code and closes a fence
+      a note left open. Setext headings are not shifted.
+    - Total cap of 400,000 characters, cut at an item boundary with a `_Truncated: N more items_`
+      line.
+  - **Deviations from the spec:**
+    - Links reuse A1's format, `- [title](<url>): description`, through `linkLine`, which was
+      extracted from `linksMarkdown`.
+    - Images are listed under Files.
+    - A custom type always gets its own section, even when its slug is a system one.
+  - **Route:** `GET /api/collections/[id]/context`.
+    - 401 without a session, then the `contextExport` rate limit (30 per hour, 429), then 404
+      for a collection that is missing or someone else's.
+    - `text/markdown` attachment with `no-store` and `nosniff`.
+    - `Content-Disposition` carries an ASCII `filename` and the real name in `filename*`, so a
+      collection named with accents or emoji does not break the header.
+    - The collection is read whole before the cap is applied. Fine at current sizes.
+  - **UI:**
+    - The collection header has a new `⋯` menu with "Export as context" (success toast
+      "Export complete: {file}") and "Copy as context".
+    - Copy refuses past 200,000 characters. `CopyRefusedError` in `copyFromPromise` shows the
+      refusal's own message, kept apart because Chromium rejects the write with its own
+      DOMException.
+    - `responseError` was extracted from `ExportButtons`.
+  - The description cap went from 2,000 to 10,000, and the collection form shows a hint.
+  - **French from DeepL** (glossary, `prefer_more`). Typography fixed by hand, and « stack »
+    used instead of DeepL's « pile » at the author's request. The glossary is not updated.
+  - **Browser-checked** on develop with the demo account:
+    - download and copy on every seeded collection
+    - the copy refusal and a 429, both faked with `page.route`: the clipboard stays untouched
+    - the description hint and the success toast
+    - Notes and custom types are covered by unit tests only, because no seeded collection
+      holds one.
+  - The demo account was set to Pro on develop until 2027-11-26 for the author's tests.
+  - 1,154 tests, build and lint green. Merged into `main` (`91d5347`, fast-forward); branch
     deleted.
