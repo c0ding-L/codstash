@@ -27,7 +27,7 @@ function blankToNull(value: unknown) {
 /** Caps on what one collection can hold, in line with the item caps. */
 const COLLECTION_LIMITS = {
   name: 100,
-  description: 2_000,
+  description: 10_000,
 } as const;
 
 export interface CreateCollectionInput {

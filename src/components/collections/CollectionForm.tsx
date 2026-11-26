@@ -70,7 +70,12 @@ export function CollectionForm({
         <Input value={name} autoFocus {...fieldProps("name", setName)} />
       </Field>
 
-      <Field id={`${id}-description`} label={t("description")} error={messageFor("description")}>
+      <Field
+        id={`${id}-description`}
+        label={t("description")}
+        error={messageFor("description")}
+        hint={t("descriptionHint")}
+      >
         <Textarea value={description} className="resize-none" {...fieldProps("description", setDescription)} />
       </Field>
 

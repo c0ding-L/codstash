@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { toast } from "sonner";
 
-import { copyFromPromise, copyToClipboard } from "./clipboard";
+import { copyFromPromise, copyToClipboard, CopyRefusedError } from "./clipboard";
 
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
@@ -78,5 +78,27 @@ describe("copyFromPromise", () => {
 
     expect(toast.error).toHaveBeenCalledWith("Could not copy to the clipboard.");
     expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it("shows the refusal's own message, even when the browser reports its own error", async () => {
+    vi.stubGlobal("ClipboardItem", FakeClipboardItem);
+    // Chromium rejects the write with a DOMException of its own, not the text's reason.
+    write.mockImplementation(async ([item]) => {
+      await item!.items["text/plain"]!.catch(() => {
+        throw new DOMException("Failed", "NotAllowedError");
+      });
+    });
+
+    await copyFromPromise(Promise.reject(new CopyRefusedError("Too long to copy.")), MESSAGES);
+
+    expect(toast.error).toHaveBeenCalledWith("Too long to copy.");
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
+  it("shows the refusal's message where ClipboardItem is missing", async () => {
+    await copyFromPromise(Promise.reject(new CopyRefusedError("Too many attempts.")), MESSAGES);
+
+    expect(writeText).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledWith("Too many attempts.");
   });
 });

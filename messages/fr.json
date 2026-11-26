@@ -516,6 +516,7 @@
     "deleteLabel": "Supprimer la collection",
     "name": "Nom",
     "description": "Description",
+    "descriptionHint": "Décrivez la stack, les conventions et les objectifs : ce sont eux qui déterminent votre contexte exporté.",
     "new": {
       "title": "Nouvelle collection",
       "description": "Donnez-lui un nom et, si vous le souhaitez, une description.",
@@ -534,6 +535,13 @@
       "title": "Supprimer cette collection ?",
       "body": "<name>{collection}</name> sera supprimée. Ses éléments sont conservés : ils quittent simplement cette collection. Cette action est irréversible.",
       "deleted": "Collection supprimée."
+    },
+    "context": {
+      "export": "Exporter en tant que contexte",
+      "copy": "Copier en tant que contexte",
+      "done": "Exportation terminée : {file}",
+      "tooLong": "Ce contexte est trop long pour être copié. Utilisez plutôt l’option « Exporter en tant que contexte » pour le télécharger.",
+      "failed": "Impossible d’exporter le contexte. Veuillez réessayer."
     }
   },
   "profile": {

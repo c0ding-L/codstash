@@ -127,10 +127,20 @@ describe("createCollection", () => {
   });
 
   it("refuses a description over the cap", async () => {
-    const result = await createCollection({ name: "React", description: "a".repeat(2_001) });
+    const result = await createCollection({ name: "React", description: "a".repeat(10_001) });
 
     expect(result).toMatchObject({ success: false, field: "description" });
     expect(createQuery).not.toHaveBeenCalled();
+  });
+
+  it("accepts a description of 10,000 characters", async () => {
+    await createCollection({ name: "React", description: "a".repeat(10_000) });
+
+    expect(createQuery).toHaveBeenCalledWith(
+      USER_ID,
+      { name: "React", description: "a".repeat(10_000) },
+      { maxCollections: undefined },
+    );
   });
 
   it("ignores a userId sent from the client", async () => {
@@ -181,7 +191,7 @@ describe("updateCollection", () => {
   });
 
   it("refuses a description over the cap", async () => {
-    const result = await updateCollection("col_1", { name: "React", description: "a".repeat(2_001) });
+    const result = await updateCollection("col_1", { name: "React", description: "a".repeat(10_001) });
 
     expect(result).toMatchObject({ success: false, field: "description" });
     expect(updateQuery).not.toHaveBeenCalled();

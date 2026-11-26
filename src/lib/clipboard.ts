@@ -6,6 +6,9 @@ export interface ClipboardMessages {
   failed: string;
 }
 
+/** Rejects the text given to `copyFromPromise`: nothing is copied, and its message shows instead of `failed`. */
+export class CopyRefusedError extends Error {}
+
 /** Copies text to the clipboard and says how it went in a toast. */
 export async function copyToClipboard(text: string, messages: ClipboardMessages) {
   try {
@@ -23,6 +26,12 @@ export async function copyToClipboard(text: string, messages: ClipboardMessages)
  * the browser waits for it. Where ClipboardItem is missing, it waits, then writes.
  */
 export async function copyFromPromise(text: Promise<string>, messages: ClipboardMessages) {
+  // The browser reports a rejected ClipboardItem with an error of its own, so the text's
+  // reason is kept here.
+  const reason = text.then(
+    () => null,
+    (error: unknown) => error,
+  );
   try {
     if (typeof ClipboardItem !== "undefined" && navigator.clipboard.write) {
       const blob = text.then((value) => new Blob([value], { type: "text/plain" }));
@@ -32,6 +41,7 @@ export async function copyFromPromise(text: Promise<string>, messages: Clipboard
     }
     toast.success(messages.copied);
   } catch {
-    toast.error(messages.failed);
+    const error = await reason;
+    toast.error(error instanceof CopyRefusedError ? error.message : messages.failed);
   }
 }

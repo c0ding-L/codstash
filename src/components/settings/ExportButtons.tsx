@@ -7,17 +7,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { exportFileName, filenameFromDisposition, type ExportFormat } from "@/lib/export";
-
-/** The route's error body: a translated message. */
-async function errorMessage(response: Response) {
-  try {
-    const body: unknown = await response.json();
-    if (body && typeof body === "object" && "error" in body && typeof body.error === "string") return body.error;
-  } catch {
-    // Not JSON: the generic message below.
-  }
-  return null;
-}
+import { responseError } from "@/lib/response-error";
 
 /**
  * The two export downloads. Fetched rather than a plain `<a download>` link, so a refusal
@@ -34,7 +24,7 @@ export function ExportButtons() {
     try {
       const response = await fetch(`/api/export?format=${format}`);
       if (!response.ok) {
-        toast.error((await errorMessage(response)) ?? t("failed"));
+        toast.error((await responseError(response)) ?? t("failed"));
         return;
       }
       const blob = await response.blob();

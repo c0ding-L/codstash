@@ -212,15 +212,17 @@ export function renderItemText(row: Pick<ExportItemRow, "content">) {
   return content.endsWith("\n") || content === "" ? content : `${content}\n`;
 }
 
-/** `links.md`: every link as a Markdown list. The URL is wrapped in `<>` so spaces and parentheses survive. */
+/** One link as a Markdown list entry. The URL is wrapped in `<>` so spaces and parentheses survive. */
+export function linkLine({ title, url, description }: Pick<ExportItemRow, "title" | "url" | "description">) {
+  const label = title.replace(/[[\]\\]/g, "\\$&");
+  const target = (url ?? "").replace(/[<>\s]/g, (character) => encodeURIComponent(character));
+  const suffix = description?.trim() ? `: ${description.trim().replace(/\s+/g, " ")}` : "";
+  return `- [${label}](<${target}>)${suffix}`;
+}
+
+/** `links.md`: every link as a Markdown list. */
 export function linksMarkdown(links: Pick<ExportItemRow, "title" | "url" | "description">[]) {
-  const lines = links.map(({ title, url, description }) => {
-    const label = title.replace(/[[\]\\]/g, "\\$&");
-    const target = (url ?? "").replace(/[<>\s]/g, (character) => encodeURIComponent(character));
-    const suffix = description?.trim() ? `: ${description.trim().replace(/\s+/g, " ")}` : "";
-    return `- [${label}](<${target}>)${suffix}`;
-  });
-  return `# Links\n\n${lines.join("\n")}\n`;
+  return `# Links\n\n${links.map(linkLine).join("\n")}\n`;
 }
 
 /** `cortex-export-2026-11-26.zip`, dated in UTC. */

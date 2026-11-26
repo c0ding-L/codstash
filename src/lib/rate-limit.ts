@@ -17,6 +17,8 @@ const LIMITS = {
   checkout: { attempts: 5, window: "15 m" },
   /** Per user: each export reads the whole stash and every stored file. */
   export: { attempts: 5, window: "1 h" },
+  /** Per user: each context export reads a whole collection. */
+  contextExport: { attempts: 30, window: "1 h" },
   /** Per user, shared by every AI feature. */
   ai: { attempts: 20, window: "1 h" },
   /** Per user, shared by every AI feature: caps one user's daily cost. */

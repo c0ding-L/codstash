@@ -516,6 +516,7 @@
     "deleteLabel": "Delete collection",
     "name": "Name",
     "description": "Description",
+    "descriptionHint": "Describe the stack, conventions and goals: they lead your exported context.",
     "new": {
       "title": "New collection",
       "description": "Give it a name and, if you like, a description.",
@@ -534,6 +535,13 @@
       "title": "Delete this collection?",
       "body": "<name>{collection}</name> will be deleted. Its items are kept; they just leave this collection. This cannot be undone.",
       "deleted": "Collection deleted."
+    },
+    "context": {
+      "export": "Export as context",
+      "copy": "Copy as context",
+      "done": "Export complete: {file}",
+      "tooLong": "This context is too long to copy. Use “Export as context” to download it instead.",
+      "failed": "Could not export the context. Try again."
     }
   },
   "profile": {
