@@ -121,6 +121,18 @@
       "saved": "Préférences de l’éditeur enregistrées.",
       "saveFailed": "Impossible d’enregistrer vos préférences d’éditeur. Réessayez."
     },
+    "data": {
+      "heading": "Données",
+      "exportTitle": "Exportez vos données",
+      "exportDescription": "Téléchargez tous vos éléments, collections et tags. Le fichier ZIP contient également vos fichiers et images, ainsi qu’une copie lisible de chaque élément.",
+      "json": "Exporter au format JSON",
+      "zip": "Exporter au format ZIP (avec les fichiers)",
+      "zipNote": "Le fichier ZIP peut être volumineux et son téléchargement peut prendre un certain temps.",
+      "preparing": "Préparation de l’exportation…",
+      "failed": "L’exportation a échoué. Vérifiez votre connexion et réessayez.",
+      "proOnly": "L’exportation de vos données est réservée à la formule Pro.",
+      "upgrade": "Passer à Pro"
+    },
     "account": {
       "heading": "Compte",
       "password": "Mot de passe",
@@ -525,7 +537,8 @@
       "items": "Les comptes gratuits sont limités à {max, number} éléments. Passez à Pro dans les Paramètres.",
       "collections": "Les comptes gratuits sont limités à {max, number} collections. Passez à Pro dans les Paramètres.",
       "uploads": "L’import de fichiers et d’images est réservé à la formule Pro.",
-      "ai": "Les fonctionnalités d’IA sont réservées à la formule Pro."
+      "ai": "Les fonctionnalités d’IA sont réservées à la formule Pro.",
+      "export": "L’exportation de vos données est réservée à la formule Pro."
     },
     "tooManyAttempts": "Trop de tentatives. Réessayez dans {minutes, plural, one {# minute} other {# minutes}}.",
     "somethingWrong": "Une erreur s’est produite. Réessayez.",
@@ -617,6 +630,9 @@
       "notMultipart": "Envoyez le fichier en multipart/form-data.",
       "failed": "Impossible d’importer le fichier. Réessayez.",
       "network": "L’import a échoué. Vérifiez votre connexion et réessayez."
+    },
+    "export": {
+      "badFormat": "Choisissez le format JSON ou ZIP pour l’exportation."
     }
   },
   "emails": {

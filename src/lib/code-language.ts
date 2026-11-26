@@ -106,3 +106,45 @@ export function languageLabel(language: string | null | undefined): string {
   const value = language ?? "";
   return LANGUAGE_OPTIONS.find((option) => option.value === value)?.label ?? value;
 }
+
+/** File extensions by Monaco language id, for exported snippets and commands. */
+const EXTENSIONS: Record<string, string> = {
+  typescript: "ts",
+  javascript: "js",
+  python: "py",
+  java: "java",
+  csharp: "cs",
+  cpp: "cpp",
+  c: "c",
+  go: "go",
+  rust: "rs",
+  ruby: "rb",
+  php: "php",
+  swift: "swift",
+  kotlin: "kt",
+  shell: "sh",
+  powershell: "ps1",
+  sql: "sql",
+  pgsql: "sql",
+  mysql: "sql",
+  html: "html",
+  css: "css",
+  scss: "scss",
+  json: "json",
+  yaml: "yml",
+  xml: "xml",
+  markdown: "md",
+  dockerfile: "dockerfile",
+  graphql: "graphql",
+  plaintext: "txt",
+};
+
+/**
+ * The extension (without the dot) for an item's free-text `language`, through the same
+ * aliases as the editor. `fallback` when the language is empty or unknown.
+ */
+export function extensionForLanguage(language: string | null | undefined, fallback = "txt"): string {
+  if (!language?.trim()) return fallback;
+  const id = toMonacoLanguage(language);
+  return Object.hasOwn(EXTENSIONS, id) ? EXTENSIONS[id]! : fallback;
+}

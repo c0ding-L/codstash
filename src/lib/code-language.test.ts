@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { LANGUAGE_OPTIONS, isCodeType, languageLabel, languageOptionsFor, toMonacoLanguage } from "./code-language";
+import {
+  LANGUAGE_OPTIONS,
+  extensionForLanguage,
+  isCodeType,
+  languageLabel,
+  languageOptionsFor,
+  toMonacoLanguage,
+} from "./code-language";
 
 describe("isCodeType", () => {
   it("is true for snippets and commands only", () => {
@@ -77,5 +84,22 @@ describe("languageLabel", () => {
 
   it("shows an unlisted language as saved", () => {
     expect(languageLabel("elixir")).toBe("elixir");
+  });
+});
+
+describe("extensionForLanguage", () => {
+  it("maps languages and their aliases to an extension", () => {
+    expect(extensionForLanguage("typescript")).toBe("ts");
+    expect(extensionForLanguage("TS")).toBe("ts");
+    expect(extensionForLanguage("bash")).toBe("sh");
+    expect(extensionForLanguage("postgres")).toBe("sql");
+    expect(extensionForLanguage("yml")).toBe("yml");
+  });
+
+  it("falls back for an empty, unknown or prototype name", () => {
+    expect(extensionForLanguage(null)).toBe("txt");
+    expect(extensionForLanguage("  ", "sh")).toBe("sh");
+    expect(extensionForLanguage("brainfuck")).toBe("txt");
+    expect(extensionForLanguage("constructor")).toBe("txt");
   });
 });

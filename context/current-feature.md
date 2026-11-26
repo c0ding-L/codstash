@@ -1,16 +1,77 @@
 # Current Feature
 
+# A1 — Export (JSON / ZIP)
+
 ## Status
 
-Not Started
+Implemented on `feature/export`, not committed yet. Vercel checked by the author: Fluid compute
+is on, 300 s max.
+
+- `client-zip` 2.5.1 (`makeZip`, no dependencies, ZIP64, web streams). Not in Context7; chosen
+  from its npm README.
+- New files:
+  - `src/lib/export.ts`: pure. `exportJsonChunks`, `exportHeader` and `exportItem`, entry
+    paths, `safeFileName`, `renderItemText` and `linksMarkdown`.
+  - `src/lib/export-zip.ts`: the entries as an async generator.
+  - `src/lib/db/export.ts`: header data, plus item pages of 100 by `id > last`.
+  - `src/app/api/export/route.ts`: `maxDuration` 300.
+  - `src/components/settings/ExportDataCard.tsx`: the `#data` section in `/settings`.
+- `shortId` in `utils.ts`, `extensionForLanguage` in `code-language.ts`, `canExport`, and the
+  `export` rate limit (5/h).
+- French from DeepL with the glossary. Changes to its output:
+  - « version Pro » → « formule Pro »
+  - « est une fonctionnalité réservée » → « est réservée » (same wording as the other limits)
+  - « balises » → « tags »
+  - « Passer à la version Pro » → « Passer à Pro »
+  - curly apostrophes
+- Browser check on develop, with the demo account set Pro and then reset to Free:
+  - Three 3.6 MB images uploaded through New Item.
+  - JSON: 10.7 KB, 1.9 s.
+  - ZIP: 10.9 MB, 4.1 s. `testzip` clean, 17 items, the images byte-identical (MD5), the
+    storage keys absent.
+  - The three images were then deleted through the drawer. The dev log shows no `[r2]` delete
+    failure.
+  - Windows readers: `Expand-Archive` (PowerShell) and `tar.exe` both read the ZIP. The em-dash
+    in a file name comes out intact (UTF-8 bytes checked), and the images match their MD5.
+  - **Not verified on Vercel.** Whether a streamed ZIP over 4.5 MB gets through Vercel's
+    function response handling has not been checked, and the measure was about 11 MB rather than
+    the spec's 50 MB. The author should download a ZIP over 4.5 MB once deployed.
+  - Free view in EN and FR at 375 px: no overflow. The API answers 403 for Free.
+  - No console errors.
+- Review fixes (`/feature review`):
+  1. The downloads are now buttons (`ExportButtons`, client). They `fetch` the route, so a
+     refusal (403, 429) shows the route's message in a toast instead of a silent failed
+     download. The filename comes from `Content-Disposition` (`filenameFromDisposition`).
+     New strings `preparing` and `failed` come from DeepL; only the apostrophes were changed.
+  2. A failure while the body streams is logged (`[export] … failed mid-stream`) and ends the
+     response in error, so a truncated file never looks complete.
+  - Browser check of the fixes: both downloads work from the buttons. The account was set Free
+    while the page stayed open, and the next click showed the toast "Exporting your data is a
+    Pro feature."
+- 1,048 tests, lint and build green.
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- Pro users download all their data from Settings › Data, as JSON or as a ZIP that holds the
+  JSON, a readable tree of the text items and the R2 files.
+- `GET /api/export?format=json|zip`: session, Pro only, rate limited (`export`, 5/h), 400 on a
+  bad format, `maxDuration` 300 (or the plan's cap).
+- Both the JSON and the ZIP are streamed, never buffered: `exportJsonChunks` writes the JSON
+  incrementally, and the R2 files are piped one at a time.
+- `shortId(id)` = the **last** 8 characters of a cuid, used in the ZIP entry names.
+- A missing R2 object is skipped and listed in `missing-files.txt`.
+- Free users see the card with the Pro upsell. Strings in EN and FR (DeepL + glossary).
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Spec: `context/features/export-spec.md`. Roadmap: `docs/roadmap-v2.md` § A1 (first of 14
+  specs, all written and reviewed on 2026-11-26).
+- **Prerequisite (author):** check that Fluid compute is on in the Vercel project and what
+  `maxDuration` the plan allows.
+- Pick the zip library with Context7 (candidate `client-zip`, not `jszip`), installed through
+  Windows npm.
+- Keep `renderItemText(item)` separate: A3 (context export) reuses it.
+- Export stays Pro only (default confirmed by the author).
 
 ---
 

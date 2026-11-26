@@ -28,6 +28,11 @@ export function canUseAi(plan: Pick<PlanUsage, "isPro">) {
   return plan.isPro;
 }
 
+/** Exporting all data (JSON / ZIP) is sold with Pro. */
+export function canExport(plan: Pick<PlanUsage, "isPro">) {
+  return plan.isPro;
+}
+
 /**
  * Thrown by the create queries when, re-counted under a lock, the Free limit
  * is already reached: two requests racing past the action's early check.

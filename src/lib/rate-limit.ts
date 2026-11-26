@@ -15,6 +15,8 @@ const LIMITS = {
   reauth: { attempts: 5, window: "15 m" },
   /** Per user: each attempt creates a Bictorys charge and a PENDING payment row. */
   checkout: { attempts: 5, window: "15 m" },
+  /** Per user: each export reads the whole stash and every stored file. */
+  export: { attempts: 5, window: "1 h" },
   /** Per user, shared by every AI feature. */
   ai: { attempts: 20, window: "1 h" },
   /** Per user, shared by every AI feature: caps one user's daily cost. */

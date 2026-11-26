@@ -121,6 +121,18 @@
       "saved": "Editor preferences saved.",
       "saveFailed": "Could not save your editor preferences. Try again."
     },
+    "data": {
+      "heading": "Data",
+      "exportTitle": "Export your data",
+      "exportDescription": "Download all your items, collections and tags. The ZIP also holds your files and images, and a readable copy of each item.",
+      "json": "Export as JSON",
+      "zip": "Export as ZIP (with files)",
+      "zipNote": "The ZIP can be large and take a while to download.",
+      "preparing": "Preparing the export…",
+      "failed": "The export failed. Check your connection and try again.",
+      "proOnly": "Exporting your data is a Pro feature.",
+      "upgrade": "Upgrade to Pro"
+    },
     "account": {
       "heading": "Account",
       "password": "Password",
@@ -525,7 +537,8 @@
       "items": "Free accounts can have {max, number} items. Upgrade to Pro in Settings.",
       "collections": "Free accounts can have {max, number} collections. Upgrade to Pro in Settings.",
       "uploads": "File and image uploads are a Pro feature.",
-      "ai": "AI features are a Pro feature."
+      "ai": "AI features are a Pro feature.",
+      "export": "Exporting your data is a Pro feature."
     },
     "tooManyAttempts": "Too many attempts. Please try again in {minutes, plural, one {# minute} other {# minutes}}.",
     "somethingWrong": "Something went wrong. Try again.",
@@ -617,6 +630,9 @@
       "notMultipart": "Send the file as multipart form data.",
       "failed": "Could not upload the file. Try again.",
       "network": "The upload failed. Check your connection and try again."
+    },
+    "export": {
+      "badFormat": "Choose JSON or ZIP for the export."
     }
   },
   "emails": {
