@@ -22,7 +22,7 @@ they need.
 The pricing table promises "custom types, AI, export" to Pro. As of `24c06bb`, neither export
 nor custom types exist. A1 and A2 come first, and the rest of A follows in small separate steps.
 
-### A1. Export (Pro)
+### A1. Export (Pro) — done 2026-11-26 (`47a1429`)
 - `GET /api/export?format=json|zip` covers the signed-in user's data: items, collections, tags,
   custom types and links between them.
 - JSON: one versioned document (`{ version: 1, exportedAt, items, collections, types }`).
