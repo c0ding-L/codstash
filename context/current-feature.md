@@ -1,16 +1,63 @@
-# Current Feature
+# Current Feature: A2 — Custom item types (Pro)
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- First commit: the zod schemas of `src/actions/items.ts` move unchanged to
+  `src/lib/item-schemas.ts`; the existing tests still pass.
+- Migration `custom_item_types` (develop only): `ItemType.template String?` (≤ 10,000 chars).
+  No other column; `icon` holds a key of `CUSTOM_TYPE_ICONS`, `color` stays a `ColorToken`.
+- `item-type-ui.ts`: `CUSTOM_TYPE_ICONS` (~24 Lucide icons) and `resolveTypeView(...)` →
+  `{ slug, label, Icon, color, href, isSystem }`. System types keep their icon and translated
+  label; a custom type shows its name as typed; unknown icon/color → `Box` / `blue`.
+- Every `toItemTypeSlug(...)` call site that drops custom types goes through the view
+  (`AppSidebar`, `ItemCard`, `ItemRow`, `CollectionCard`, `FavoritesList`, `ItemDetails`,
+  `NewItemDialog`, `CommandPalette`, `i18n/labels.ts`, `lib/db/profile.ts`; re-grep).
+  `ItemTypeSlug` stays the system union.
+- `/items/[type]` resolves a system plural or the user's custom slug, else 404, in the layout,
+  the page and `generateMetadata` (`resolveTypeSegment(userId, segment)`, React `cache`).
+- `slugify(name)` (pure): lowercase ASCII, `[a-z0-9-]`, collapsed `-`, 2–40 chars. Reserved:
+  system slugs and plurals, `new`, `custom`, `all` → field error.
+- Settings › Item types (`#types`): list (icon, color, name, item count), New / Edit / Delete.
+  Dialog: name (1–40, unique per user case-insensitive), icon grid, color (seven tokens),
+  optional Markdown template. Free users see the Pro upsell.
+- `src/actions/item-types.ts`: `createItemType`, `updateItemType`, `deleteItemType` — zod, auth,
+  Pro gate (`canUseCustomTypes(plan)`) on create/update, max 20 types, owner-scoped queries in
+  `src/lib/db/item-types.ts`. Delete with items → "N items still use this type" (also P2003).
+- `NewItemDialog` lists custom types after the system ones (separator, Pro only); the template
+  pre-fills the content only while it is empty.
+- `createItem` gets a `custom` branch (`typeId`, note fields + `language`); the server checks
+  own type, `isSystem: false`, Pro. `lib/db/items.ts` `createItem` takes a system slug or an
+  owned custom `typeId`. `updateItem` keeps working. The drawer renders custom items like notes,
+  with the language in the header when set.
+- Sidebar: a "Custom" group with counts under the system types, hidden when empty.
+- Account deletion works with custom types (verify on develop);
+  `scripts/delete-all-users-except-demo` deletes items before users.
+- Pro lapse: existing types and items stay readable and editable; creating/editing types and
+  creating custom items need Pro again (Crown in the UI, checks in the actions).
+- Tests: `item-type-ui.test.ts`, `actions/item-types.test.ts`, `items.test.ts` (custom branch),
+  `lib/db/item-types.test.ts`. Browser check in EN and FR.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Spec: `context/features/custom-types-spec.md`. Roadmap: `docs/roadmap-v2.md` § A2.
+- **Defaults to confirm before implementing:** a custom type is a text type (Markdown content
+  via the note editor + optional language, no file/URL variants); at most 20 custom types per
+  user.
+- The schema is already there (`ItemType.userId`, `isSystem`, `@@unique([userId, slug])`); the
+  work is mostly undoing the narrowing to the seven system slugs.
+- Renaming a type changes its slug; the old URL 404s. Accepted.
+- `Item → ItemType` is `onDelete: Restrict`, `ItemType → User` cascades. `deleteAccount` deletes
+  items first, so it should work; if not, switch to `onDelete: NoAction` (needs a migration).
+- New strings in `settings.types` and `itemTypes.custom*`, French from DeepL + glossary. A custom
+  type's own name is never translated.
+- Search: `getSearchItems` already returns the type's name; check the palette shows custom items
+  with their view.
+- A4 (import) and C2 (REST API) will reuse `src/lib/item-schemas.ts`. Error Vault (roadmap E) is
+  a custom type with a template.
 
 ---
 
