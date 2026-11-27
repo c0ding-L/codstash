@@ -9,6 +9,7 @@ import { ChangePasswordDialog } from "@/components/profile/ChangePasswordDialog"
 import { DeleteAccountDialog } from "@/components/profile/DeleteAccountDialog";
 import { EditorPreferencesForm } from "@/components/settings/EditorPreferencesForm";
 import { ExportDataCard } from "@/components/settings/ExportDataCard";
+import { ImportDataCard } from "@/components/settings/ImportDataCard";
 import { ItemTypesManager } from "@/components/settings/ItemTypesManager";
 import { LanguageForm } from "@/components/settings/LanguageForm";
 import { UpgradeButtons } from "@/components/settings/UpgradeButtons";
@@ -137,6 +138,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       <section id="data" className="flex scroll-mt-20 flex-col gap-4">
         <h2 className="text-lg font-semibold">{t("data.heading")}</h2>
         <ExportDataCard isPro={plan.isPro} />
+        <ImportDataCard plan={plan} />
       </section>
 
       <section className="flex flex-col gap-4">

@@ -19,6 +19,8 @@ const LIMITS = {
   export: { attempts: 5, window: "1 h" },
   /** Per user: each context export reads a whole collection. */
   contextExport: { attempts: 30, window: "1 h" },
+  /** Per user, per batch of up to 100 items, and per gist listing or gist import. */
+  import: { attempts: 60, window: "1 h" },
   /** Per user, shared by every AI feature. */
   ai: { attempts: 20, window: "1 h" },
   /** Per user, shared by every AI feature: caps one user's daily cost. */

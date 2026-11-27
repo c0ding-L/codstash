@@ -140,6 +140,59 @@
       "upgrade": "Upgrade to Pro",
       "done": "Export complete: {file}"
     },
+    "import": {
+      "title": "Import",
+      "description": "Bring items in from a Cortex export, from files or from your public GitHub gists. Imported items count toward your plan’s limits.",
+      "usage": "{used, number} of {max, number} items used.",
+      "tabsLabel": "Import source",
+      "tabs": {
+        "cortex": "Cortex export",
+        "files": "Files",
+        "gists": "GitHub Gists"
+      },
+      "cortexHint": "The JSON file from “Export as JSON”. Files and images are not in it, so they are skipped.",
+      "cortexPick": "Choose a Cortex export (.json)",
+      "notExport": "This file is not a Cortex export.",
+      "unreadable": "This file could not be read.",
+      "found": "{count, plural, =0 {No items to import} one {# item ready to import} other {# items ready to import}}",
+      "conflictLabel": "When an item with the same title and type already exists",
+      "conflictSkip": "Skip it",
+      "conflictDuplicate": "Import a copy",
+      "import": "Import",
+      "importFiles": "{count, plural, one {Import # file} other {Import # files}}",
+      "importGists": "{count, plural, =0 {Import} one {Import # gist} other {Import # gists}}",
+      "progressLabel": "Import progress",
+      "importing": "Imported {done, number} / {total, number}",
+      "filesDrop": "<strong>Drop files here</strong> or click to choose",
+      "filesHint": "Markdown and text files become notes, code files snippets, and .sh, .ps1 and .bat files commands.",
+      "filesUnsupported": "{count, plural, one {# file was left out: its type cannot be imported.} other {# files were left out: their type cannot be imported.}}",
+      "typeFor": "Type of {name}",
+      "remove": "Remove {name}",
+      "gistsPublicOnly": "Only public gists can be imported.",
+      "gistsUser": "GitHub username",
+      "gistsLoad": "Show gists",
+      "gistsLoading": "Loading gists…",
+      "gistsNoUser": "Enter a GitHub username to list its public gists.",
+      "gistsEmpty": "No public gists.",
+      "gistsSelectAll": "Select all",
+      "gistsSelected": "{count, number} selected (at most {max, number})",
+      "failed": "The import failed. Check your connection and try again.",
+      "done": "{count, plural, =0 {Nothing was imported.} one {# item imported.} other {# items imported.}}",
+      "dashboard": "Go to the dashboard",
+      "report": {
+        "created": "{count, plural, one {# item imported} other {# items imported}}",
+        "collectionsCreated": "{count, plural, one {# collection created} other {# collections created}}",
+        "duplicate": "{count, plural, one {# skipped: already in your stash} other {# skipped: already in your stash}}",
+        "file": "{count, plural, one {# file or image skipped: not in the JSON} other {# files or images skipped: not in the JSON}}",
+        "tooLong": "{count, plural, one {# skipped: over 100,000 characters} other {# skipped: over 100,000 characters}}",
+        "invalid": "{count, plural, one {# skipped: not a valid item} other {# skipped: not valid items}}",
+        "limit": "{count, plural, one {# left out: the Free plan’s item limit is reached} other {# left out: the Free plan’s item limit is reached}}",
+        "collectionLinksDropped": "{count, plural, one {# collection link left out: the Free plan’s collection limit is reached} other {# collection links left out: the Free plan’s collection limit is reached}}",
+        "gistsNotFetched": "{count, plural, one {# gist could not be fetched from GitHub} other {# gists could not be fetched from GitHub}}",
+        "nothing": "Nothing to import.",
+        "invalidTitles": "Not valid: {titles}"
+      }
+    },
     "account": {
       "heading": "Account",
       "password": "Password",
@@ -714,6 +767,14 @@
     },
     "export": {
       "badFormat": "Choose JSON or ZIP for the export."
+    },
+    "import": {
+      "badRequest": "This import could not be read. Reload the page and try again.",
+      "tooLarge": "This batch is too large to import.",
+      "badUsername": "Enter a valid GitHub username.",
+      "githubRateLimit": "GitHub rate limit reached. Try again later.",
+      "githubNotFound": "GitHub has no public gists for that user.",
+      "githubFailed": "Could not reach GitHub. Try again."
     },
     "itemTypes": {
       "nameRequired": "Name is required.",

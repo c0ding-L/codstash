@@ -148,3 +148,59 @@ export function extensionForLanguage(language: string | null | undefined, fallba
   const id = toMonacoLanguage(language);
   return Object.hasOwn(EXTENSIONS, id) ? EXTENSIONS[id]! : fallback;
 }
+
+/** Extensions that are not an alias of a listed language, for imported files. */
+const EXTRA_EXTENSIONS: Record<string, string> = {
+  mts: "typescript",
+  cts: "typescript",
+  pyw: "python",
+  h: "c",
+  hpp: "cpp",
+  hh: "cpp",
+  cxx: "cpp",
+  kts: "kotlin",
+  yaml: "yaml",
+  gql: "graphql",
+  psm1: "powershell",
+};
+
+/** The languages the forms offer, by value, for the import lookups below. */
+const LISTED_LANGUAGES: ReadonlySet<string> = new Set(
+  LANGUAGE_OPTIONS.map((option) => option.value).filter(Boolean),
+);
+
+/** Extension to language: the reverse of `EXTENSIONS`, the first language winning (`sql`). */
+const LANGUAGE_BY_EXTENSION: Record<string, string> = Object.fromEntries(
+  Object.entries(EXTENSIONS)
+    .filter(([language]) => LISTED_LANGUAGES.has(language))
+    .reverse()
+    .map(([language, extension]) => [extension, language]),
+);
+
+/**
+ * The listed language (`LANGUAGE_OPTIONS`) of a file extension, with or without its dot, for
+ * an imported file. Null when the extension is not a known code language.
+ */
+export function languageForExtension(extension: string): string | null {
+  const ext = extension.trim().toLowerCase().replace(/^\./, "");
+  if (!ext) return null;
+  if (Object.hasOwn(LANGUAGE_BY_EXTENSION, ext)) return LANGUAGE_BY_EXTENSION[ext]!;
+  if (Object.hasOwn(EXTRA_EXTENSIONS, ext)) return EXTRA_EXTENSIONS[ext]!;
+  const aliased = Object.hasOwn(ALIASES, ext) ? ALIASES[ext]! : null;
+  return aliased && LISTED_LANGUAGES.has(aliased) ? aliased : null;
+}
+
+/**
+ * The listed language of a language name such as GitHub's ("TypeScript", "C#", "Shell"):
+ * a label, a value or an alias, ignoring case. Null when it is not one the forms offer.
+ */
+export function languageForName(name: string | null | undefined): string | null {
+  const wanted = name?.trim().toLowerCase();
+  if (!wanted) return null;
+  const option = LANGUAGE_OPTIONS.find(
+    (candidate) => candidate.value && (candidate.label.toLowerCase() === wanted || candidate.value === wanted),
+  );
+  if (option) return option.value;
+  const aliased = toMonacoLanguage(wanted);
+  return LISTED_LANGUAGES.has(aliased) ? aliased : null;
+}

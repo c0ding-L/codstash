@@ -5,7 +5,6 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { auth } from "@/auth";
-import { errKey } from "@/i18n/error-keys";
 import { getErrors } from "@/i18n/errors-server";
 import { getPlanStatus } from "@/lib/db/billing";
 import {
@@ -16,19 +15,8 @@ import {
   type CollectionSummary,
   type RecentCollection,
 } from "@/lib/db/collections";
+import { collectionSchema } from "@/lib/item-schemas";
 import { FREE_LIMITS, LimitReachedError, canCreateCollection } from "@/lib/usage-limits";
-
-/** An input left blank is stored as null rather than "". */
-function blankToNull(value: unknown) {
-  if (typeof value !== "string") return value;
-  return value.trim() || null;
-}
-
-/** Caps on what one collection can hold, in line with the item caps. */
-const COLLECTION_LIMITS = {
-  name: 100,
-  description: 10_000,
-} as const;
 
 export interface CreateCollectionInput {
   name: string;
@@ -43,23 +31,6 @@ export type CreateCollectionResult =
   | { success: true; data: RecentCollection; error: null }
   /** `field` names the input at fault when validation failed, so the form can mark it. */
   | { success: false; data: null; error: string; field?: CreateCollectionField };
-
-/** Shared by create and update: the same name and description rules. */
-const collectionSchema = z.object({
-  name: z
-    .string({ error: errKey("collections.nameRequired") })
-    .trim()
-    .min(1, errKey("collections.nameRequired"))
-    .max(COLLECTION_LIMITS.name, errKey("collections.nameTooLong")),
-  description: z.preprocess(
-    blankToNull,
-    z
-      .string()
-      .max(COLLECTION_LIMITS.description, errKey("collections.descriptionTooLong"))
-      .nullable()
-      .optional(),
-  ),
-});
 
 /** The first validation issue, naming the field at fault when it is one of the form's. */
 function invalidInput(

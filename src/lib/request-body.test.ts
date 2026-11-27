@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { readFormDataWithin } from "@/lib/request-body";
+import { readFormDataWithin, readJsonWithin } from "@/lib/request-body";
 
 const URL = "http://localhost/api/upload";
 
@@ -67,5 +67,34 @@ describe("readFormDataWithin", () => {
       status: 400,
     });
     await expect(readFormDataWithin(new Request(URL, { method: "POST" }), 10_000)).resolves.toEqual({ ok: false, status: 400 });
+  });
+});
+
+describe("readJsonWithin", () => {
+  const post = (body: BodyInit, headers: Record<string, string> = {}) =>
+    new Request(URL, { method: "POST", headers, body, duplex: "half" } as RequestInit);
+
+  it("parses a JSON body within the cap", async () => {
+    expect(await readJsonWithin(post(JSON.stringify({ a: "é" })), 100)).toEqual({ ok: true, json: { a: "é" } });
+  });
+
+  it("refuses a declared length over the cap before reading", async () => {
+    expect(await readJsonWithin(post("{}", { "content-length": "101" }), 100)).toEqual({ ok: false, status: 413 });
+  });
+
+  it("refuses a streamed body once it passes the cap", async () => {
+    let pulled = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulled += 1;
+        controller.enqueue(new Uint8Array(64));
+      },
+    });
+    expect(await readJsonWithin(post(body), 1000)).toEqual({ ok: false, status: 413 });
+    expect(pulled).toBeLessThan(20);
+  });
+
+  it("answers 400 for a body that is not JSON", async () => {
+    expect(await readJsonWithin(post("nope"), 100)).toEqual({ ok: false, status: 400 });
   });
 });

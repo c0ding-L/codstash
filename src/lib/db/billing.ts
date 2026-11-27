@@ -44,10 +44,23 @@ export async function assertBelowLimit(
   limit: "items" | "collections",
   max: number,
 ) {
+  if ((await roomBelowLimit(tx, userId, limit, max)) === 0) throw new LimitReachedError(limit);
+}
+
+/**
+ * How many more the user can create before `max`, under the same lock as `assertBelowLimit`:
+ * an import writes up to that many of a chunk and reports the rest.
+ */
+export async function roomBelowLimit(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  limit: "items" | "collections",
+  max: number,
+): Promise<number> {
   await tx.$queryRaw`SELECT 1 FROM "User" WHERE "id" = ${userId} FOR UPDATE`;
   const count =
     limit === "items" ? await tx.item.count({ where: { userId } }) : await tx.collection.count({ where: { userId } });
-  if (count >= max) throw new LimitReachedError(limit);
+  return Math.max(0, max - count);
 }
 
 /**

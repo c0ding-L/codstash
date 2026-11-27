@@ -140,6 +140,59 @@
       "upgrade": "Passer à Pro",
       "done": "Exportation terminée : {file}"
     },
+    "import": {
+      "title": "Importer",
+      "description": "Importez des éléments à partir d’une exportation Cortex, de fichiers ou de vos gists GitHub publics. Les éléments importés sont pris en compte dans les limites de votre formule.",
+      "usage": "{used, number} sur {max, number} éléments utilisés.",
+      "tabsLabel": "Source d’importation",
+      "tabs": {
+        "cortex": "Exportation Cortex",
+        "files": "Fichiers",
+        "gists": "Gists GitHub"
+      },
+      "cortexHint": "Le fichier JSON issu de la fonction « Exporter au format JSON ». Les fichiers et les images n’y figurent pas ; ils sont donc ignorés.",
+      "cortexPick": "Choisissez un fichier d’exportation Cortex (.json)",
+      "notExport": "Ce fichier n’est pas une exportation Cortex.",
+      "unreadable": "Ce fichier n’a pas pu être lu.",
+      "found": "{count, plural, =0 {Aucun élément à importer} one {# élément prêt à être importé} other {# éléments prêts à être importés}}",
+      "conflictLabel": "Lorsqu’un élément portant le même titre et du même type existe déjà",
+      "conflictSkip": "L’ignorer",
+      "conflictDuplicate": "Importer une copie",
+      "import": "Importer",
+      "importFiles": "{count, plural, one {Importer # fichier} other {Importer # fichiers}}",
+      "importGists": "{count, plural, =0 {Importer} one {Importer # gist} other {Importer # gists}}",
+      "progressLabel": "État d’avancement de l’importation",
+      "importing": "Importés : {done, number} / {total, number}",
+      "filesDrop": "<strong>Déposez vos fichiers ici</strong> ou cliquez pour les choisir",
+      "filesHint": "Les fichiers Markdown et texte deviennent des notes, les fichiers de code des snippets, et les fichiers .sh, .ps1 et .bat des commandes.",
+      "filesUnsupported": "{count, plural, one {# fichier a été ignoré : son type ne peut pas être importé.} other {# fichiers ont été ignorés : leur type ne peut pas être importé.}}",
+      "typeFor": "Type de {name}",
+      "remove": "Supprimer {name}",
+      "gistsPublicOnly": "Seuls les gists publics peuvent être importés.",
+      "gistsUser": "Nom d’utilisateur GitHub",
+      "gistsLoad": "Afficher les gists",
+      "gistsLoading": "Chargement des gists…",
+      "gistsNoUser": "Saisissez un nom d’utilisateur GitHub pour afficher la liste de ses gists publics.",
+      "gistsEmpty": "Aucun gist public.",
+      "gistsSelectAll": "Tout sélectionner",
+      "gistsSelected": "Sélection : {count, number} (au maximum {max, number})",
+      "failed": "L’importation a échoué. Vérifiez votre connexion et réessayez.",
+      "done": "{count, plural, =0 {Rien n’a été importé.} one {# élément importé.} other {# éléments importés.}}",
+      "dashboard": "Accédez au tableau de bord",
+      "report": {
+        "created": "{count, plural, one {# élément importé} other {# éléments importés}}",
+        "collectionsCreated": "{count, plural, one {# collection créée} other {# collections créées}}",
+        "duplicate": "{count, plural, one {# ignoré : déjà présent} other {# ignorés : déjà présents}}",
+        "file": "{count, plural, one {# fichier ou image ignoré : absent du JSON} other {# fichiers ou images ignorés : absents du JSON}}",
+        "tooLong": "{count, plural, one {# omis : plus de 100 000 caractères} other {# omis : plus de 100 000 caractères}}",
+        "invalid": "{count, plural, one {# ignoré : élément non valide} other {# ignorés : éléments non valides}}",
+        "limit": "{count, plural, one {# omis : la limite d’éléments de la formule gratuite est atteinte} other {# omis : la limite d’éléments de la formule gratuite est atteinte}}",
+        "collectionLinksDropped": "{count, plural, one {# lien vers une collection omis : la limite de collections de la formule gratuite est atteinte} other {# liens vers des collections omis : la limite de collections de la formule gratuite est atteinte}}",
+        "gistsNotFetched": "{count, plural, one {# gist n’a pas pu être récupéré depuis GitHub} other {# gists n’ont pas pu être récupérés depuis GitHub}}",
+        "nothing": "Rien à importer.",
+        "invalidTitles": "Non valide : {titles}"
+      }
+    },
     "account": {
       "heading": "Compte",
       "password": "Mot de passe",
@@ -714,6 +767,14 @@
     },
     "export": {
       "badFormat": "Choisissez le format JSON ou ZIP pour l’exportation."
+    },
+    "import": {
+      "badRequest": "Cette importation n’a pas pu être lue. Veuillez actualiser la page et réessayer.",
+      "tooLarge": "Ce lot est trop volumineux pour être importé.",
+      "badUsername": "Veuillez saisir un nom d’utilisateur GitHub valide.",
+      "githubRateLimit": "La limite de requêtes GitHub a été atteinte. Veuillez réessayer plus tard.",
+      "githubNotFound": "GitHub ne contient aucun gist public pour cet utilisateur.",
+      "githubFailed": "Impossible d’accéder à GitHub. Veuillez réessayer."
     },
     "itemTypes": {
       "nameRequired": "Le nom est obligatoire.",

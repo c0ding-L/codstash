@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   LANGUAGE_OPTIONS,
   extensionForLanguage,
+  languageForExtension,
+  languageForName,
   isCodeType,
   languageLabel,
   languageOptionsFor,
@@ -101,5 +103,43 @@ describe("extensionForLanguage", () => {
     expect(extensionForLanguage("  ", "sh")).toBe("sh");
     expect(extensionForLanguage("brainfuck")).toBe("txt");
     expect(extensionForLanguage("constructor")).toBe("txt");
+  });
+});
+
+describe("languageForExtension", () => {
+  it("maps extensions, with or without the dot, to a listed language", () => {
+    expect(languageForExtension("ts")).toBe("typescript");
+    expect(languageForExtension(".TSX")).toBe("typescript");
+    expect(languageForExtension("py")).toBe("python");
+    expect(languageForExtension("yml")).toBe("yaml");
+    expect(languageForExtension("yaml")).toBe("yaml");
+    expect(languageForExtension("sql")).toBe("sql");
+    expect(languageForExtension("h")).toBe("c");
+    expect(languageForExtension("sh")).toBe("shell");
+    expect(languageForExtension("ps1")).toBe("powershell");
+  });
+
+  it("is null for an unknown, empty or prototype extension", () => {
+    expect(languageForExtension("")).toBeNull();
+    expect(languageForExtension("exe")).toBeNull();
+    expect(languageForExtension("bat")).toBeNull();
+    expect(languageForExtension("constructor")).toBeNull();
+    expect(languageForExtension("txt")).toBeNull();
+  });
+});
+
+describe("languageForName", () => {
+  it("maps GitHub's language names to a listed language", () => {
+    expect(languageForName("TypeScript")).toBe("typescript");
+    expect(languageForName("C#")).toBe("csharp");
+    expect(languageForName("C++")).toBe("cpp");
+    expect(languageForName("Shell")).toBe("shell");
+    expect(languageForName("Dockerfile")).toBe("dockerfile");
+  });
+
+  it("is null for a language the forms do not list", () => {
+    expect(languageForName(null)).toBeNull();
+    expect(languageForName("Brainfuck")).toBeNull();
+    expect(languageForName("Text")).toBeNull();
   });
 });

@@ -1,12 +1,18 @@
 import { z } from "zod";
 
 import { errKey, type ErrorKey } from "@/i18n/error-keys";
-import { ITEM_LIMITS } from "@/lib/item-limits";
+import { COLLECTION_LIMITS, ITEM_LIMITS } from "@/lib/item-limits";
 
 /*
  * The item schemas, out of `src/actions/items.ts`: a "use server" file can export only async
  * functions, and import (A4) and the REST API (C2) validate with the same rules.
  */
+
+/**
+ * Web addresses only. `z.url()` alone accepts any scheme, so a `javascript:` or `data:` link
+ * would be stored, then opened from the link list and, with D1, served publicly.
+ */
+const WEB_PROTOCOL = /^https?$/;
 
 /** An input left blank clears the field, so it is stored as null rather than "". */
 function blankToNull(value: unknown) {
@@ -41,7 +47,10 @@ export const updateItemSchema = z.object({
       .optional(),
   ),
   language: optionalText(ITEM_LIMITS.language, "items.languageTooLong"),
-  url: z.preprocess(blankToNull, z.url(errKey("items.invalidUrl")).nullable().optional()),
+  url: z.preprocess(
+    blankToNull,
+    z.url({ protocol: WEB_PROTOCOL, error: errKey("items.invalidUrl") }).nullable().optional(),
+  ),
   tags: z
     .array(
       z
@@ -86,7 +95,10 @@ export const createItemSchema = z.discriminatedUnion(
       // Blank becomes null, which fails as "required" rather than as a bad URL.
       url: z.preprocess(
         blankToNull,
-        z.url({ error: (issue) => (issue.input == null ? errKey("items.urlRequired") : errKey("items.invalidUrl")) }),
+        z.url({
+          protocol: WEB_PROTOCOL,
+          error: (issue) => (issue.input == null ? errKey("items.urlRequired") : errKey("items.invalidUrl")),
+        }),
       ),
     }),
     z.object({ type: z.literal("file"), ...baseFields, fileKey: fileKeyField }),
@@ -102,3 +114,20 @@ export const createItemSchema = z.discriminatedUnion(
   ],
   { error: errKey("items.chooseType") },
 );
+
+/** Shared by create and update, and by import (A4): the same name and description rules. */
+export const collectionSchema = z.object({
+  name: z
+    .string({ error: errKey("collections.nameRequired") })
+    .trim()
+    .min(1, errKey("collections.nameRequired"))
+    .max(COLLECTION_LIMITS.name, errKey("collections.nameTooLong")),
+  description: z.preprocess(
+    blankToNull,
+    z
+      .string()
+      .max(COLLECTION_LIMITS.description, errKey("collections.descriptionTooLong"))
+      .nullable()
+      .optional(),
+  ),
+});

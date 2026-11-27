@@ -17,3 +17,9 @@ export const CUSTOM_TYPE_LIMITS = {
   name: 40,
   template: 10_000,
 } as const;
+
+/** Caps on what one collection can hold, in line with the item caps. */
+export const COLLECTION_LIMITS = {
+  name: 100,
+  description: 10_000,
+} as const;

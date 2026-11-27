@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { auth } from "@/auth";
-import { errKey } from "@/i18n/error-keys";
 import { getErrors } from "@/i18n/errors-server";
 import { getPlanStatus } from "@/lib/db/billing";
 import {
@@ -14,8 +13,8 @@ import {
   isCustomTypeNameTaken,
   updateCustomType,
 } from "@/lib/db/item-types";
-import { CUSTOM_TYPE_LIMITS } from "@/lib/item-limits";
-import { CUSTOM_COLOR_TOKENS, CUSTOM_TYPE_ICONS, isReservedTypeSlug, slugify } from "@/lib/item-type-ui";
+import { isReservedTypeSlug, slugify } from "@/lib/item-type-ui";
+import { itemTypeSchema } from "@/lib/item-type-schema";
 import { LimitReachedError, canUseCustomTypes } from "@/lib/usage-limits";
 
 /** What the type dialog sends. */
@@ -34,23 +33,6 @@ export type ItemTypeResult =
   | { success: false; data: null; error: string; field?: ItemTypeField };
 
 export type DeleteItemTypeResult = { success: true; data: null; error: null } | { success: false; data: null; error: string };
-
-const ICON_KEYS = Object.keys(CUSTOM_TYPE_ICONS) as [string, ...string[]];
-
-const itemTypeSchema = z.object({
-  name: z
-    .string({ error: errKey("itemTypes.nameRequired") })
-    .trim()
-    .min(1, errKey("itemTypes.nameRequired"))
-    .max(CUSTOM_TYPE_LIMITS.name, errKey("itemTypes.nameTooLong")),
-  icon: z.enum(ICON_KEYS, { error: errKey("itemTypes.invalidIcon") }),
-  color: z.enum(CUSTOM_COLOR_TOKENS, { error: errKey("itemTypes.invalidColor") }),
-  // Kept as typed, like an item's content; blank is no template.
-  template: z.preprocess(
-    (value) => (typeof value === "string" && !value.trim() ? null : value),
-    z.string().max(CUSTOM_TYPE_LIMITS.template, errKey("itemTypes.templateTooLong")).nullable().optional(),
-  ),
-});
 
 function prismaCode(error: unknown) {
   return typeof error === "object" && error !== null && "code" in error ? error.code : undefined;

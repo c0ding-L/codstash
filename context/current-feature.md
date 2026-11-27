@@ -1,16 +1,133 @@
-# Current Feature
+# Current Feature: A4 Import (Cortex JSON, loose files, GitHub Gists)
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+Spec: `@context/features/import-spec.md`. Fourth step of `docs/roadmap-v2.md` § A4.
+
+- Any user (Free or Pro) brings items in from a Cortex JSON export (A1's round trip), loose
+  files (`.md`, `.txt`, code files) or their **public** GitHub Gists. Imported items count
+  against the Free limits.
+- `src/lib/import.ts`, pure and client-safe, maps each source to `ImportCandidate`s:
+  - `fromCortexExport(json)`: zod check of `format === "cortex-export"` and `version === 1`,
+    anything else is an error. File and image items are skipped (`file`). A custom-type item
+    uses its type when it exists or can be created (Pro), otherwise it becomes a note tagged
+    `type:<slug>`.
+  - `fromLooseFile(name, text)`: `.md`/`.txt` → note, a known code extension → snippet with
+    the language from a new `languageForExtension(ext)` in `code-language.ts`, `.sh`/`.ps1`/
+    `.bat` → command. Title is the file name without its extension.
+  - `fromGist(gist)`: one candidate per file, language from GitHub's `language` through
+    `LANGUAGE_OPTIONS` or from the extension, Markdown → note, tag `gist`, the gist's
+    description as the description.
+  - Content over 100,000 characters is skipped (`tooLong`). Every candidate goes through the
+    `createItem` zod schemas (`src/lib/item-schemas.ts`), so a `javascript:` URL or an
+    oversized field is skipped (`invalid`) with its title in the report.
+- `src/lib/db/import.ts` `importCandidates(userId, candidates, { maxItems, conflict })`:
+  `skip` leaves out a candidate whose title and type already exist. Collections are matched by
+  name and created if missing, within the Free collection limit (past it the links are dropped
+  and reported). Chunks of 50 in a transaction, re-checking the item limit with
+  `assertBelowLimit`, stopping and reporting what was left out. Returns `{ created, skipped:
+  { duplicate, file, tooLong, limit }, collectionsCreated }`.
+- `POST /api/import`: JSON `{ candidates, conflict }`, up to 100 candidates and under 3 MB per
+  request (the client measures and splits), 413 over 3.5 MB, rate limit `import: { attempts:
+  60, window: "1 h" }` per batch, `maxDuration = 120`. The server validates every candidate
+  again and never trusts the client's mapping. The browser shows progress ("Imported 300 /
+  1,200").
+- `GET /api/import/gists?username=` lists the gists (id, description, file names, updated);
+  `POST /api/import/gists` `{ username?, gistIds }` imports the chosen ones, 100 at most.
+  Username defaults to the linked GitHub login (`GET /user` with the stored
+  `Account.access_token`), else typed. The user's token is used when there is one, otherwise
+  unauthenticated; a 403 or 429 gives "GitHub rate limit, try later". A truncated file fetches
+  `raw_url` only on `gist.githubusercontent.com`, with a 10 s timeout.
+- An "Import" card in Settings › Data, below A1's export card, with three tabs: Cortex export
+  (file picker, skip/duplicate, Import), Files (drag and drop with the `FileUpload` look, a
+  preview list with an editable type, Import), GitHub Gists (username pre-filled, checkbox
+  list, Import). "N of 50 items used" before starting; a summary toast and an inline report
+  with a link to the dashboard after.
+- Tests: `src/lib/import.test.ts`, `src/lib/db/import.test.ts`, and route tests (auth, 413,
+  429, `javascript:` URL skipped, batch cap, gists unauthenticated without a token, foreign
+  `raw_url` refused, GitHub 403 turned into the friendly error with `fetch` mocked). Browser:
+  export then re-import into a fresh develop account, three loose files, the author's gists.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- **Out of scope**: ZIP import (with the files), secret gists (would need the `gist` scope).
+- **Never translated**: imported content is user input (memory "Translate ours, never user
+  input"). Only UI strings go into `en.json` / `fr.json`, French from DeepL.
+- **Decisions** (author, 2026-11-26, at `start`):
+  - Report: `skipped` gains `invalid` (with the titles, first 20) and the result gains
+    `collectionLinksDropped`. The UI shows every non-zero line.
+  - Carried over: optional `isFavorite` / `isPinned` on the candidate, and each collection's
+    description, used only when the collection is created.
+  - Custom types: the batch carries the export's type definitions. The server uses an existing
+    type with that slug, creates it for Pro within the limits, else saves a note tagged
+    `type:<slug>`.
+- **Progress (2026-11-27)**: implemented, tests (1,231), lint and build pass. Not committed.
+  - Done: link URLs limited to http(s) in `item-schemas.ts` (author's choice, also applies to
+    the item form and drawer); collection and custom-type schemas moved to `src/lib/`;
+    `src/lib/import.ts`, `src/lib/db/import.ts`, `src/lib/github-gists.ts`, `POST /api/import`,
+    `GET/POST /api/import/gists`, the Import card (three tabs), EN + FR strings (DeepL, then
+    hand fixes).
+  - **Bug found in the browser, fixed**: the first version wrote each item with a nested
+    `create` (tag upserts and collection links), several round trips per item. Against Neon
+    a 50-item chunk outlasted the 30 s transaction timeout, and the request failed with a
+    `P2003` on `ItemTag` (the next insert ran on an expired transaction). Each chunk now uses
+    bulk `createMany` (items, missing tags, tag links, collection links) with item ids made up
+    front (`newItemId`, cuid-shaped). 60 items: 29.5 s → 5.2 s.
+  - Also fixed: a failed batch no longer shows the success toast; a Free user already at the
+    item limit gets every item reported as `limit` and no collection is created.
+  - **Browser-checked on develop** (three throwaway Free accounts, deleted afterwards through
+    Settings › Delete account; none left, demo untouched):
+    - Crafted export (demo's 14 items + an image, a custom-type item, a `javascript:` link,
+      60 notes, a 4th collection): 50 imported, 26 over the limit, 3 collections created with
+      their descriptions, 1 collection link dropped, 1 file skipped, "Evil link" invalid.
+      Rows checked in the database: types, favorites/pins, `type:recipe` tag, links.
+    - Files: `.md`, `.ts`, `.sh` imported as note, snippet, command; `.png` refused.
+    - Gists: `c0ding-L` has no public gists, so `octocat` was used: 8 listed, 4 imported,
+      3 duplicates (same title), 1 GitHub 502 reported as not fetched.
+    - FR at 375 px: no overflow.
+  - **Not verified**: recreating a custom type for a Pro user against the real database, the
+    default username from a linked GitHub account, a truncated gist file fetched from
+    `raw_url` (unit-tested only).
+- **Spec gaps** (settled above):
+  - The return shape lists `skipped: { duplicate, file, tooLong, limit }`, but the core also
+    produces `invalid` (with titles) and the collection step drops links past the limit. Both
+    need a place in the report.
+  - `ImportCandidate` has no `isFavorite` / `isPinned`, which the export carries
+    (`ExportItem`, `src/lib/export.ts:72`). Dropping them on re-import is the spec as written.
+  - The export has `collectionIds` per item and a `collections` header with ids and names, so
+    `fromCortexExport` maps ids to `collectionNames`. Collection descriptions are not in the
+    candidate shape and would be lost when a collection is created.
+  - "Can be created (Pro)" for a custom type: the export's `types` header holds `slug, name,
+    icon, color, template` (`src/lib/export.ts:107`), so the type can be recreated from it. That
+    runs on the server (it needs the plan and the user's types), so the candidate's
+    `{ customSlug }` needs those definitions to travel with the batch, or the pure core only
+    flags it and `importCandidates` decides.
+  - The roadmap says each gist file becomes a snippet; the spec makes Markdown files notes. The
+    spec wins.
+- **Existing code to reuse**:
+  - `ITEM_LIMITS` in `src/lib/item-limits.ts` (content 100,000, title 200, tags 20).
+  - `createItemSchema` in `src/lib/item-schemas.ts:76` (a discriminated union).
+  - `EXPORT_FORMAT` / `EXPORT_VERSION` in `src/lib/export.ts:8`.
+  - `code-language.ts` has `EXTENSIONS` (language → extension, line 111).
+    `languageForExtension` is its inverse plus extras (`yaml`, `jsx`, `tsx`, `bash`…); `sql` is
+    ambiguous (`sql`/`pgsql`/`mysql`) and should map to `sql`.
+  - `assertBelowLimit` from `src/lib/db/billing.ts`, used in `src/lib/db/items.ts:560` and
+    `src/lib/db/collections.ts:279`.
+  - `src/lib/request-body.ts` only has `readFormDataWithin`. A JSON body reader with the same
+    size check is new.
+  - The rate limit goes next to `export` (5 / 1 h) in `src/lib/rate-limit.ts:19`.
+  - Settings cards live in `src/components/settings/` (`ExportDataCard.tsx`); the drop zone
+    look is `src/components/items/FileUpload.tsx`.
+- **GitHub token**: the provider is the plain `GitHub` in `src/auth.config.ts` with the default
+  scope, which is enough for `GET /user` and public gists. `Account.access_token` is in
+  `prisma/schema.prisma:58`. GitHub OAuth tokens do not expire unless revoked, so a 401 should
+  fall back to an unauthenticated call.
+- **Pre-existing, not this feature**: `/api/upload` accepts 10 MB through the function body,
+  above Vercel's ~4.5 MB. Check uploads over 4.5 MB on the deployed app.
 
 ---
 
