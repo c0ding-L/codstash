@@ -14,6 +14,12 @@ Not Started
 
 ---
 
+Previous feature (completed) — C2 REST API v1: a JSON API under `/api/v1`, authenticated with
+C1's tokens, for the CLI, scripts and a later browser extension. Second step of
+`docs/roadmap-v2.md` § C. Outcome in the History below.
+
+---
+
 Previous feature (completed) — C1 Personal API tokens: users create read or read + write
 tokens in Settings › API tokens for the API, the MCP server and the CLI. First step of
 `docs/roadmap-v2.md` § C. Outcome in the History below.
@@ -2862,3 +2868,50 @@ Environment notes that outlive any one feature:
     and an expired token (expiry backdated by SQL). No console errors. The test rows stay in
     develop, all revoked.
   - 1,426 tests, build and lint green. Merged into `main` (fast-forward); branch deleted.
+- 2026-11-27 — C2 REST API v1 (`78d8a2c`).
+  - Spec: `context/features/rest-api-spec.md`.
+  - **Routes** (`src/app/api/v1/`), each starting with `authenticateApi`:
+    - Read: `GET /me`, `GET /items`, `GET /items/[id]`, `GET /collections` and
+      `GET /collections/[id]/context` (A3's Markdown).
+    - Write: `POST /items` and `PATCH /items/[id]`.
+    - No `DELETE` (roadmap decision #7).
+  - **`src/lib/db/api-items.ts`**, owner-scoped:
+    - `q` matches title, description or content (`contains`, insensitive) or an exact tag, in
+      an `OR`. It sits in `AND` beside the cursor's `OR`.
+    - Filters: `type` (system or custom slug), `tag`, `collection` and `idSuffix`.
+    - Ordered by `updatedAt desc, id desc`. The cursor is base64url of `{ u, i }`; `take` is
+      limit + 1 for `nextCursor`. The limit defaults to 20 and is clamped to 50.
+    - List previews hold 300 characters with a `truncated` flag. Files show as `{ name, size }`
+      and the R2 key is never selected.
+  - **POST**: `createItemSchema` unchanged.
+    - Also takes a custom type's slug as `type`, resolved to `typeId`. Reserved slugs prevent
+      collisions with system types.
+    - `file` and `image` are refused with 422 `unsupported_type` before validation.
+    - Collections and custom types are checked as the caller's. No Free limits, since writing
+      is Pro.
+    - Answers 500 rather than `201 { data: null }` if the new item cannot be read back.
+  - **PATCH**: `updateItemSchema.partial()` through a new `patchApiItem`, which rewrites tags
+    and collections only when they are sent. A field the type does not use, or an empty patch,
+    is a 422. P2025 becomes a 404.
+  - **Errors**: C1's shape, with codes `invalid_json`, `not_found`, `invalid_request` (with
+    `details[{ path, message }]`), `unsupported_type` and `internal_error`. Responses are
+    `no-store`.
+    - 422s are in English: `getErrors({ locale: "en" })`, plus `isKey` so the API's own
+      messages pass through unchanged.
+    - **Bug found by the manual curl run:** `src/i18n/request.ts` ignored an explicit locale,
+      so the details followed `Accept-Language`. It now honours one. `src/i18n/request.test.ts`
+      covers this and fails on the old code. Vitest's include gained `src/i18n/**`, and
+      CLAUDE.md was updated.
+  - **Docs**: `docs/api.md` (auth, each endpoint with `curl` against `$CODSTASH_URL`, error
+    codes, limits). Settings › API tokens links to it on GitHub (`main`); the link 404s while
+    the repo is private. French link text from DeepL, apostrophe curled.
+  - **EXPLAIN on develop**, 1,000 seeded items for a throwaway Pro user, deleted afterwards:
+    - A `q` with matches walks `Item_userId_updatedAt_idx` backwards: 10 ms.
+    - A `q` with no match is a seq scan: 10 ms.
+    - A cursor page takes 0.2 ms.
+    - Acceptable; no full-text index yet.
+  - **Manual curl** against `next dev` with a real write token: every endpoint and error case
+    as documented, including 404s on the demo user's rows. Test user, token and items deleted.
+  - Not done: the existing schema cases still live in `src/actions/items.test.ts`;
+    `item-schemas.test.ts` keeps its 2 link cases.
+  - 1,491 tests, build and lint green. Merged into `main` (fast-forward); branch deleted.
