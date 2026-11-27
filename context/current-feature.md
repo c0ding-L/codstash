@@ -14,6 +14,12 @@ Not Started
 
 ---
 
+Previous feature (completed) — Sidebar Favorites link and favicon: the duplicate sidebar
+Favorites link is gone and the browser tab shows the Cortex logo instead of Vercel's. Outcome
+in the History below.
+
+---
+
 Previous feature (completed) — UI layout fixes: from a Playwright UI review, the sidebar
 highlights the current page and the register page offers GitHub, plus tablet and phone layout
 fixes. Outcome in the History below.
@@ -3180,3 +3186,14 @@ Environment notes that outlive any one feature:
   - 1,704 tests, build and lint green. Playwright checked active links, the GitHub button, the
     sheet at 768px and no overflow at 390/768/1024/1100px. Fast-forward merged into `main`;
     branch deleted.
+- 2026-11-27 — Sidebar Favorites link and favicon (`e9c7a77`).
+  - Asked by the author: drop the sidebar Favorites link added in the UI layout fixes (the
+    top bar's star already goes to `/favorites`), and replace the Vercel favicon.
+  - `src/app/icon.svg`: the lucide `Layers` paths on a #e5e5e5 rounded square with a #171717
+    stroke (dark theme `--primary` / `--primary-foreground`, as in the sidebar header), stroke
+    2.4 so it holds at 16px. `src/app/favicon.ico` (create-next-app default) deleted with the
+    author's OK.
+  - Playwright: the only icon link is `/icon.svg` (`image/svg+xml`, `sizes="any"`),
+    `/favicon.ico` answers 404, no `/favorites` link in the sidebar, top-bar star kept; icon
+    rendered at 128, 32 and 16px.
+  - 1,704 tests, build and lint green. Fast-forward merged into `main`; branch deleted.
