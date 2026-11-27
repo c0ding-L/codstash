@@ -76,6 +76,14 @@ describe("runCommand", () => {
     }
   });
 
+  it("refuses stored control characters before asking for any variable", async () => {
+    const { deps: d, ask, spawnCommand, said } = deps([command("echo {{name:\x1b[2Jok}} done")], ["x", "y"]);
+    await expect(runCommand("wxyz1234", { yes: false }, d)).rejects.toThrow(/control characters/);
+    expect(ask).not.toHaveBeenCalled();
+    expect(said).toContain("  echo {{name:\\x1b[2Jok}} done");
+    expect(spawnCommand).not.toHaveBeenCalled();
+  });
+
   it("refuses a control character typed into a variable", async () => {
     const { deps: d, spawnCommand } = deps([command("echo {{msg}}")], ["hi\x1b[2K", "y"]);
     await expect(runCommand("wxyz1234", { yes: false }, d)).rejects.toThrow(/control characters/);

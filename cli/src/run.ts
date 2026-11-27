@@ -52,6 +52,20 @@ async function pickCommand(target: string, { client, ask, say, interactive }: Ru
   return client.getItem(matches[choice - 1]!.id);
 }
 
+/** Throws when the text holds control characters; `say` first shows it with them escaped. */
+function refuseControlChars(text: string, say?: (line: string) => void) {
+  if (!hasControlChars(text)) return;
+  if (say) {
+    say("");
+    say(`  ${showControlChars(text).split("\n").join("\n  ")}`);
+    say("");
+  }
+  throw new CliError(
+    "This command contains control characters (shown escaped above), so what the terminal shows may not be what runs.",
+    "Remove them in the app, then run it again.",
+  );
+}
+
 /**
  * `cortex run`: resolves the command, fills its variables, shows the final command and asks
  * before running it. `yes` skips the question. Resolves with the exit code to leave with.
@@ -65,19 +79,16 @@ export async function runCommand(target: string, { yes }: { yes: boolean }, deps
   const item = await pickCommand(target, deps);
   const content = normalizeNewlines(item.content ?? "").trim();
   if (!content) throw new CliError(`"${showControlChars(item.title)}" has no content to run.`);
+  // Refused before any prompt, so nothing stored reaches the terminal raw.
+  refuseControlChars(content, say);
 
   const command = normalizeNewlines(await fillInteractive(content, ask, interactive));
   say("");
   say(`  ${showControlChars(command).split("\n").join("\n  ")}`);
   say("");
 
-  // Checked after filling: a typed value could hold one too. Never run, even with --yes.
-  if (hasControlChars(command)) {
-    throw new CliError(
-      "This command contains control characters (shown escaped above), so what the terminal shows may not be what runs.",
-      "Remove them in the app, then run it again.",
-    );
-  }
+  // Checked again after filling: a typed value could hold one too. Never run, even with --yes.
+  refuseControlChars(command);
 
   if (!yes) {
     const answer = await ask("Run? [y/N] ");
