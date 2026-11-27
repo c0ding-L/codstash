@@ -9,10 +9,13 @@ const freeFeatures = [
   { key: "items", included: true },
   { key: "collections", included: true },
   { key: "search", included: true },
+  { key: "variables", included: true },
+  { key: "contextExport", included: true },
+  { key: "apiRead", included: true },
   { key: "noAi", included: false },
 ] as const;
 
-const proFeatures = ["unlimited", "uploads", "customTypes", "ai", "export"] as const;
+const proFeatures = ["unlimited", "uploads", "customTypes", "ai", "export", "apiWrite"] as const;
 
 /** The Free plan, for the homepage pricing and `/upgrade`. `action` is the button at the bottom. */
 export function FreePlanCard({ currency, action }: { currency: Currency; action: React.ReactNode }) {

@@ -361,14 +361,18 @@
       "items": "50 éléments",
       "collections": "3 collections",
       "search": "Recherche simple",
-      "noAi": "Pas de fonctionnalités d’IA"
+      "noAi": "Pas de fonctionnalités d’IA",
+      "variables": "Variables de prompt et de commande",
+      "contextExport": "Les collections en tant que fichiers de contexte",
+      "apiRead": "API, MCP et CLI (lecture)"
     },
     "proFeatures": {
       "unlimited": "Éléments et collections illimités",
       "uploads": "Import de fichiers et d’images",
       "customTypes": "Types d’éléments personnalisés",
       "ai": "Fonctionnalités d’IA",
-      "export": "Export (JSON / ZIP)"
+      "export": "Export (JSON / ZIP)",
+      "apiWrite": "API, MCP et CLI (écriture)"
     },
     "currentPlan": "Formule actuelle",
     "openingCheckout": "Ouverture de la page de paiement…",
@@ -479,7 +483,7 @@
     "page": "{page} · Cortex",
     "home": {
       "title": "Cortex — La plateforme de connaissances des développeurs",
-      "description": "Conservez vos snippets, vos prompts, vos commandes, vos notes, vos fichiers, vos images et vos liens dans un seul et même endroit où vous pouvez effectuer des recherches."
+      "description": "Conservez vos snippets de code, vos prompts, vos commandes, vos notes, vos fichiers, vos images et vos liens dans un seul et même emplacement consultable, et utilisez-les depuis Claude Code, Cursor et votre terminal."
     }
   },
   "drawer": {
@@ -1050,7 +1054,7 @@
     "hero": {
       "titleStart": "Enregistrez-le une seule fois.",
       "titleEnd": "Retrouvez-le à tout moment.",
-      "subtitle": "Ne perdez plus votre temps à fouiller dans l’historique de Bash et vos anciennes conversations. Conservez tous vos snippets de code, prompts, commandes et liens au même endroit, et retrouvez-les en quelques secondes.",
+      "subtitle": "Ne perdez plus de temps à fouiller dans l’historique de Bash et vos anciennes conversations. Conservez tous vos snippets de code, prompts, commandes et liens au même endroit, retrouvez-les en quelques secondes et transmettez-les à votre assistant IA.",
       "getStartedFree": "Commencez gratuitement",
       "seeFeatures": "Voir les fonctionnalités"
     },
@@ -1079,7 +1083,7 @@
         },
         "prompts": {
           "title": "Prompts IA",
-          "description": "Veillez à ce que vos meilleurs prompts soient classés par version et prêts à être utilisés avec n’importe quel modèle."
+          "description": "Gardez vos meilleurs prompts à portée de main pour n’importe quel modèle. Remplacez leurs {variables} lorsque vous les copiez."
         },
         "commands": {
           "title": "Commandes",
@@ -1096,6 +1100,18 @@
         "search": {
           "title": "Collections et recherche instantanée",
           "description": "Regroupez tout ce que vous souhaitez dans des collections et retrouvez-le en quelques millisecondes grâce à ⌘K."
+        },
+        "variables": {
+          "title": "Variables",
+          "description": "Écrivez une fois {variables} dans un prompt ou une commande, puis complétez les espaces vides lors de la copie. Une variable peut avoir une valeur par défaut ; la date et un UUID sont intégrés par défaut."
+        },
+        "customTypes": {
+          "title": "Types personnalisés",
+          "description": "Créez vos propres types d’éléments, avec leur propre icône et leur propre couleur, en plus de ceux fournis par défaut."
+        },
+        "importExport": {
+          "title": "Importation et exportation",
+          "description": "Importez des fichiers et des Gists GitHub publics, exportez le tout au format JSON ou ZIP, et transformez une collection en fichier de contexte pour Claude Code, Cursor et Codex."
         }
       }
     },
@@ -1111,16 +1127,38 @@
       },
       "generatedTags": "Tags générés par l’IA"
     },
+    "integrations": {
+      "badge": "Intégrations",
+      "title": "Votre savoir, au cœur de vos outils",
+      "subtitle": "Fournissez à Claude Code, Cursor et à vos scripts les snippets et les prompts que vous avez déjà enregistrés, à l’aide d’un jeton API personnel.",
+      "items": {
+        "api": {
+          "title": "API REST",
+          "description": "Recherchez et consultez vos éléments et vos collections, puis enregistrez ou mettez à jour des éléments via HTTP."
+        },
+        "mcp": {
+          "title": "Serveur MCP",
+          "description": "Claude Code, Cursor et d’autres assistants effectuent des recherches dans vos éléments, utilisent vos prompts et enregistrent ce qu’ils écrivent."
+        },
+        "cli": {
+          "title": "Ligne de commande",
+          "description": "Recherchez, copiez et exécutez vos commandes depuis le terminal à l’aide de la commande « cortex »."
+        }
+      },
+      "comingSoon": "À venir",
+      "plans": "La consultation est incluse dans la formule gratuite. L’enregistrement via l’API, MCP et l’interface en ligne de commande (CLI) est une fonctionnalité réservée à la formule Pro.",
+      "toolsLabel": "Outils pour votre assistant"
+    },
     "pricing": {
       "title": "Une tarification qui s’adapte à votre évolution",
-      "subtitle": "Commencez par la formule gratuite, puis passez à Pro pour accéder aux fichiers, aux images et à l’IA."
+      "subtitle": "Commencez par la formule gratuite, puis passez à Pro pour bénéficier de l’accès aux fichiers, aux images, à l’IA et à la sauvegarde depuis vos outils."
     },
     "cta": {
       "title": "Ne perdez plus jamais un snippet de code",
       "subtitle": "Une minute pour démarrer, quelques secondes pour tout retrouver."
     },
     "footer": {
-      "tagline": "La plateforme de connaissances destinée aux développeurs, consacrée aux snippets, aux prompts, aux commandes et bien plus encore.",
+      "tagline": "La plateforme de connaissances destinée aux développeurs, regroupant des snippets de code, des prompts et des commandes, accessible depuis votre navigateur et votre assistant IA.",
       "product": "Produit",
       "account": "Compte",
       "rights": "© {year} Cortex. Tous droits réservés."

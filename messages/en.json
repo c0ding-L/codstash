@@ -361,14 +361,18 @@
       "items": "50 items",
       "collections": "3 collections",
       "search": "Basic search",
-      "noAi": "No AI features"
+      "noAi": "No AI features",
+      "variables": "Prompt and command variables",
+      "contextExport": "Collections as context files",
+      "apiRead": "API, MCP and CLI (read)"
     },
     "proFeatures": {
       "unlimited": "Unlimited items & collections",
       "uploads": "File & image uploads",
       "customTypes": "Custom item types",
       "ai": "AI features",
-      "export": "Export (JSON / ZIP)"
+      "export": "Export (JSON / ZIP)",
+      "apiWrite": "API, MCP and CLI (write)"
     },
     "currentPlan": "Current plan",
     "openingCheckout": "Opening checkout…",
@@ -479,7 +483,7 @@
     "page": "{page} · Cortex",
     "home": {
       "title": "Cortex — Developer Knowledge Hub",
-      "description": "Keep your snippets, prompts, commands, notes, files, images and links in one searchable place."
+      "description": "Keep your snippets, prompts, commands, notes, files, images and links in one searchable place, and use them from Claude Code, Cursor and your terminal."
     }
   },
   "drawer": {
@@ -1050,7 +1054,7 @@
     "hero": {
       "titleStart": "Save It Once.",
       "titleEnd": "Find It Forever.",
-      "subtitle": "Stop digging through bash history and old chats. Keep every snippet, prompt, command and link in one place, and find any of them in seconds.",
+      "subtitle": "Stop digging through bash history and old chats. Keep every snippet, prompt, command and link in one place, find any of them in seconds, and hand them to your AI assistant.",
       "getStartedFree": "Get Started Free",
       "seeFeatures": "See Features"
     },
@@ -1079,7 +1083,7 @@
         },
         "prompts": {
           "title": "AI Prompts",
-          "description": "Keep your best prompts versioned and ready for any model."
+          "description": "Keep your best prompts ready for any model. Fill in their {variables} when you copy them."
         },
         "commands": {
           "title": "Commands",
@@ -1096,6 +1100,18 @@
         "search": {
           "title": "Collections & Instant Search",
           "description": "Group anything into collections and find it in milliseconds with ⌘K."
+        },
+        "variables": {
+          "title": "Variables",
+          "description": "Write {variables} once in a prompt or command, then fill in the blanks on copy. A variable can have a default value, and the date and a UUID are built in."
+        },
+        "customTypes": {
+          "title": "Custom Types",
+          "description": "Create your own item types, with their own icon and color, next to the built-in ones."
+        },
+        "importExport": {
+          "title": "Import & Export",
+          "description": "Bring in files and public GitHub Gists, export everything as JSON or ZIP, and turn a collection into a context file for Claude Code, Cursor and Codex."
         }
       }
     },
@@ -1111,16 +1127,38 @@
       },
       "generatedTags": "AI Generated Tags"
     },
+    "integrations": {
+      "badge": "Integrations",
+      "title": "Your knowledge, inside your tools",
+      "subtitle": "Give Claude Code, Cursor and your scripts the snippets and prompts you already saved, with a personal API token.",
+      "items": {
+        "api": {
+          "title": "REST API",
+          "description": "Search and read your items and collections, and save or update items, over HTTP."
+        },
+        "mcp": {
+          "title": "MCP server",
+          "description": "Claude Code, Cursor and other assistants search your items, use your prompts and save what they write."
+        },
+        "cli": {
+          "title": "Command line",
+          "description": "Search, copy and run your commands from the terminal with the cortex command."
+        }
+      },
+      "comingSoon": "Coming soon",
+      "plans": "Reading is included in the free plan. Saving from the API, MCP and CLI is a Pro feature.",
+      "toolsLabel": "Tools for your assistant"
+    },
     "pricing": {
       "title": "Pricing that scales with you",
-      "subtitle": "Start on the free plan, upgrade for files, images and AI."
+      "subtitle": "Start on the free plan, upgrade for files, images, AI and saving from your tools."
     },
     "cta": {
       "title": "Never Lose a Snippet Again",
       "subtitle": "Set up in a minute, find anything in seconds."
     },
     "footer": {
-      "tagline": "The developer knowledge hub for snippets, prompts, commands and more.",
+      "tagline": "The developer knowledge hub for snippets, prompts and commands, in your browser and in your AI assistant.",
       "product": "Product",
       "account": "Account",
       "rights": "© {year} Cortex. All rights reserved."

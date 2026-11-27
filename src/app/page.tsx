@@ -1,4 +1,4 @@
-import { ArrowRight, Search } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
@@ -10,11 +10,15 @@ import { DashboardPreview } from "@/components/home/DashboardPreview";
 import { features } from "@/components/home/home-content";
 import { HomeLogo } from "@/components/home/HomeLogo";
 import { HomeNav } from "@/components/home/HomeNav";
+import { IntegrationsSection } from "@/components/home/IntegrationsSection";
 import { PricingPlans } from "@/components/home/PricingPlans";
 import { Reveal } from "@/components/home/Reveal";
 import { buttonVariants } from "@/components/ui/button";
 import { colorClasses, surfaceClasses, typeColors, typeIcons } from "@/lib/item-type-ui";
 import { cn } from "@/lib/utils";
+
+/** Fills the `{variables}` placeholder of the feature cards: the template syntax, which ICU messages cannot hold as text. */
+const variables = "{{variables}}";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("metadata.home");
@@ -76,8 +80,8 @@ export default async function Home() {
             </Reveal>
             <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {features.map((feature, index) => {
-                const color = feature.type ? typeColors[feature.type] : null;
-                const Icon = feature.type ? typeIcons[feature.type] : Search;
+                const color = "type" in feature ? typeColors[feature.type] : null;
+                const Icon = "type" in feature ? typeIcons[feature.type] : feature.icon;
                 return (
                   <Reveal key={feature.key} delay={index * 60}>
                     <div className="h-full rounded-xl border border-border bg-card p-6 transition-colors hover:border-neutral-700">
@@ -91,7 +95,7 @@ export default async function Home() {
                       </div>
                       <h3 className="mt-5 font-medium">{t(`features.cards.${feature.key}.title`)}</h3>
                       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                        {t(`features.cards.${feature.key}.description`)}
+                        {t(`features.cards.${feature.key}.description`, { variables })}
                       </p>
                     </div>
                   </Reveal>
@@ -102,6 +106,8 @@ export default async function Home() {
         </section>
 
         <AiSection />
+
+        <IntegrationsSection />
 
         <section id="pricing" className="scroll-mt-20 border-t border-border px-4 py-28 sm:px-6">
           <Reveal className="mx-auto max-w-2xl text-center">

@@ -1,3 +1,4 @@
+import { ArrowLeftRight, Braces, Search, Shapes, type LucideIcon } from "lucide-react";
 import type { Messages } from "next-intl";
 
 import type { ItemTypeSlug } from "@/types/item-type";
@@ -27,12 +28,18 @@ export const previewTypes: ItemTypeSlug[] = ["snippet", "prompt", "note", "comma
 
 export const previewCollections: PreviewTextKey[] = ["reactPatterns", "devops", "aiWorkflows"];
 
-/** Feature cards, worded in `home.features.cards`. `type` picks the accent; `null` is the neutral card. */
-export const features: { type: ItemTypeSlug | null; key: keyof Messages["home"]["features"]["cards"] }[] = [
+/**
+ * Feature cards, worded in `home.features.cards`. `type` picks an item type's icon and accent;
+ * a card with `icon` instead is neutral.
+ */
+export const features: ({ key: keyof Messages["home"]["features"]["cards"] } & ({ type: ItemTypeSlug } | { icon: LucideIcon }))[] = [
   { type: "snippet", key: "snippets" },
   { type: "prompt", key: "prompts" },
   { type: "command", key: "commands" },
   { type: "note", key: "notes" },
   { type: "file", key: "files" },
-  { type: null, key: "search" },
+  { icon: Search, key: "search" },
+  { icon: Braces, key: "variables" },
+  { icon: Shapes, key: "customTypes" },
+  { icon: ArrowLeftRight, key: "importExport" },
 ];
