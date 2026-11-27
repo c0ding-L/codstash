@@ -1,17 +1,36 @@
-# Current Feature
+# Current Feature: Fix — stable sort
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+Found while checking A5 (2026-11-27); a separate fix at the author's request.
+
+- Every date-sorted list gets `id` as a second sort key, so items or collections that share a
+  date always come back in the same order. The seeded items all share one `updatedAt`, and the
+  dashboard's "Recent items" reshuffled between loads.
+- Follows the existing pattern `[{ updatedAt: "desc" }, { id: "asc" }]` (`getFavoriteItems`,
+  `pinnedFirstOrder`, `getCollectionsPage`).
+- Queries fixed:
+  - `src/lib/db/items.ts`: `getPinnedItems`, `getRecentItems`, `getRecentlyUsedItems`,
+    `getSearchItems`;
+  - `src/lib/db/collections.ts`: the sidebar's recent collections;
+  - `src/lib/db/context-export.ts`: the collection's items;
+  - `src/lib/db/import.ts`: the user's collections, oldest first, when matching by name.
+- Tests assert the second key on each.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
-
+- Name sorts (`name: "asc"`) are left as they are: collection names can repeat, but those
+  lists were not reported, and the fix stays on dates.
+- **Progress (2026-11-27)**: done; 1,254 tests, lint and build pass. Not committed.
+  - Also the export's collections (`src/lib/db/export.ts`, `createdAt` then `id`), found by the
+    same search.
+  - New `src/lib/db/context-export.test.ts` (it had none): owner filter, sort, 404 case.
+  - **Browser-checked** with the demo account: four loads of the dashboard, the same "Recent
+    items" order each time.
 ---
 
 Previous feature (completed) — A5 Recently used: items record when they are copied, downloaded or

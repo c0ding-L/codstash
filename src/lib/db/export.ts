@@ -21,7 +21,7 @@ export async function getExportHeaderData(
     prisma.collection.findMany({
       where: { userId },
       select: { id: true, name: true, description: true, isFavorite: true, createdAt: true, updatedAt: true },
-      orderBy: { createdAt: "asc" },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
     }),
   ]);
   return user ? { user, types, collections } : null;

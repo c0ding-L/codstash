@@ -141,7 +141,7 @@ export async function getSidebarRecentCollections(
   userId: string,
   limit: number = SIDEBAR_RECENT_LIMIT,
 ): Promise<SidebarCollection[]> {
-  return getCollectionsWithTypes(userId, {}, { updatedAt: "desc" }, limit);
+  return getCollectionsWithTypes(userId, {}, [{ updatedAt: "desc" }, { id: "asc" }], limit);
 }
 
 export interface RecentCollection {

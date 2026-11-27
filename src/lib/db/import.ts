@@ -289,7 +289,7 @@ async function resolveCollections(
   }
   if (wanted.length === 0) return ids;
 
-  const owned = await prisma.collection.findMany({ where: { userId }, select: { id: true, name: true }, orderBy: { createdAt: "asc" } });
+  const owned = await prisma.collection.findMany({ where: { userId }, select: { id: true, name: true }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] });
   for (const collection of owned) {
     const key = collection.name.toLowerCase().trim();
     if (!ids.has(key)) ids.set(key, collection.id);

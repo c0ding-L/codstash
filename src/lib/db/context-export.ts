@@ -17,7 +17,7 @@ export async function getCollectionContextData(
 
   const items = await prisma.item.findMany({
     where: { userId, collections: { some: { collectionId } } },
-    orderBy: { updatedAt: "desc" },
+    orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
     select: {
       id: true,
       title: true,

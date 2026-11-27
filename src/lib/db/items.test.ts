@@ -117,7 +117,7 @@ describe("getSearchItems", () => {
   it("reads the newest first, up to the ceiling", async () => {
     await getSearchItems(USER);
 
-    expect(findMany.mock.calls[0]![0]).toMatchObject({ orderBy: { updatedAt: "desc" }, take: MAX_ITEM_LIMIT });
+    expect(findMany.mock.calls[0]![0]).toMatchObject({ orderBy: [{ updatedAt: "desc" }, { id: "asc" }], take: MAX_ITEM_LIMIT });
   });
 
   it("returns the whole content and a clipped preview, the tags, and the collections flattened", async () => {
@@ -286,6 +286,12 @@ describe("getRecentItems", () => {
     expect(findMany.mock.calls[0]![0].take).toBe(DASHBOARD_RECENT_ITEMS_LIMIT);
   });
 
+  it("breaks ties on the date by id, so items saved together keep one order", async () => {
+    await getRecentItems(USER);
+
+    expect(findMany.mock.calls[0]![0].orderBy).toEqual([{ updatedAt: "desc" }, { id: "asc" }]);
+  });
+
   it("clamps a limit above the ceiling", async () => {
     await getRecentItems(USER, MAX_ITEM_LIMIT + 1);
 
@@ -303,7 +309,7 @@ describe("getPinnedItems", () => {
     await getPinnedItems(USER);
 
     expect(DASHBOARD_PINNED_ITEMS_LIMIT).toBe(5);
-    expect(findMany.mock.calls[0]![0]).toMatchObject({ orderBy: { updatedAt: "desc" }, take: DASHBOARD_PINNED_ITEMS_LIMIT });
+    expect(findMany.mock.calls[0]![0]).toMatchObject({ orderBy: [{ updatedAt: "desc" }, { id: "asc" }], take: DASHBOARD_PINNED_ITEMS_LIMIT });
   });
 });
 
@@ -317,7 +323,7 @@ describe("getRecentlyUsedItems", () => {
 
     expect(findMany.mock.calls[0]![0]).toMatchObject({
       where: { userId: USER, lastUsedAt: { not: null } },
-      orderBy: { lastUsedAt: "desc" },
+      orderBy: [{ lastUsedAt: "desc" }, { id: "asc" }],
       take: DASHBOARD_RECENTLY_USED_LIMIT,
     });
     expect(items[0]!.collections).toEqual([{ id: "c", name: "C" }]);

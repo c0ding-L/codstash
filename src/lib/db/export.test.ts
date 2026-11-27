@@ -43,7 +43,9 @@ describe("getExportHeaderData", () => {
     expect(prisma.itemType.findMany).toHaveBeenCalledWith(
       expect.objectContaining({ where: { userId: "user_1", isSystem: false } }),
     );
-    expect(prisma.collection.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { userId: "user_1" } }));
+    expect(prisma.collection.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { userId: "user_1" }, orderBy: [{ createdAt: "asc" }, { id: "asc" }] }),
+    );
   });
 
   it("is null without a user row", async () => {

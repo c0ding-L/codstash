@@ -91,6 +91,14 @@ describe("account isolation", () => {
   });
 });
 
+describe("getSidebarRecentCollections", () => {
+  it("breaks ties on the date by id, so collections saved together keep one order", async () => {
+    await getSidebarRecentCollections(USER);
+
+    expect(findCollections.mock.calls[0]![0].orderBy).toEqual([{ updatedAt: "desc" }, { id: "asc" }]);
+  });
+});
+
 describe("getRecentCollections", () => {
   it("returns the counts with their types, most used first", async () => {
     groupItems.mockResolvedValue([

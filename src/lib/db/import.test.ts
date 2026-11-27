@@ -190,7 +190,11 @@ describe("importCandidates", () => {
       { ...free, collections: [{ name: "Ops", description: "Servers" }, { name: "Bad", description: 3 }] },
     );
 
-    expect(asMock(prisma.collection.findMany).mock.calls[0]![0].where).toEqual({ userId: USER });
+    expect(asMock(prisma.collection.findMany).mock.calls[0]![0]).toMatchObject({
+      where: { userId: USER },
+      // The oldest of a repeated name wins, the same one every time.
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    });
     expect(createCollection).toHaveBeenNthCalledWith(1, USER, { name: "Ops", description: "Servers" }, { maxCollections: 3 });
     expect(createCollection).toHaveBeenNthCalledWith(2, USER, { name: "Extra", description: null }, { maxCollections: 3 });
     expect(result).toMatchObject({ created: 2, collectionsCreated: 1, collectionLinksDropped: 1 });

@@ -82,7 +82,7 @@ function collectionLinks(collectionIds: string[]) {
 export async function getPinnedItems(userId: string): Promise<DashboardItem[]> {
   const items = await prisma.item.findMany({
     where: { userId, isPinned: true },
-    orderBy: { updatedAt: "desc" },
+    orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
     take: DASHBOARD_PINNED_ITEMS_LIMIT,
     select: dashboardItemSelect,
   });
@@ -116,7 +116,7 @@ export async function getRecentItems(
   const [items, totalCount] = await Promise.all([
     prisma.item.findMany({
       where: { userId },
-      orderBy: { updatedAt: "desc" },
+      orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
       take: clampLimit(limit, MAX_ITEM_LIMIT),
       select: dashboardItemSelect,
     }),
@@ -133,7 +133,7 @@ export async function getRecentlyUsedItems(
 ): Promise<DashboardItem[]> {
   const items = await prisma.item.findMany({
     where: { userId, lastUsedAt: { not: null } },
-    orderBy: { lastUsedAt: "desc" },
+    orderBy: [{ lastUsedAt: "desc" }, { id: "asc" }],
     take: clampLimit(limit, MAX_ITEM_LIMIT),
     select: dashboardItemSelect,
   });
@@ -223,7 +223,7 @@ export type SearchItemJson = Omit<SearchItem, "updatedAt" | "lastUsedAt"> & { up
 export async function getSearchItems(userId: string): Promise<SearchItem[]> {
   const items = await prisma.item.findMany({
     where: { userId },
-    orderBy: { updatedAt: "desc" },
+    orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
     take: MAX_ITEM_LIMIT,
     select: {
       ...dashboardItemSelect,
