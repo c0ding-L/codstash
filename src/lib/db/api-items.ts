@@ -292,3 +292,26 @@ export async function getApiMe(userId: string): Promise<ApiMe | null> {
     },
   };
 }
+
+const mcpPromptSelect = { id: true, title: true, description: true, content: true } satisfies Prisma.ItemSelect;
+/** The system `prompt` type only: a custom type with the slug "prompt" cannot exist (reserved). */
+const promptWhere = (userId: string) => ({ userId, type: { slug: "prompt", isSystem: true } }) satisfies Prisma.ItemWhereInput;
+
+/** The user's `take` most recently updated prompts, for the MCP server's `prompts/list` (C3). */
+export async function listMcpPromptRows(userId: string, take: number) {
+  return prisma.item.findMany({
+    where: promptWhere(userId),
+    orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+    take,
+    select: mcpPromptSelect,
+  });
+}
+
+/** The user's prompts whose id ends with `idSuffix`, for `prompts/get`: the caller matches the full name. */
+export async function findMcpPromptRows(userId: string, idSuffix: string) {
+  return prisma.item.findMany({
+    where: { ...promptWhere(userId), id: { endsWith: idSuffix } },
+    take: 10,
+    select: mcpPromptSelect,
+  });
+}

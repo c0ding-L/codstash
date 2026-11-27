@@ -5,9 +5,13 @@
 // session store) and serves both the 2026-07-28 protocol and 2025-era clients. The route
 // authenticates the bearer token first and hands the caller over in `authInfo.extra`.
 
-import { createMcpHandler, McpServer, type AuthInfo } from "@modelcontextprotocol/server";
+import { randomUUID } from "node:crypto";
+
+import { createMcpHandler, INVALID_PARAMS, McpServer, ProtocolError, type AuthInfo } from "@modelcontextprotocol/server";
 
 import type { ApiCaller } from "@/lib/api-auth";
+import { findMcpPromptRows, listMcpPromptRows } from "@/lib/db/api-items";
+import { MCP_PROMPTS_MAX, mcpPromptIdSuffix, mcpPromptName, renderMcpPrompt, toMcpPromptEntry } from "@/lib/mcp-prompts";
 import {
   createItemInput,
   createItemTool,
@@ -43,7 +47,7 @@ function callerFrom(authInfo: AuthInfo | undefined): ApiCaller {
 
 /** A server with every tool, for one request by `caller`. */
 export function buildMcpServer(caller: ApiCaller): McpServer {
-  const server = new McpServer(SERVER_INFO, { capabilities: { tools: {} }, instructions: INSTRUCTIONS });
+  const server = new McpServer(SERVER_INFO, { capabilities: { tools: {}, prompts: {} }, instructions: INSTRUCTIONS });
 
   server.registerTool(
     "search_items",
@@ -118,7 +122,28 @@ export function buildMcpServer(caller: ApiCaller): McpServer {
     (input) => createItemTool(caller, input),
   );
 
+  registerPrompts(server, caller);
   return server;
+}
+
+/**
+ * The user's prompt items as MCP prompts. Handled at the protocol level rather than with
+ * `registerPrompt`, so the prompts are read only for `prompts/list` and `prompts/get`, not on
+ * every tool call: each HTTP request builds a fresh server.
+ */
+function registerPrompts(server: McpServer, caller: ApiCaller) {
+  server.server.setRequestHandler("prompts/list", async () => {
+    const rows = await listMcpPromptRows(caller.userId, MCP_PROMPTS_MAX);
+    return { prompts: rows.map(toMcpPromptEntry) };
+  });
+
+  server.server.setRequestHandler("prompts/get", async (request) => {
+    const { name, arguments: values = {} } = request.params;
+    const suffix = mcpPromptIdSuffix(name);
+    const row = suffix ? (await findMcpPromptRows(caller.userId, suffix)).find((candidate) => mcpPromptName(candidate) === name) : undefined;
+    if (!row) throw new ProtocolError(INVALID_PARAMS, `No prompt named "${name}". Use prompts/list to see the user's prompts.`);
+    return renderMcpPrompt(row, values, { now: new Date(), uuid: randomUUID });
+  });
 }
 
 /** The handler `/api/mcp` serves: one fresh server per request, for the caller in `authInfo`. */
