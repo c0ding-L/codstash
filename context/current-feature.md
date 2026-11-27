@@ -14,6 +14,12 @@ Not Started
 
 ---
 
+Previous feature (completed) — D1 Public sharing: a collection or a single item gets a
+read-only public link (`/s/<id>`, `/s/i/<id>`) to send to a friend or a colleague, no account
+needed. Outcome in the History below.
+
+---
+
 Previous feature (completed) — Animated hero background: the landing hero's blurred glow drifts
 and breathes slowly, with a second fainter glow, in CSS only. Outcome in the History below.
 
@@ -3107,3 +3113,40 @@ Environment notes that outlive any one feature:
     frozen with `getAnimations()` at three points of the cycle; `recordVideo` clips for the
     author.
   - 1,657 tests, build and lint green. Fast-forward merged into `main`; branch deleted.
+- 2026-11-27 — D1 Public sharing, collections and items (`049e5c9`).
+  - Asked by the author: share one prompt from a collection with a friend or a colleague. D1
+    (`public-collections-spec.md`) covered collections only; option 2 chosen, one mechanism
+    for both. Decided by the author: Free gets 3 public links, collections and items together;
+    items at `/s/i/[shareId]`; tags shown.
+  - Schema: `shareId` (unique, 22 base64url chars), `sharedAt`, `shareIndexable`,
+    `shareShowOwner` on `Collection` and `Item`. Migration `20261127200000_public_sharing`,
+    develop only: `prisma migrate dev` refuses to run without a TTY here, so the SQL came from
+    `prisma migrate diff --from-config-datasource` and was applied with `migrate deploy` on
+    develop. **Ships after `prisma migrate deploy` in production.**
+  - `src/lib/share.ts` (pure: id, path, `visibleSharedItems`), `src/lib/db/share.ts` (target,
+    count, `saveShare` with raw SQL so `updatedAt` stays, Free cap re-counted under a
+    `FOR UPDATE` lock; `getSharedItem` / `getSharedCollection` with narrow selects),
+    `src/actions/share.ts` (`setSharing` / `getSharing`, one action for both kinds since the
+    cap counts both). Files and images refused; secrets refused, re-checked on every save
+    while on; turning off always allowed.
+  - Public pages under `src/app/s/` (outside the proxy matcher), dynamic, `noindex` by
+    default: code highlighted by Shiki, Markdown without raw HTML, links only when `isWebUrl`,
+    copy only (no `markUsed`), owner name on opt-in, never the email. An item that gained a
+    secret answers 404; a collection hides such items, at most 100 shown.
+  - `ShareDialog` from the collection header and the item drawer (not for files and images);
+    `SharedBadge` globe on cards, rows and the collection header. `isShared` added to
+    `DashboardItem`, `RecentCollection` and `CollectionSummary`.
+  - Strings in `share.*`, `publicShare.*`, `errors.share.*`, `errors.limits.shared`; FR via
+    DeepL + glossary. Changed after DeepL: typography (apostrophes, no-break spaces,
+    guillemets), the two plurals assembled from full-sentence runs, "Réinitialiser le lien",
+    "Partager cette collection" and `publicShare.empty` from a second run with context.
+    `errors.share.quotedTitle` is typography, written by hand.
+  - Browser (Playwright, demo account, develop): dialog, visitor without session in EN, FR and
+    390 px mobile, copy, `noindex`, collection page, secret added then removed (404 then 200),
+    reset (old 404, new 200), off (404), unknown id (404). Demo data left unshared; the prompt
+    "Code review — correctness first" kept its description but its `updatedAt` moved to
+    2026-11-27 from the test edits.
+  - Known limits, from review: a shared collection shows 100 items at most; two simultaneous
+    "on" requests for one target can leave the first link dead; the public top bar shows
+    "Sign In" to a signed-in owner.
+  - 1,700 tests, build and lint green. Fast-forward merged into `main`; branch deleted.
