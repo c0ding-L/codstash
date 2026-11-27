@@ -136,7 +136,7 @@ describe("POST /api/import/gists", () => {
     const response = await importRequest({ gistIds: ["abc123", "def456"] });
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ created: 2, gistsNotFetched: 0 });
+    expect(await response.json()).toMatchObject({ created: 2, gistsNotFetched: 0, gistFilesSkipped: 0 });
     const [user, candidates, options] = asMock(importCandidates).mock.calls[0]!;
     expect(user).toBe("user_1");
     expect(candidates).toEqual([
@@ -169,6 +169,21 @@ describe("POST /api/import/gists", () => {
     });
     // The second group of five is never asked for.
     expect(fetchCalls()).toHaveLength(5);
+  });
+
+  it("stops reading once the request's budget is spent, and reports what was left out", async () => {
+    const manyFiles = Object.fromEntries(
+      Array.from({ length: 300 }, (_, i) => [`f${i}.ts`, { filename: `f${i}.ts`, language: "TypeScript", content: "x" }]),
+    );
+    fetchMock.mockImplementation(async (url: string) => json({ ...gist(String(url).split("/").pop()!), files: manyFiles }));
+    const ids = ["a1", "a2", "a3", "a4", "a5", "a6", "a7"];
+
+    const response = await importRequest({ gistIds: ids });
+
+    // The first group of five spends the 500-file budget; the last two are never asked for.
+    expect(fetchCalls()).toHaveLength(5);
+    expect(asMock(importCandidates).mock.calls[0]![1]).toHaveLength(500);
+    expect(await response.json()).toMatchObject({ created: 500, gistFilesSkipped: 1_000, gistsNotFetched: 2 });
   });
 
   it("answers the friendly 429 when GitHub's limit leaves nothing to import", async () => {

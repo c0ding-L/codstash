@@ -11,6 +11,24 @@ const RAW_HOST = "gist.githubusercontent.com";
 const TIMEOUT_MS = 10_000;
 /** Listing pages of 100; a stash of more than 1,000 gists lists the newest 1,000. */
 const MAX_LIST_PAGES = 10;
+/**
+ * The most an API answer is read: a gist inlines up to 1 MB per file and can hold hundreds of
+ * files. A larger answer counts as a failed fetch rather than being held in memory.
+ */
+const MAX_API_BYTES = 10_000_000;
+
+/** Files and characters one gist import may still read: shared by every gist of the request. */
+export interface GistBudget {
+  files: number;
+  chars: number;
+  /** Files left out because the budget ran out. */
+  skipped: number;
+}
+
+/** What one request may read: about what the batch route takes (`IMPORT_BODY_MAX_BYTES`). */
+export function newGistBudget(): GistBudget {
+  return { files: 500, chars: 4_000_000, skipped: 0 };
+}
 
 /** GitHub's own username rule: letters, digits and single inner hyphens, at most 39 characters. */
 const USERNAME = /^[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}$/;
@@ -70,10 +88,32 @@ async function githubGet(path: string, token: string | null): Promise<unknown> {
   if (response.status === 404) throw new GithubError("notFound");
   if (!response.ok) throw new GithubError("failed");
   try {
-    return await response.json();
+    return JSON.parse(await readTextWithin(response, MAX_API_BYTES));
   } catch {
     throw new GithubError("failed");
   }
+}
+
+/** The body as text, failing past `maxBytes` (declared or streamed) instead of reading on. */
+async function readTextWithin(response: Response, maxBytes: number): Promise<string> {
+  if (Number(response.headers.get("content-length")) > maxBytes || !response.body) {
+    throw new GithubError("failed");
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let text = "";
+  let received = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    received += value.byteLength;
+    if (received > maxBytes) {
+      await reader.cancel();
+      throw new GithubError("failed");
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+  return text + decoder.decode();
 }
 
 /** The login of the token's GitHub account, or null when GitHub does not answer with one. */
@@ -118,8 +158,10 @@ export async function listPublicGists(username: string, token: string | null): P
 /**
  * One public gist with every file's content. A file GitHub truncated is read from its
  * `raw_url`, never past the content cap. A secret gist (fetchable by id) counts as not found.
+ * Each file read spends the request's `budget`; once it is spent, the remaining files are
+ * left out and counted in `budget.skipped`.
  */
-export async function fetchGist(id: string, token: string | null): Promise<GistDetail> {
+export async function fetchGist(id: string, token: string | null, budget: GistBudget = newGistBudget()): Promise<GistDetail> {
   if (!isGistId(id)) throw new GithubError("notFound");
   const gist = (await githubGet(`/gists/${id}`, token)) as ApiGist;
   if (gist?.public !== true || gist.id !== id) throw new GithubError("notFound");
@@ -127,11 +169,22 @@ export async function fetchGist(id: string, token: string | null): Promise<GistD
   const files: GistDetail["files"] = {};
   for (const [key, file] of Object.entries(gist.files ?? {})) {
     if (!file || typeof file.filename !== "string") continue;
+    if (budget.files <= 0 || budget.chars <= 0) {
+      budget.skipped += 1;
+      continue;
+    }
     let content = typeof file.content === "string" ? file.content : "";
     if (file.truncated === true) {
       if (typeof file.raw_url !== "string") continue;
       content = await fetchRawFile(file.raw_url);
     }
+    if (content.length > budget.chars) {
+      budget.chars = 0;
+      budget.skipped += 1;
+      continue;
+    }
+    budget.files -= 1;
+    budget.chars -= content.length;
     files[key] = {
       filename: file.filename,
       language: typeof file.language === "string" ? file.language : null,

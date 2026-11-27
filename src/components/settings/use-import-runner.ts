@@ -20,7 +20,7 @@ export interface ImportProgress {
 }
 
 /** A route's import report, plus what only the gists route adds. */
-export type ImportReportData = ImportResult & { gistsNotFetched?: number };
+export type ImportReportData = ImportResult & { gistsNotFetched?: number; gistFilesSkipped?: number };
 
 /**
  * Sends a parsed import in batches to `POST /api/import` and sums the reports, with the

@@ -8,6 +8,7 @@ import {
   isGistId,
   isGithubUsername,
   listPublicGists,
+  newGistBudget,
 } from "@/lib/github-gists";
 import { ITEM_LIMITS } from "@/lib/item-limits";
 
@@ -148,6 +149,66 @@ describe("fetchGist", () => {
 
     await expect(fetchGist("abc123", null)).rejects.toMatchObject({ kind: "badUrl" });
     expect(calls()).toHaveLength(1);
+  });
+});
+
+describe("the read budget", () => {
+  const files = (count: number, size: number) =>
+    Object.fromEntries(
+      Array.from({ length: count }, (_, i) => [`f${i}.ts`, { filename: `f${i}.ts`, language: "TypeScript", content: "x".repeat(size) }]),
+    );
+
+  it("leaves out the files past the file budget and counts them", async () => {
+    fetchMock.mockResolvedValue(json({ id: "abc123", public: true, files: files(5, 10) }));
+    const budget = { files: 3, chars: 1_000, skipped: 0 };
+
+    const gist = await fetchGist("abc123", null, budget);
+
+    expect(Object.keys(gist.files)).toEqual(["f0.ts", "f1.ts", "f2.ts"]);
+    expect(budget).toEqual({ files: 0, chars: 970, skipped: 2 });
+  });
+
+  it("leaves out a file larger than the characters left, and stops there", async () => {
+    fetchMock.mockResolvedValue(json({ id: "abc123", public: true, files: files(3, 400) }));
+    const budget = { files: 10, chars: 1_000, skipped: 0 };
+
+    const gist = await fetchGist("abc123", null, budget);
+
+    expect(Object.keys(gist.files)).toEqual(["f0.ts", "f1.ts"]);
+    expect(budget).toMatchObject({ chars: 0, skipped: 1 });
+  });
+
+  it("reads no raw file once the budget is spent", async () => {
+    fetchMock.mockResolvedValue(
+      json({ id: "abc123", public: true, files: { "a.md": { filename: "a.md", content: "", truncated: true, raw_url: "https://gist.githubusercontent.com/u/raw/a" } } }),
+    );
+    const budget = { files: 0, chars: 1_000, skipped: 0 };
+
+    await fetchGist("abc123", null, budget);
+
+    expect(calls()).toHaveLength(1);
+    expect(budget.skipped).toBe(1);
+  });
+
+  it("is about what the batch route takes", () => {
+    expect(newGistBudget()).toEqual({ files: 500, chars: 4_000_000, skipped: 0 });
+  });
+
+  it("refuses an API answer over 10 MB, declared or streamed, as a failed fetch", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("[]", { headers: { "content-length": "10000001" } }));
+    await expect(listPublicGists("octocat", null)).rejects.toMatchObject({ kind: "failed" });
+
+    const chunk = new Uint8Array(1_000_000).fill(32);
+    let pulls = 0;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulls += 1;
+        controller.enqueue(chunk);
+      },
+    });
+    fetchMock.mockResolvedValueOnce(new Response(body));
+    await expect(fetchGist("abc123", null)).rejects.toMatchObject({ kind: "failed" });
+    expect(pulls).toBeLessThanOrEqual(12);
   });
 });
 

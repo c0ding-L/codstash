@@ -11,6 +11,7 @@ import {
   fetchGist,
   getGithubLogin,
   isGistId,
+  newGistBudget,
   isGithubUsername,
   listPublicGists,
 } from "@/lib/github-gists";
@@ -84,7 +85,9 @@ export async function GET(request: Request) {
 /**
  * Imports the chosen public gists, one item per file. A gist GitHub no longer serves is
  * counted in `gistsNotFetched`; hitting GitHub's rate limit midway imports what was fetched
- * and says so in `warning`.
+ * and says so in `warning`. The files read are capped per request (`newGistBudget`): past
+ * it, the rest are counted in `gistFilesSkipped` and the gists not yet asked for in
+ * `gistsNotFetched`, so one request cannot pull hundreds of files into memory.
  */
 export async function POST(request: Request) {
   const e = await getErrors();
@@ -116,11 +119,13 @@ export async function POST(request: Request) {
   let notFetched = 0;
   let attempted = 0;
   let rateLimited = false;
+  // Files and characters this request may read from GitHub, shared by every gist fetched.
+  const budget = newGistBudget();
 
-  for (let start = 0; start < ids.length && !rateLimited; start += CONCURRENCY) {
+  for (let start = 0; start < ids.length && !rateLimited && budget.files > 0 && budget.chars > 0; start += CONCURRENCY) {
     const slice = ids.slice(start, start + CONCURRENCY);
     attempted += slice.length;
-    const fetched = await Promise.allSettled(slice.map((id) => fetchGist(id, token)));
+    const fetched = await Promise.allSettled(slice.map((id) => fetchGist(id, token, budget)));
     for (const outcome of fetched) {
       if (outcome.status === "rejected") {
         if (!(outcome.reason instanceof GithubError)) throw outcome.reason;
@@ -134,7 +139,7 @@ export async function POST(request: Request) {
       }
     }
   }
-  // The gists after GitHub's limit was hit were never asked for.
+  // The gists after GitHub's limit, or after the budget ran out, were never asked for.
   notFetched += ids.length - attempted;
   if (candidates.length === 0 && rateLimited) {
     return NextResponse.json({ error: e.message("import.githubRateLimit") }, { status: 429 });
@@ -154,7 +159,7 @@ export async function POST(request: Request) {
 
   if (result.created > 0) revalidatePath("/", "layout");
   return NextResponse.json(
-    { ...result, gistsNotFetched: notFetched, ...(rateLimited && { warning: e.message("import.githubRateLimit") }) },
+    { ...result, gistsNotFetched: notFetched, gistFilesSkipped: budget.skipped, ...(rateLimited && { warning: e.message("import.githubRateLimit") }) },
     { headers: { "Cache-Control": "no-store" } },
   );
 }

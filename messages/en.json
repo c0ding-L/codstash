@@ -189,6 +189,7 @@
         "limit": "{count, plural, one {# left out: the Free plan’s item limit is reached} other {# left out: the Free plan’s item limit is reached}}",
         "collectionLinksDropped": "{count, plural, one {# collection link left out: the Free plan’s collection limit is reached} other {# collection links left out: the Free plan’s collection limit is reached}}",
         "gistsNotFetched": "{count, plural, one {# gist could not be fetched from GitHub} other {# gists could not be fetched from GitHub}}",
+        "gistFilesSkipped": "{count, plural, one {# gist file left out: too much to import at once, import fewer gists} other {# gist files left out: too much to import at once, import fewer gists}}",
         "nothing": "Nothing to import.",
         "invalidTitles": "Not valid: {titles}"
       }

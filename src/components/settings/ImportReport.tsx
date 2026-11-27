@@ -41,6 +41,7 @@ export function ImportReport({ progress, report }: { progress: ImportProgress | 
     ["limit", report.skipped.limit],
     ["collectionLinksDropped", report.collectionLinksDropped],
     ["gistsNotFetched", report.gistsNotFetched ?? 0],
+    ["gistFilesSkipped", report.gistFilesSkipped ?? 0],
   ] as const;
 
   return (

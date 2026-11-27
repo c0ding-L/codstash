@@ -189,6 +189,7 @@
         "limit": "{count, plural, one {# omis : la limite d’éléments de la formule gratuite est atteinte} other {# omis : la limite d’éléments de la formule gratuite est atteinte}}",
         "collectionLinksDropped": "{count, plural, one {# lien vers une collection omis : la limite de collections de la formule gratuite est atteinte} other {# liens vers des collections omis : la limite de collections de la formule gratuite est atteinte}}",
         "gistsNotFetched": "{count, plural, one {# gist n’a pas pu être récupéré depuis GitHub} other {# gists n’ont pas pu être récupérés depuis GitHub}}",
+        "gistFilesSkipped": "{count, plural, one {# fichier de gist omis : trop volumineux pour être importé en une seule fois ; importez moins de gists} other {# fichiers de gist omis : trop volumineux pour être importés en une seule fois ; importez moins de gists}}",
         "nothing": "Rien à importer.",
         "invalidTitles": "Non valide : {titles}"
       }
