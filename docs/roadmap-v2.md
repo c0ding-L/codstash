@@ -85,7 +85,7 @@ nor custom types exist. A1 and A2 come first, and the rest of A follows in small
 
 ---
 
-## B. Variables in prompts and commands (Free)
+## B. Variables in prompts and commands (Free) — done 2026-11-27 (`6574bb3`)
 
 - `{{name}}` and `{{name:default}}` in a prompt or command, plus the built-ins `{{date}}` and
   `{{uuid}}`. A pure parser goes in `src/lib` (tested).

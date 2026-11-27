@@ -1,153 +1,22 @@
-# Current Feature: B Template variables in prompts and commands
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-Spec: `@context/features/template-variables-spec.md`. Roadmap `docs/roadmap-v2.md` § B. Free,
-no schema change.
-
-- `src/lib/template-vars.ts`, pure (no Next or React imports):
-  - Syntax `{{ name }}` / `{{ name:default }}`. The name matches `[a-zA-Z_][a-zA-Z0-9_-]{0,39}`
-    and the default is any text without `}`, trimmed.
-  - Not variables: `${{ … }}`, names with a dot or a space, and `\{{name}}` (escaped, rendered
-    as the literal `{{name}}`).
-  - `parseVariables(text)` → `Variable[]` (`{ name, default?, builtin? }`), unique, in
-    first-seen order. The first default wins. `date` and `uuid` get no field unless the text
-    gives them a default.
-  - `fillVariables(text, values, { now, uuid })`: falls back to value, then default, then `""`.
-    It removes escape backslashes. `date` is local `YYYY-MM-DD` and `uuid` is one value per
-    name.
-- Only prompts and commands are templated. Snippets, notes and custom types never are.
-- `useTemplateCopy()` → `copyItemText(text, { itemId, type })`. With no variables, or not a
-  prompt or command, it copies as today, `markUsed` included. Otherwise it opens
-  `FillVariablesDialog`:
-  - one input per variable (label = name, placeholder = default), the first one focused
-  - a live, read-only, scrollable monospace preview
-  - "Copy" (Enter), "Copy raw", Esc cancels
-- Last values remembered in `localStorage` under `cortex:vars:<itemId>`, at most 50 items with
-  the oldest dropped, wrapped in try/catch.
-- Wired into `ItemCopyButton`, `CommandCopyButton`, `ItemActionBar`, and the read-view copy of
-  the drawer's `CodeEditor` (command) and `MarkdownEditor` (prompt). Copy in edit mode stays
-  raw.
-- Variables highlighted (a tinted inline span) in the prompt Markdown read view. Prompt list
-  cards show a `{{ }}` badge with the count. No highlighting in Monaco for now.
-- Strings under `variables.*` in EN and FR (FR via DeepL). Variable names and defaults are
-  never translated.
-- Tests in `src/lib/template-vars.test.ts`:
-  - simple, default, repeated name
-  - `${{ }}` and dotted names ignored, escaping
-  - built-ins with injected `now` and `uuid`
-  - an unclosed `{{`, a name over 40 characters, unicode defaults
-  - missing values
-  - 100,000 characters
-- Browser checks:
-  - `docker exec -it {{container}} psql -U {{user:postgres}}`: dialog, preview, Copy, Copy raw,
-    and values remembered after a reload
-  - a prompt with `{{date}}`: no field, the date filled in
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-Checked while loading, to settle before or during implementation:
+<!-- Additional context, constraints, or details from spec -->
 
-- **Spec default to confirm with the author:** only prompts and commands are templated, and
-  custom types could opt in later.
-- **Safari and the clipboard after an await.** `ItemCopyButton` (lists) does not have the
-  content. It fetches the content inside the click through `copyFromPromise`
-  (`src/lib/clipboard.ts`), so Safari still allows the write. To know whether there are
-  variables, it has to fetch first. A copy that opens the dialog is fine, because the dialog's
-  Copy is a new click. A prompt with no variables, though, would copy after an await, and
-  Safari could refuse it. Options:
-  - Pass a "has variables" flag to the list, the same server-side data as the badge count, and
-    decide before fetching.
-  - Fall back to the dialog only when needed.
+---
 
-  The flag looks right, since the badge needs it anyway. `CommandCopyButton` already has the
-  text unless `isCut`.
-- **The prompt badge needs server data.** `PromptList` gets a `PromptPreview` (excerpt, tags,
-  words, tokens), not the full content. The variable count has to be added where the previews
-  are built, which reuses the pure parser on the server.
-- **`MarkdownEditor` has an "Optimized" tab copy** (A2/A7 suggestion). Plan: leave it raw, since
-  it is not the saved item. To confirm.
-- No `localStorage` use exists in `src/` yet, so this is the first. The `cortex:` prefix matches
-  the internal markers (`[[cortex:…]]`).
-- C3 (MCP prompts) and C4 (`cod run`) will reuse the parser, so keep it dependency-free.
-
-### Implementation decisions
-
-The three open questions above got no answer before `start`, so the recommended defaults were
-taken: only system prompts and commands are templated, list cards get a server-side flag, and the
-Optimized tab copies raw. The author confirmed all three before `complete`.
-
-- **Hook shape follows `useSecretCheck`.** `useTemplateCopy()` returns `{ copyItemText,
-  copyItemContent, dialog }`, and the caller renders `dialog`. There is no new provider.
-  `copyItemContent(load, { itemId, type, hasVariables })` is for the list buttons that fetch on
-  click. Without variables, the write still starts in the click through `copyFromPromise`
-  (Safari). With variables, the dialog opens and fetches the content itself, and its Copy click
-  does the write.
-- **The dialog opens for any variable, built-ins included.** A `{{date}}`-only prompt shows no
-  field, a "Nothing to fill in" line and the preview. This keeps the list and the drawer
-  consistent and avoids a write after an await.
-- **Server data:**
-  - `getPromptPreviews` adds `variables`, the count for the badge.
-  - `getCommandTexts` adds `hasVariables`, read on the whole command, so a command cut at 2,000
-    characters still opens the form. Its return type is now `CommandText`.
-- **Cut commands now copy through `copyFromPromise`.** Before, they fetched and then called
-  `writeText` after an await, which Safari could refuse. A failed fetch throws
-  `CopyRefusedError("commandCopyFailed")`, so the toast stays the same.
-- **Editors:**
-  - `CodeEditor` swaps `onCopied` for `onCopy(text)`. `ItemBody` was its only caller.
-  - `MarkdownEditor` keeps `onCopied` for the Optimized rewrite (raw copy, still a use) and adds
-    `onCopy`, plus `highlightVariables`.
-  - Copy in edit mode is unchanged, because the form passes neither prop.
-- **Highlight:** `src/lib/remark-template-vars.ts` is a small remark plugin with local node types
-  (`mdast` is only a transitive dependency). It takes the names from `parseVariables(value)`,
-  because Markdown drops the backslash of `\{{name}}` before the plugin runs. Inline code and
-  code blocks are not highlighted, but `fillVariables` still fills them, as the spec's parser
-  works on the whole text.
-- **Focus:** the dialog's `initialFocus` is a ref to the first field, or to Copy when there is no
-  field, so Enter copies the filled text rather than the raw one. On the fetch path the form
-  arrives after the dialog opens, so it also focuses that element on mount.
-- **Regex limits not in the spec:** only spaces and tabs are allowed around the name, so a
-  variable stays on one line. The default is capped at 200 characters, so an unclosed `{{a:`
-  cannot make parsing quadratic. The 100,000-character test covers it.
-- **Storage:** one key per item, `cortex:vars:<itemId>`, plus an index `cortex:vars-index`
-  (newest first) to drop the oldest past 50. Only the current fields' values are saved, on Copy
-  (not on Copy raw).
-- **The `uuid` and `date` are fixed when the dialog opens,** so the preview is exactly what gets
-  copied. `crypto.randomUUID` needs a secure context, which both localhost and the deployed site
-  are.
-- **French:** from DeepL with the glossary. I changed three things in its output: curly
-  apostrophes, a no-break space before `:`, and the ICU keywords of `count`, which DeepL had
-  translated (`nombre, pluriel, une, autre`).
-
-### Verification
-
-- `npm test`: 82 files, 1370 tests. `npm run lint` is clean and `npm run build` passes.
-- Browser check (Playwright script, dev server, demo account, develop branch, `[B-test]` items
-  deleted afterwards):
-  - **Command list, `docker exec -it {{container}} psql -U {{user:postgres}}`:** the first field
-    is focused and `user` has the `postgres` placeholder. The preview is live. Enter copied
-    `docker exec -it db-1 psql -U postgres` and "Copy raw" copied the template. After a reload,
-    `container` was still `db-1`. Esc closes the dialog.
-  - **Prompt list:** the badge shows `{{ }} 1` and `{{ }} 3`. The `{{date}}` prompt shows no
-    field and copied `… for 2026-11-27.`
-  - **Drawer:** `{{file}}` and `{{lang:TypeScript}}` are highlighted and the inline code is not.
-    The editor's copy and the action bar's Copy both open the form. Esc closes only the form,
-    not the drawer.
-  - **Snippet list:** copy goes straight to the clipboard, with no form.
-  - **Second run, after the focus and escape fixes:**
-    - Focus lands on the first field on the prompt list (fetch path), the command list and the
-      drawer.
-    - The `{{date}}` prompt focuses Copy, and Enter copied the filled date.
-    - `\{{esc}}` is not highlighted and copies as `{{esc}}`.
-  - French was not checked in the browser.
-- **Review fix, close flash:** the dialog keeps showing the last copy while it fades out.
-  Before, the content switched to "Loading…" during the 100 ms exit animation. I sampled the
-  popup on every frame while it closed, after Enter and after Esc, and saw only the form. A
-  reopen still loads the saved values, since the popup unmounts once closed.
+Previous feature (completed) — B Template variables: copying a prompt or command with
+`{{name}}` variables opens a form that fills them in first. Step B of `docs/roadmap-v2.md`.
+Outcome in the History below.
 
 ---
 
@@ -2917,3 +2786,38 @@ Environment notes that outlive any one feature:
     weakened for the test and restored (same md5 and `updatedAt`); Favorite toggled back.
   - French from DeepL with a context hint; changed: curly apostrophes.
   - 1,339 tests, build and lint green. Merged into `main` (fast-forward); branch deleted.
+- 2026-11-27 — B Template variables in prompts and commands (`6574bb3`).
+  - Spec: `context/features/template-variables-spec.md`.
+  - **Parser:** `src/lib/template-vars.ts`, pure, for C3 and C4 to reuse.
+    - `parseVariables`, `variableFields`, `fillVariables` (with `now` and `uuid` injected) and
+      `templateSegments`.
+    - Ignores `${{ }}`, dotted or spaced names and `\{{ }}`.
+    - Not in the spec: a variable stays on one line, and a default is capped at 200 characters,
+      so text full of unclosed `{{a:` stays linear.
+  - **Copy flow:** `useTemplateCopy()` in `FillVariablesDialog.tsx` returns `{ copyItemText,
+    copyItemContent, dialog }`, like `useSecretCheck`.
+    - It opens for any variable, `{{date}}` included. With no field, Copy takes the focus.
+    - On the lists, `getPromptPreviews` sends `variables` (also the badge's count) and
+      `getCommandTexts` sends `hasVariables`, read on the whole command. Without variables, the
+      write still starts in the click (Safari). Cut commands now copy through `copyFromPromise`.
+    - Wired into both list buttons, the drawer's Copy, and the read view of `CodeEditor`
+      (`onCopied` became `onCopy`) and `MarkdownEditor`. Edit mode and the Optimized rewrite
+      copy raw.
+  - **Values:** `cortex:vars:<itemId>` plus an index `cortex:vars-index`, at most 50 items.
+    Saved on Copy only. They are plain text on the device, so a `{{password}}` value stays
+    readable there.
+  - **Highlight:** a remark plugin (`src/lib/remark-template-vars.ts`) tints only the names the
+    raw text parses. Markdown drops the backslash of an escape first. Inline code is filled but
+    not highlighted.
+  - **Author confirmed:** prompts and commands only, the server-side flag, and a raw copy on the
+    Optimized tab.
+  - French from DeepL with the glossary. Changed: curly apostrophes, a no-break space before
+    `:`, and the ICU keywords of `count`, which DeepL had translated.
+  - **Browser-checked** on develop:
+    - The spec's docker command: dialog, preview, Copy, Copy raw, and values remembered after a
+      reload. The `{{date}}` prompt fills on Enter.
+    - Badges and the highlight. Snippets copy directly, with no form.
+    - The review found that focus missed the first field on the fetch path and that "Loading…"
+      flashed on close. Both are fixed and re-checked.
+    - Test items deleted. French not checked in the browser.
+  - 1,370 tests, build and lint green. Merged into `main` (fast-forward); branch deleted.
