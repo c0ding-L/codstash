@@ -141,6 +141,52 @@
       "upgrade": "Upgrade to Pro",
       "done": "Export complete: {file}"
     },
+    "api": {
+      "heading": "API tokens",
+      "title": "Personal API tokens",
+      "description": "Tokens let the CLI, the MCP server and the REST API reach your stash. Read access is free; read + write needs Pro. At most {max, number} active tokens. Changing or resetting your password revokes them all.",
+      "empty": "No API tokens yet.",
+      "new": "New token",
+      "atCap": "You have {max, number} active tokens. Revoke one to create another.",
+      "created": "Created {date}",
+      "lastUsed": "Last used {date}",
+      "neverUsed": "Never used",
+      "expires": "Expires {date}",
+      "expired": "Expired {date}",
+      "expiredBadge": "Expired",
+      "noExpiry": "No expiry",
+      "scopes": {
+        "read": "Read",
+        "write": "Read + write"
+      },
+      "revoke": "Revoke",
+      "revokeLabel": "Revoke {name}",
+      "revokeTitle": "Revoke this token?",
+      "revokeBody": "<name>{token}</name> stops working at once. Anything that uses it loses access.",
+      "revoking": "Revoking…",
+      "revoked": "Token revoked.",
+      "newTitle": "New API token",
+      "dialogDescription": "Name it after where you will use it, such as the laptop or the editor.",
+      "name": "Name",
+      "namePlaceholder": "Laptop CLI",
+      "scope": "Access",
+      "writeProOnly": "Read + write needs Pro.",
+      "expiry": "Expiry",
+      "expiries": {
+        "30d": "30 days",
+        "90d": "90 days",
+        "1y": "1 year",
+        "never": "Never"
+      },
+      "create": "Create token",
+      "creating": "Creating…",
+      "createdTitle": "Your new token",
+      "createdBody": "Copy it now. You won't see it again.",
+      "tokenLabel": "API token",
+      "copy": "Copy token",
+      "done": "Done",
+      "createdToast": "Token created."
+    },
     "import": {
       "title": "Import",
       "description": "Bring items in from a Cortex export, from files or from your public GitHub gists. Imported items count toward your plan’s limits.",
@@ -523,6 +569,7 @@
       "stripe": "Stripe key",
       "slack": "Slack token",
       "google": "Google API key",
+      "codstash": "CodStash API token",
       "jwt": "JSON Web Token",
       "connectionString": "Database URL with a password",
       "envAssignment": "Secret in a variable"
@@ -727,7 +774,8 @@
       "uploads": "File and image uploads are a Pro feature.",
       "ai": "AI features are a Pro feature.",
       "export": "Exporting your data is a Pro feature.",
-      "customTypes": "Custom item types are a Pro feature."
+      "customTypes": "Custom item types are a Pro feature.",
+      "apiWrite": "Read + write API tokens are a Pro feature."
     },
     "tooManyAttempts": "Too many attempts. Please try again in {minutes, plural, one {# minute} other {# minutes}}.",
     "somethingWrong": "Something went wrong. Try again.",
@@ -846,6 +894,16 @@
       "inUse": "{count, plural, one {# item still uses this type. Delete it first.} other {# items still use this type. Delete them first.}}",
       "inUseNow": "Items still use this type. Delete them first.",
       "deleteFailed": "Could not delete the type. Try again."
+    },
+    "apiTokens": {
+      "nameRequired": "Name is required.",
+      "nameTooLong": "Name can be at most {max, number} characters.",
+      "invalidScope": "Choose an access level from the list.",
+      "invalidExpiry": "Choose an expiry from the list.",
+      "tooMany": "You can have at most {max, number} active API tokens. Revoke one first.",
+      "notFound": "This token no longer exists.",
+      "createFailed": "Could not create the token. Try again.",
+      "revokeFailed": "Could not revoke the token. Try again."
     }
   },
   "emails": {

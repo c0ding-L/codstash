@@ -17,6 +17,7 @@ export type SecretKind =
   | "stripe"
   | "slack"
   | "google"
+  | "codstash"
   | "jwt"
   | "connectionString"
   | "envAssignment";
@@ -104,6 +105,12 @@ const DETECTORS: Detector[] = [
   {
     pattern: /\bAIza([0-9A-Za-z_-]{35})(?![0-9A-Za-z_-])/g,
     read: (m) => ({ kind: "google", text: m[0], value: m[1] }),
+  },
+  {
+    // Our own API token (C1). Its last character is never `-` or `_` (32 bytes of base64url),
+    // so `\b` is safe here.
+    pattern: /\bcstash_([A-Za-z0-9_-]{43})\b/g,
+    read: (m) => ({ kind: "codstash", text: m[0], value: m[1] }),
   },
   {
     // Three dot-separated base64url parts of 10+ characters, the first one a JSON header.

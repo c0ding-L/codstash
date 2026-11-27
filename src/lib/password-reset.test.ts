@@ -12,6 +12,7 @@ vi.mock("@/lib/prisma", () => ({
     $transaction: vi.fn(),
     user: { findUnique: vi.fn(), update: vi.fn() },
     verificationToken: { findFirst: vi.fn(), findUnique: vi.fn(), create: vi.fn(), deleteMany: vi.fn() },
+    apiToken: { updateMany: vi.fn() },
   },
 }));
 
@@ -151,6 +152,7 @@ describe("resetPassword", () => {
 
   beforeEach(() => {
     updateUser.mockReturnValue("update-user");
+    asMock(prisma.apiToken.updateMany).mockReturnValue("revoke-api-tokens");
     findUser.mockResolvedValue(user);
     // The first call consumes the reset token, and the second is inside the transaction.
     deleteTokens.mockResolvedValueOnce({ count: 1 }).mockReturnValueOnce("delete-verification-tokens");
@@ -166,7 +168,7 @@ describe("resetPassword", () => {
     expect(findUser).toHaveBeenCalledWith({ where: { email: "ada@example.com" } });
   });
 
-  it("sets the password, ends older sessions and drops verification tokens together", async () => {
+  it("sets the password, ends older sessions, drops verification tokens and revokes API tokens together", async () => {
     await resetPassword("ada@example.com", "raw-token", "new-hash");
 
     expect(updateUser).toHaveBeenCalledWith({
@@ -174,7 +176,15 @@ describe("resetPassword", () => {
       data: { password: "new-hash", passwordChangedAt: new Date(NOW) },
     });
     expect(deleteTokens).toHaveBeenNthCalledWith(2, { where: { identifier: "ada@example.com" } });
-    expect(transaction).toHaveBeenCalledExactlyOnceWith(["update-user", "delete-verification-tokens"]);
+    expect(prisma.apiToken.updateMany).toHaveBeenCalledWith({
+      where: { userId: "user_1", revokedAt: null },
+      data: { revokedAt: new Date(NOW) },
+    });
+    expect(transaction).toHaveBeenCalledExactlyOnceWith([
+      "update-user",
+      "delete-verification-tokens",
+      "revoke-api-tokens",
+    ]);
   });
 
   it("marks an unverified account verified, since the link proves the inbox", async () => {

@@ -141,6 +141,52 @@
       "upgrade": "Passer à Pro",
       "done": "Exportation terminée : {file}"
     },
+    "api": {
+      "heading": "Jetons API",
+      "title": "Jetons API personnels",
+      "description": "Les jetons permettent à l’interface en ligne de commande (CLI), au serveur MCP et à l’API REST d’accéder à votre espace de stockage. L’accès en lecture est gratuit ; l’accès en lecture et en écriture nécessite la formule Pro. Nombre maximal de jetons actifs : {max, number}. La modification ou la réinitialisation de votre mot de passe entraîne la révocation de tous ces jetons.",
+      "empty": "Il n’y a pas encore de jetons API.",
+      "new": "Nouveau jeton",
+      "atCap": "Vous disposez de {max, number} jetons actifs. Révoquez-en un pour en créer un autre.",
+      "created": "Créé le {date}",
+      "lastUsed": "Dernière utilisation le {date}",
+      "neverUsed": "Jamais utilisé",
+      "expires": "Expire le {date}",
+      "expired": "Expiré le {date}",
+      "expiredBadge": "Expiré",
+      "noExpiry": "Sans date d’expiration",
+      "scopes": {
+        "read": "Lecture",
+        "write": "Lecture + écriture"
+      },
+      "revoke": "Révoquer",
+      "revokeLabel": "Révoquer {name}",
+      "revokeTitle": "Souhaitez-vous révoquer ce jeton ?",
+      "revokeBody": "<name>{token}</name> cesse immédiatement de fonctionner. Tout ce qui l’utilise en perd l’accès.",
+      "revoking": "Révocation…",
+      "revoked": "Jeton révoqué.",
+      "newTitle": "Nouveau jeton API",
+      "dialogDescription": "Donnez-lui un nom en fonction de l’endroit où vous allez l’utiliser, par exemple « ordinateur portable » ou « éditeur ».",
+      "name": "Nom",
+      "namePlaceholder": "CLI pour ordinateur portable",
+      "scope": "Accès",
+      "writeProOnly": "La lecture et l’écriture nécessitent la formule Pro.",
+      "expiry": "Date d’expiration",
+      "expiries": {
+        "30d": "30 jours",
+        "90d": "90 jours",
+        "1y": "1 an",
+        "never": "Jamais"
+      },
+      "create": "Créer un jeton",
+      "creating": "Création en cours…",
+      "createdTitle": "Votre nouveau jeton",
+      "createdBody": "Copiez-le tout de suite. Vous ne le reverrez plus.",
+      "tokenLabel": "Jeton API",
+      "copy": "Copier le jeton",
+      "done": "Terminé",
+      "createdToast": "Le jeton a été créé."
+    },
     "import": {
       "title": "Importer",
       "description": "Importez des éléments à partir d’une exportation Cortex, de fichiers ou de vos gists GitHub publics. Les éléments importés sont pris en compte dans les limites de votre formule.",
@@ -523,6 +569,7 @@
       "stripe": "Clé Stripe",
       "slack": "Jeton Slack",
       "google": "Clé API Google",
+      "codstash": "Jeton API CodStash",
       "jwt": "JSON Web Token",
       "connectionString": "URL de la base de données avec un mot de passe",
       "envAssignment": "Un secret dans une variable"
@@ -727,7 +774,8 @@
       "uploads": "L’import de fichiers et d’images est réservé à la formule Pro.",
       "ai": "Les fonctionnalités d’IA sont réservées à la formule Pro.",
       "export": "L’exportation de vos données est réservée à la formule Pro.",
-      "customTypes": "Les types d’éléments personnalisés sont réservés à la formule Pro."
+      "customTypes": "Les types d’éléments personnalisés sont réservés à la formule Pro.",
+      "apiWrite": "Les jetons API de lecture et d’écriture sont une fonctionnalité réservée à la formule Pro."
     },
     "tooManyAttempts": "Trop de tentatives. Réessayez dans {minutes, plural, one {# minute} other {# minutes}}.",
     "somethingWrong": "Une erreur s’est produite. Réessayez.",
@@ -846,6 +894,16 @@
       "inUse": "{count, plural, one {# élément utilise encore ce type. Veuillez d’abord le supprimer.} other {# éléments utilisent encore ce type. Veuillez d’abord les supprimer.}}",
       "inUseNow": "Certains éléments utilisent encore ce type. Veuillez les supprimer au préalable.",
       "deleteFailed": "Impossible de supprimer le type. Veuillez réessayer."
+    },
+    "apiTokens": {
+      "nameRequired": "Le nom est obligatoire.",
+      "nameTooLong": "Le nom ne doit pas dépasser {max, number} caractères.",
+      "invalidScope": "Choisissez un niveau d’accès dans la liste.",
+      "invalidExpiry": "Choisissez une date d’expiration dans la liste.",
+      "tooMany": "Vous pouvez disposer au maximum de {max, number} jetons API actifs. Veuillez d’abord en révoquer un.",
+      "notFound": "Ce jeton n’existe plus.",
+      "createFailed": "Impossible de créer le jeton. Veuillez réessayer.",
+      "revokeFailed": "Impossible de révoquer le jeton. Veuillez réessayer."
     }
   },
   "emails": {

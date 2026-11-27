@@ -44,6 +44,7 @@ model User {
   collections Collection[]
   tags        Tag[]
   payments    Payment[]
+  apiTokens   ApiToken[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -270,4 +271,24 @@ model Payment {
   updatedAt DateTime @updatedAt
 
   @@index([userId, createdAt])
+}
+
+// Personal API token (C1) for the REST API, the MCP server and the CLI.
+model ApiToken {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  // First 12 characters of the token ("cstash_" + 5), shown in the list to tell tokens apart.
+  prefix     String
+  // SHA-256 of the whole token, hex. The token itself is never stored.
+  hash       String    @unique
+  // "read" or "write" (write implies read).
+  scope      String
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
 }

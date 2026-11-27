@@ -30,6 +30,7 @@ vi.mock("@/lib/prisma", () => ({
     user: { findUnique: vi.fn(), update: vi.fn(), delete: vi.fn() },
     item: { deleteMany: vi.fn() },
     verificationToken: { deleteMany: vi.fn() },
+    apiToken: { updateMany: vi.fn() },
   },
 }));
 
@@ -68,6 +69,7 @@ beforeEach(() => {
   asMock(prisma.user.delete).mockReturnValue("delete-user");
   asMock(prisma.item.deleteMany).mockReturnValue("delete-items");
   asMock(prisma.verificationToken.deleteMany).mockReturnValue("delete-tokens");
+  asMock(prisma.apiToken.updateMany).mockReturnValue("revoke-api-tokens");
 });
 
 describe("changePassword", () => {
@@ -127,7 +129,7 @@ describe("changePassword", () => {
     expect(prisma.user.update).not.toHaveBeenCalled();
   });
 
-  it("stores the hash, ends other sessions, revokes reset links and signs back in", async () => {
+  it("stores the hash, ends other sessions, revokes reset links and API tokens, and signs back in", async () => {
     await expect(changePassword(INITIAL, form(valid))).rejects.toThrow("REDIRECT /profile?passwordChanged=1");
 
     expect(hash).toHaveBeenCalledWith(valid.newPassword, 12);
@@ -138,7 +140,11 @@ describe("changePassword", () => {
     expect(prisma.verificationToken.deleteMany).toHaveBeenCalledWith({
       where: { identifier: "reset@ada@example.com" },
     });
-    expect(transaction).toHaveBeenCalledExactlyOnceWith(["update-user", "delete-tokens"]);
+    expect(prisma.apiToken.updateMany).toHaveBeenCalledWith({
+      where: { userId: USER.id, revokedAt: null },
+      data: { revokedAt: expect.any(Date) },
+    });
+    expect(transaction).toHaveBeenCalledExactlyOnceWith(["update-user", "delete-tokens", "revoke-api-tokens"]);
     expect(signIn).toHaveBeenCalledWith("credentials", {
       email: USER.email,
       password: valid.newPassword,

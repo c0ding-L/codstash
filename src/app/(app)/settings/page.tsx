@@ -5,6 +5,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 
 import { auth } from "@/auth";
+import { ApiTokensManager } from "@/components/settings/ApiTokensManager";
 import { ChangePasswordDialog } from "@/components/profile/ChangePasswordDialog";
 import { DeleteAccountDialog } from "@/components/profile/DeleteAccountDialog";
 import { EditorPreferencesForm } from "@/components/settings/EditorPreferencesForm";
@@ -16,11 +17,12 @@ import { UpgradeButtons } from "@/components/settings/UpgradeButtons";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatProUntil, parseCurrency } from "@/lib/billing-plans";
+import { listApiTokens, MAX_API_TOKENS } from "@/lib/db/api-tokens";
 import { getPlanStatus } from "@/lib/db/billing";
 import { DEMO_USER_EMAIL } from "@/lib/db/collections";
 import { getCustomTypes, MAX_CUSTOM_TYPES } from "@/lib/db/item-types";
 import { getProfile } from "@/lib/db/profile";
-import { FREE_LIMITS, canUseCustomTypes } from "@/lib/usage-limits";
+import { FREE_LIMITS, canUseApiWrite, canUseCustomTypes } from "@/lib/usage-limits";
 import { pageMetadata } from "@/i18n/labels-server";
 
 /** Server actions take the page's limit: Suggest Tags and Description wait on a slow free model. */
@@ -45,9 +47,10 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   if (!profile) redirect("/sign-in?callbackUrl=/settings");
 
   // `?currency=` comes from the pricing page's "Get Pro" link.
-  const [plan, customTypes, { currency }, t, locale] = await Promise.all([
+  const [plan, customTypes, apiTokens, { currency }, t, locale] = await Promise.all([
     getPlanStatus(profile.id),
     getCustomTypes(profile.id),
+    listApiTokens(profile.id),
     searchParams,
     getTranslations("settings"),
     getLocale(),
@@ -142,6 +145,19 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         <h2 className="text-lg font-semibold">{t("data.heading")}</h2>
         <ExportDataCard isPro={plan.isPro} />
         <ImportDataCard plan={plan} />
+      </section>
+
+      <section id="api" className="flex scroll-mt-20 flex-col gap-4">
+        <h2 className="text-lg font-semibold">{t("api.heading")}</h2>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("api.title")}</CardTitle>
+            <CardDescription>{t("api.description", { max: MAX_API_TOKENS })}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ApiTokensManager tokens={apiTokens} canWrite={canUseApiWrite(plan)} max={MAX_API_TOKENS} />
+          </CardContent>
+        </Card>
       </section>
 
       <section className="flex flex-col gap-4">

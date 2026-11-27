@@ -7,6 +7,7 @@ import { z } from "zod";
 import { auth, signIn, signOut } from "@/auth";
 import { errKey } from "@/i18n/error-keys";
 import { getErrors } from "@/i18n/errors-server";
+import { revokeAllApiTokensQuery } from "@/lib/db/api-tokens";
 import { DEMO_USER_EMAIL } from "@/lib/db/collections";
 import { getItemFileKeys } from "@/lib/db/items";
 import { prisma } from "@/lib/prisma";
@@ -68,6 +69,8 @@ export async function changePassword(_previous: ActionResult, formData: FormData
       }),
       // A reset link requested earlier would otherwise still set a password.
       prisma.verificationToken.deleteMany({ where: { identifier: `reset@${user.email.toLowerCase()}` } }),
+      // The same "I may be compromised" step covers the API tokens (C1).
+      revokeAllApiTokensQuery(user.id),
     ]);
     email = user.email;
   } catch (error) {

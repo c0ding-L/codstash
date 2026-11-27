@@ -33,6 +33,11 @@ export function canExport(plan: Pick<PlanUsage, "isPro">) {
   return plan.isPro;
 }
 
+/** API tokens are read for Free; the `write` scope (creating one, and writing with one) is Pro. */
+export function canUseApiWrite(plan: Pick<PlanUsage, "isPro">) {
+  return plan.isPro;
+}
+
 /** Custom item types: creating or editing one, and creating items of one. Existing ones stay readable. */
 export function canUseCustomTypes(plan: Pick<PlanUsage, "isPro">) {
   return plan.isPro;
@@ -43,7 +48,7 @@ export function canUseCustomTypes(plan: Pick<PlanUsage, "isPro">) {
  * is already reached: two requests racing past the action's early check.
  */
 export class LimitReachedError extends Error {
-  constructor(readonly limit: "items" | "collections" | "customTypes") {
+  constructor(readonly limit: "items" | "collections" | "customTypes" | "apiTokens") {
     // Internal: the action that catches it answers with the `errors.limits` message.
     super(`${limit} limit reached`);
     this.name = "LimitReachedError";

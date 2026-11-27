@@ -27,6 +27,10 @@ const LIMITS = {
   aiDaily: { attempts: 50, window: "1 d" },
   /** Whole app, identifier "global": OpenRouter's free models allow 20 requests a minute per account. */
   aiGlobal: { attempts: 18, window: "1 m" },
+  /** Per API token, every request to the REST API and the MCP server. */
+  api: { attempts: 120, window: "1 m" },
+  /** Per API token, the writes, counted on top of `api`. */
+  apiWrite: { attempts: 30, window: "1 m" },
 } satisfies Record<string, { attempts: number; window: Duration }>;
 
 export type RateLimitName = keyof typeof LIMITS;

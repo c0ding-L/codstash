@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { generateToken } from "@/lib/api-token";
 import { containsSecrets, detectSecrets, scanItem, type SecretKind } from "@/lib/secrets";
 
 /*
@@ -21,6 +22,7 @@ const POSITIVES: [SecretKind, string][] = [
   ["stripe", "sk_" + "live_" + run(RANDOM, 24)],
   ["slack", "xoxb-" + "1234567890-" + run(RANDOM, 20)],
   ["google", "AIza" + run(RANDOM, 35)],
+  ["codstash", "cstash_" + run(RANDOM, 43)],
   ["jwt", "eyJ" + run(RANDOM, 20) + "." + run(RANDOM, 20) + "." + run(RANDOM, 20)],
   ["connectionString", "postgres" + "://admin:" + "Zq8vR2kL" + "@db.internal:5432/app"],
   ["envAssignment", "STRIPE_" + "SECRET=" + run(RANDOM, 16)],
@@ -146,5 +148,16 @@ describe("containsSecrets", () => {
 
   it("is false for a clean item", () => {
     expect(containsSecrets({ title: "Hello", description: "World", content: "print(1)", url: null })).toBe(false);
+  });
+});
+
+describe("CodStash API tokens", () => {
+  it("finds every generated token, at the end of a line too", () => {
+    for (let i = 0; i < 200; i++) {
+      const { token } = generateToken();
+      expect(detectSecrets(`"Authorization": "Bearer ${token}"`).map((f) => f.kind)).toContain("codstash");
+      expect(detectSecrets(`CODSTASH_TOKEN=${token}`).map((f) => f.kind)).toContain("codstash");
+      expect(detectSecrets(token).map((f) => f.kind)).toEqual(["codstash"]);
+    }
   });
 });

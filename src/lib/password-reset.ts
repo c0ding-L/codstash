@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 
+import { revokeAllApiTokensQuery } from "@/lib/db/api-tokens";
 import { sendPasswordResetEmail } from "@/lib/email";
 import { DEFAULT_LOCALE, type Locale } from "@/lib/locale";
 import { prisma } from "@/lib/prisma";
@@ -100,6 +101,8 @@ export async function resetPassword(email: string, token: string, passwordHash: 
       },
     }),
     prisma.verificationToken.deleteMany({ where: { identifier: normalizedEmail } }),
+    // Like a password change, a reset revokes the API tokens (C1).
+    revokeAllApiTokensQuery(user.id),
   ]);
   return true;
 }

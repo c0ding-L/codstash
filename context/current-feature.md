@@ -1,16 +1,110 @@
-# Current Feature
+# Current Feature: C1 Personal API tokens
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+Spec: `@context/features/api-tokens-spec.md`. Roadmap `docs/roadmap-v2.md` § C1. Read for Free,
+write for Pro. Schema change (migration `api_tokens`, develop only).
+
+- `ApiToken` model as in the spec (`name`, `prefix`, `hash` unique, `scope`, `lastUsedAt`,
+  `expiresAt`, `revokedAt`, `createdAt`), cascading from `User`, indexed on `userId`. Created
+  with `prisma migrate dev`, never `db push`.
+- `src/lib/api-token.ts`, pure and server-only:
+  - `generateToken()` → `{ token, prefix, hash }`: `cstash_` + 32 random bytes in base64url,
+    50 characters, prefix = first 12.
+  - `hashToken(token)`: SHA-256 hex.
+  - `parseBearer(header)`: the token for `Bearer cstash_…` of the right length, else null.
+- `src/lib/api-auth.ts` — `authenticateApi(request, need)` → `{ userId, tokenId, scope }` or a
+  `Response`:
+  - missing/malformed bearer, unknown, revoked or expired token: the same 401
+    `invalid_token`, with `WWW-Authenticate: Bearer`
+  - write with a `read` token: 403 `insufficient_scope`; write while not Pro: 403
+    `pro_required`
+  - per-token limits `api` (120 / 1 m) and, on writes, `apiWrite` (30 / 1 m): 429 with
+    `Retry-After`
+  - `lastUsedAt` updated by raw SQL throttled to once a minute, fire and forget
+  - error body `{ "error": { "code", "message" } }`, messages in English with an explicit
+    `en` locale, never `Accept-Language`
+- Settings › API tokens (`#api`):
+  - list of active tokens: name, prefix…, scope, created, last used, expires, Revoke
+  - "New token" dialog: name (1–50), scope (`write` disabled with a Crown on Free), expiry
+    (30 d / 90 d / 1 y / never, default 90 d)
+  - the token shown once with a copy button and "You won't see it again."
+- `src/actions/api-tokens.ts`: `createApiToken` (zod, auth, Pro for `write`, at most 10 active)
+  and `revokeApiToken` (sets `revokedAt`; another user's or a missing token → "not found").
+- A password change revokes all of the user's tokens (confirmed by the author, roadmap
+  decision #6), and so does a password reset (author, 2026-11-27).
+- `detectSecrets` (A6) learns `\bcstash_[A-Za-z0-9_-]{43}\b`.
+- Tokens never logged; logs use the token id.
+- Strings in `settings.api` (EN, FR via DeepL).
+- Tests:
+  - `src/lib/api-token.test.ts`
+  - `src/lib/api-auth.test.ts`
+  - `src/actions/api-tokens.test.ts`
+  - `profile.test.ts` (password change revokes)
+  - `secrets.test.ts` (the new pattern)
+- Browser: create, copy, list, revoke from Settings, in EN and FR.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+Checked while loading, to settle before or during implementation:
+
+- **No API route exists yet.** C1 ships the helper and its tests only; C2 is its first caller.
+  So `authenticateApi` is exercised by unit tests alone in this step.
+- **Rate limits fail open.** `checkRateLimit` (`src/lib/rate-limit.ts`) lets requests through
+  when Upstash is not configured or answers in over 2 s. Same as every other limit; noted, not
+  changed. `reset` is in epoch ms, so `Retry-After` = `ceil((reset - now) / 1000)`.
+- **Plan check** reuses `getPlanStatus` (`src/lib/db/billing.ts`), as `ai-gate.ts` does. Pro
+  is checked on every write, so a lapsed Pro keeps the token but stops writing.
+- **`lastUsedAt` raw SQL.** `ApiToken` has no `@updatedAt`, so the raw SQL is only for the
+  in-query throttle, like `markItemUsed` (`src/lib/db/items.ts:663`):
+  `WHERE "lastUsedAt" IS NULL OR "lastUsedAt" < now() - interval '1 minute'`. Queries go in a
+  new `src/lib/db/api-tokens.ts`.
+- **10-token cap race.** Two concurrent creates could both see 9. `createCustomType`
+  (`src/lib/db/item-types.ts:90`) already solves it: a transaction that locks the user row
+  (`SELECT 1 FROM "User" … FOR UPDATE`), counts, throws `LimitReachedError`, then creates.
+  Same pattern, counting tokens with `revokedAt` null and not expired.
+- **Password change** (`src/actions/profile.ts:61`) already runs a `$transaction`; the
+  `updateMany` setting `revokedAt` joins it.
+- **Password reset revokes tokens too** (forgot-password flow, `src/lib/password-reset.ts:98`). Decided by the author on
+  2026-11-27: same "I think I was compromised" reasoning as the change. Tested alongside the
+  reset's existing tests.
+- **The spec's closing `\b` is safe.** 32 bytes in unpadded base64url give 43 characters
+  holding 258 bits, so the last one carries 4 real bits and is always one of
+  `048AEIMQUYcgkosw` (checked on 200,000 tokens), never `-` or `_`. A6's lookahead (used for
+  Google keys) is optional here, for consistency only.
+- **Secret kind.** `SecretKind` is a union in `src/lib/secrets.ts`; add `"codstash"` (or
+  similar) and its label string in EN/FR.
+- **Settings page** has sections `#plan`, `#types`, `#data`, then an unnamed Account section
+  (password, deletion). `#api` goes between `#data` and Account. The
+  C2/C3 links are left out until those steps ship.
+
+### Implementation decisions
+
+- **Pro check on writes** joins `user.proUntil` into the hash lookup and calls `isProActive`,
+  instead of `getPlanStatus` (three queries, two of them counts). Same answer, one query.
+- **API errors are English literals** in `src/lib/api-auth.ts`, not `getErrors` /
+  `tooManyAttemptsMessage`, which follow the request locale. No `fr.json` entries for them.
+- **`lastUsedAt`** is written in `after()` (not a bare promise), and a failure logs the token id
+  only. The one-minute throttle is in the SQL (`src/lib/db/api-tokens.test.ts`).
+- **Revocation on password change and reset** is one more query in each existing
+  `$transaction` (`revokeAllApiTokensQuery`).
+- **Secret detector** keeps the spec's `\b` (see the note above), tested on 200 generated tokens.
+- **FR** via DeepL + glossary. "Lecture" and the placeholder "CLI pour ordinateur portable"
+  come from a second DeepL pass with `context`. Changed after DeepL: "Jetons API personnels"
+  (DeepL: "Jeton"), "Créé le / Dernière utilisation le / Expire le {date}" (DeepL left out
+  "le"), "formule Pro" (DeepL: "version Pro"), "Jeton API" capitalised, curly apostrophes and
+  no-break spaces.
+- **Expired tokens stay listed**, dimmed, with an "Expired" badge, "Expired {date}" and Revoke
+  (author, 2026-11-27). They do not count towards the 10-token cap. `expired` is computed on
+  the server, so the client never compares dates. FR "Expiré" from DeepL; "le" added before
+  the date, as for the others.
+- **Browser check (2026-11-27, demo account, Free):** create, copy (clipboard equals the
+  token), list (prefix, dates), revoke, in EN and FR, no console errors. "Read + write" is
+  disabled with a Crown. The test rows stay in develop, all revoked.
 
 ---
 
