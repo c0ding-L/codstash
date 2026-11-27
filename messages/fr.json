@@ -188,6 +188,17 @@
       "done": "Terminé",
       "createdToast": "Le jeton a été créé."
     },
+    "mcp": {
+      "title": "Connecter un assistant IA",
+      "description": "Claude Code, Cursor et d’autres clients MCP peuvent effectuer des recherches et consulter votre espace de stockage, ainsi qu’y enregistrer de nouveaux éléments à l’aide d’un jeton Lecture + écriture.",
+      "claudeCode": "Claude Code",
+      "claudeCodeHint": "Exécutez-le dans un terminal.",
+      "cursor": "Cursor",
+      "cursorHint": "Ajoutez-le au fichier ~/.cursor/mcp.json, ou au fichier .cursor/mcp.json d’un projet.",
+      "copy": "Copier le snippet {name}",
+      "tokenPlaceholder": "Remplacez {placeholder} par l’un de vos jetons. Le jeton est automatiquement renseigné dès que vous en créez un.",
+      "tokenFilled": "Votre nouveau jeton figure déjà dans ces snippets."
+    },
     "import": {
       "title": "Importer",
       "description": "Importez des éléments à partir d’une exportation Cortex, de fichiers ou de vos gists GitHub publics. Les éléments importés sont pris en compte dans les limites de votre formule.",

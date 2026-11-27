@@ -29,10 +29,12 @@ interface ApiTokensManagerProps {
   canWrite: boolean;
   /** At the cap, "New token" is disabled. */
   max: number;
+  /** The app's public origin, for the MCP snippets of the one-time view. */
+  origin: string;
 }
 
 /** Settings › API tokens: the active tokens, with New and Revoke. */
-export function ApiTokensManager({ tokens, canWrite, max }: ApiTokensManagerProps) {
+export function ApiTokensManager({ tokens, canWrite, max, origin }: ApiTokensManagerProps) {
   const t = useTranslations("settings.api");
   const format = useFormatter();
   const [creating, setCreating] = useState(false);
@@ -89,7 +91,7 @@ export function ApiTokensManager({ tokens, canWrite, max }: ApiTokensManagerProp
         {atCap ? <p className="text-sm text-muted-foreground">{t("atCap", { max })}</p> : null}
       </div>
 
-      {creating ? <ApiTokenDialog canWrite={canWrite} onClose={() => setCreating(false)} /> : null}
+      {creating ? <ApiTokenDialog canWrite={canWrite} origin={origin} onClose={() => setCreating(false)} /> : null}
       {revoking ? <RevokeApiTokenDialog token={revoking} onOpenChange={(open) => !open && setRevoking(null)} /> : null}
     </div>
   );

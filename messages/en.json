@@ -188,6 +188,17 @@
       "done": "Done",
       "createdToast": "Token created."
     },
+    "mcp": {
+      "title": "Connect an AI assistant",
+      "description": "Claude Code, Cursor and other MCP clients can search and read your stash, and save new items with a read + write token.",
+      "claudeCode": "Claude Code",
+      "claudeCodeHint": "Run it in a terminal.",
+      "cursor": "Cursor",
+      "cursorHint": "Add it to ~/.cursor/mcp.json, or to .cursor/mcp.json in a project.",
+      "copy": "Copy the {name} snippet",
+      "tokenPlaceholder": "Replace {placeholder} with one of your tokens. The token is filled in for you right after you create one.",
+      "tokenFilled": "Your new token is already in these snippets."
+    },
     "import": {
       "title": "Import",
       "description": "Bring items in from a Cortex export, from files or from your public GitHub gists. Imported items count toward your plan’s limits.",

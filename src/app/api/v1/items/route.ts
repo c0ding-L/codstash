@@ -1,21 +1,16 @@
 import { z } from "zod";
 
 import { apiError, authenticateApi } from "@/lib/api-auth";
+import { createItemFromApi } from "@/lib/api-create-item";
 import { apiData, apiServerError, apiValidationError, readJsonBody } from "@/lib/api-v1";
 import {
   API_ITEMS_DEFAULT_LIMIT,
   API_ITEMS_MAX_LIMIT,
   decodeCursor,
-  findCustomTypeIdBySlug,
   getApiItem,
   listApiItems,
 } from "@/lib/db/api-items";
-import { ownsCollections } from "@/lib/db/collections";
-import { ownsCustomType } from "@/lib/db/item-types";
-import { createItem } from "@/lib/db/items";
 import { ITEM_LIMITS } from "@/lib/item-limits";
-import { createItemSchema } from "@/lib/item-schemas";
-import { isReservedTypeSlug } from "@/lib/item-type-ui";
 
 /** An optional query parameter: absent or blank is no filter. */
 function optionalParam(max: number, label: string) {
@@ -69,11 +64,7 @@ export async function GET(request: Request) {
   }
 }
 
-/**
- * Creates a text item or a link. The body is `createItemSchema`'s; a custom type is
- * `type: "custom"` with `typeId`, or simply its slug as `type`. Writing is Pro, so the Free
- * limits do not apply.
- */
+/** Creates a text item or a link: `createItemFromApi`, which the MCP server shares. */
 export async function POST(request: Request) {
   const caller = await authenticateApi(request, "write");
   if (caller instanceof Response) return caller;
@@ -81,46 +72,15 @@ export async function POST(request: Request) {
 
   const read = await readJsonBody(request);
   if (read instanceof Response) return read;
-  let body = read.body;
 
   try {
-    // Before validation: a file sent without `fileKey` must still answer `unsupported_type`.
-    const type = typeof body === "object" && body !== null && "type" in body ? body.type : undefined;
-    if (type === "file" || type === "image") {
-      return apiError(422, "unsupported_type", "File and image items cannot be created through the API.");
+    const result = await createItemFromApi(userId, read.body);
+    if (!result.ok) {
+      return result.reason === "unsupported_type"
+        ? apiError(422, "unsupported_type", "File and image items cannot be created through the API.")
+        : apiValidationError(result.issues);
     }
-    // A custom type by its slug. Custom slugs never take a system or reserved slug.
-    if (typeof type === "string" && type !== "custom" && !isReservedTypeSlug(type)) {
-      const typeId = await findCustomTypeIdBySlug(userId, type);
-      if (!typeId) {
-        return apiValidationError([{ path: ["type"], message: `No item type "${type}".` }]);
-      }
-      body = { ...(body as object), type: "custom", typeId };
-    }
-
-    const parsed = createItemSchema.safeParse(body);
-    if (!parsed.success) return apiValidationError(parsed.error.issues);
-    const data = parsed.data;
-    // Narrowed for TypeScript; refused above.
-    if (data.type === "file" || data.type === "image") {
-      return apiError(422, "unsupported_type", "File and image items cannot be created through the API.");
-    }
-
-    // `connect` does not filter on the owner, so the ids are checked here.
-    if (!(await ownsCollections(userId, data.collectionIds))) {
-      return apiValidationError([{ path: ["collectionIds"], message: "One of these collections does not exist." }]);
-    }
-
-    let id: string;
-    if (data.type === "custom") {
-      const { typeId, ...fields } = data;
-      if (!(await ownsCustomType(userId, typeId))) {
-        return apiValidationError([{ path: ["typeId"], message: "No custom item type has this id." }]);
-      }
-      ({ id } = await createItem(userId, { ...fields, type: { customTypeId: typeId } }));
-    } else {
-      ({ id } = await createItem(userId, data));
-    }
+    const { id } = result;
 
     // Read back in the API's shape. Gone already only if deleted in the same instant.
     const item = await getApiItem(userId, id);

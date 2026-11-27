@@ -5,8 +5,8 @@ import { apiError, type ApiCaller } from "@/lib/api-auth";
  * only `authenticateApi`, so `apiError` and the 401/403 bodies stay the real ones.
  */
 export const USER_ID = "user_1";
-export const readCaller: ApiCaller = { userId: USER_ID, tokenId: "tok_1", scope: "read" };
-export const writeCaller: ApiCaller = { userId: USER_ID, tokenId: "tok_1", scope: "write" };
+export const readCaller: ApiCaller = { userId: USER_ID, tokenId: "tok_1", scope: "read", isPro: false };
+export const writeCaller: ApiCaller = { userId: USER_ID, tokenId: "tok_1", scope: "write", isPro: true };
 
 export const invalidToken = () => apiError(401, "invalid_token", "The API token is missing, invalid, revoked or expired.");
 export const readOnly = () =>

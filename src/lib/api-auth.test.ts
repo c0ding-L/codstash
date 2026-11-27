@@ -48,7 +48,7 @@ beforeEach(() => {
 describe("authenticateApi", () => {
   it("returns the caller for a valid token and looks it up by hash", async () => {
     const result = await authenticateApi(request(`Bearer ${token}`), "write");
-    expect(result).toEqual({ userId: "user1", tokenId: "tok1", scope: "write" });
+    expect(result).toEqual({ userId: "user1", tokenId: "tok1", scope: "write", isPro: true });
     expect(findApiTokenByHash).toHaveBeenCalledWith(hash);
   });
 
@@ -58,6 +58,7 @@ describe("authenticateApi", () => {
       userId: "user1",
       tokenId: "tok1",
       scope: "read",
+      isPro: false,
     });
   });
 
@@ -136,6 +137,7 @@ describe("authenticateApi", () => {
       userId: "user1",
       tokenId: "tok1",
       scope: "write",
+      isPro: false,
     });
   });
 

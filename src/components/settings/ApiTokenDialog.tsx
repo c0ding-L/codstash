@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { createApiToken } from "@/actions/api-tokens";
 import { Field, useFieldErrors } from "@/components/items/item-form-fields";
+import { McpSetupSnippets } from "@/components/settings/McpSetupSnippets";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,6 +34,8 @@ import type { ApiTokenScope } from "@/lib/db/api-tokens";
 interface ApiTokenDialogProps {
   /** False on Free: the `write` scope is shown but disabled. */
   canWrite: boolean;
+  /** The app's public origin, for the MCP snippets shown with the new token. */
+  origin: string;
   onClose: () => void;
 }
 
@@ -40,7 +43,7 @@ interface ApiTokenDialogProps {
  * Creates a token, then shows it once. The token lives only in this dialog's state:
  * closing it drops the token for good.
  */
-export function ApiTokenDialog({ canWrite, onClose }: ApiTokenDialogProps) {
+export function ApiTokenDialog({ canWrite, origin, onClose }: ApiTokenDialogProps) {
   const t = useTranslations("settings.api");
   const router = useRouter();
   const [saving, startSaving] = useTransition();
@@ -56,7 +59,7 @@ export function ApiTokenDialog({ canWrite, onClose }: ApiTokenDialogProps) {
     <Dialog open onOpenChange={(next) => !next && !saving && close()}>
       <DialogContent className="sm:max-w-lg" showCloseButton={!saving}>
         {token ? (
-          <CreatedToken token={token} onDone={close} />
+          <CreatedToken token={token} origin={origin} onDone={close} />
         ) : (
           <>
             <DialogHeader>
@@ -195,9 +198,10 @@ function ApiTokenForm({
   );
 }
 
-/** The token, shown this once, with a copy button. */
-function CreatedToken({ token, onDone }: { token: string; onDone: () => void }) {
+/** The token, shown this once, with a copy button and the MCP snippets filled with it. */
+function CreatedToken({ token, origin, onDone }: { token: string; origin: string; onDone: () => void }) {
   const t = useTranslations("settings.api");
+  const tm = useTranslations("settings.mcp");
   const { copyToClipboard } = useClipboard();
   const id = useId();
 
@@ -227,6 +231,12 @@ function CreatedToken({ token, onDone }: { token: string; onDone: () => void }) 
           <Copy aria-hidden />
         </Button>
       </div>
+      <details className="group min-w-0 rounded-md border border-border p-3">
+        <summary className="cursor-pointer text-sm font-medium">{tm("title")}</summary>
+        <div className="mt-3">
+          <McpSetupSnippets origin={origin} token={token} />
+        </div>
+      </details>
       <DialogFooter>
         <Button type="button" onClick={onDone}>
           {t("done")}

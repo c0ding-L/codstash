@@ -26,16 +26,24 @@ export function apiNotFound(what: "item" | "collection" | "user") {
 }
 
 /**
+ * Each issue as `{ path, message }`, in English. The item schemas' messages are translation keys,
+ * so each is translated; a message that is not a key is English already and kept.
+ */
+export async function englishIssues(issues: readonly IssueLike[]): Promise<{ path: string; message: string }[]> {
+  const e = await getErrors({ locale: "en" });
+  return issues.map((issue) => ({
+    path: issue.path.map(String).join("."),
+    message: e.isKey(issue.message) ? e.issue(issue) : issue.message,
+  }));
+}
+
+/**
  * 422 with `details: [{ path, message }]`. The item schemas' messages are translation keys, so
  * each is translated, in English whatever the caller's `Accept-Language`. A message that is not
  * a key (the API's own query checks, zod's defaults) is English already and kept.
  */
 export async function apiValidationError(issues: readonly IssueLike[], message = "The request is invalid.") {
-  const e = await getErrors({ locale: "en" });
-  const details = issues.map((issue) => ({
-    path: issue.path.map(String).join("."),
-    message: e.isKey(issue.message) ? e.issue(issue) : issue.message,
-  }));
+  const details = await englishIssues(issues);
   return Response.json({ error: { code: "invalid_request", message, details } }, { status: 422, headers: NO_STORE });
 }
 

@@ -14,6 +14,8 @@ export interface ApiCaller {
   userId: string;
   tokenId: string;
   scope: ApiTokenScope;
+  /** Whether the owner's Pro plan is active: the MCP server checks it per tool, not per request. */
+  isPro: boolean;
 }
 
 export type ApiErrorCode =
@@ -55,11 +57,12 @@ export async function authenticateApi(request: Request, need: ApiTokenScope): Pr
 
   // Anything but "write" is read-only: the column is a free string.
   const scope: ApiTokenScope = row.scope === "write" ? "write" : "read";
+  const isPro = isProActive(row.user.proUntil, now);
   if (need === "write") {
     if (scope !== "write") {
       return apiError(403, "insufficient_scope", "This API token is read-only. Create a read + write token to write.");
     }
-    if (!canUseApiWrite({ isPro: isProActive(row.user.proUntil, now) })) {
+    if (!canUseApiWrite({ isPro })) {
       return apiError(403, "pro_required", "Writing through the API requires CodStash Pro.");
     }
   }
@@ -80,5 +83,5 @@ export async function authenticateApi(request: Request, need: ApiTokenScope): Pr
     }
   });
 
-  return { userId: row.userId, tokenId: row.id, scope };
+  return { userId: row.userId, tokenId: row.id, scope, isPro };
 }

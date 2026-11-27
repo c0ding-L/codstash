@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
+import { headers } from "next/headers";
 import { connection } from "next/server";
 import { Suspense } from "react";
 
@@ -13,6 +14,7 @@ import { ExportDataCard } from "@/components/settings/ExportDataCard";
 import { ImportDataCard } from "@/components/settings/ImportDataCard";
 import { ItemTypesManager } from "@/components/settings/ItemTypesManager";
 import { LanguageForm } from "@/components/settings/LanguageForm";
+import { McpSetupSnippets } from "@/components/settings/McpSetupSnippets";
 import { UpgradeButtons } from "@/components/settings/UpgradeButtons";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -22,6 +24,7 @@ import { getPlanStatus } from "@/lib/db/billing";
 import { DEMO_USER_EMAIL } from "@/lib/db/collections";
 import { getCustomTypes, MAX_CUSTOM_TYPES } from "@/lib/db/item-types";
 import { getProfile } from "@/lib/db/profile";
+import { appOrigin } from "@/lib/mcp-setup";
 import { FREE_LIMITS, canUseApiWrite, canUseCustomTypes } from "@/lib/usage-limits";
 import { pageMetadata } from "@/i18n/labels-server";
 
@@ -50,14 +53,17 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   if (!profile) redirect("/sign-in?callbackUrl=/settings");
 
   // `?currency=` comes from the pricing page's "Get Pro" link.
-  const [plan, customTypes, apiTokens, { currency }, t, locale] = await Promise.all([
+  const [plan, customTypes, apiTokens, { currency }, t, locale, requestHeaders] = await Promise.all([
     getPlanStatus(profile.id),
     getCustomTypes(profile.id),
     listApiTokens(profile.id),
     searchParams,
     getTranslations("settings"),
     getLocale(),
+    headers(),
   ]);
+  // Where the MCP snippets point: `AUTH_URL`, else this request's host.
+  const origin = appOrigin({ AUTH_URL: process.env.AUTH_URL }, requestHeaders);
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
@@ -168,7 +174,16 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ApiTokensManager tokens={apiTokens} canWrite={canUseApiWrite(plan)} max={MAX_API_TOKENS} />
+            <ApiTokensManager tokens={apiTokens} canWrite={canUseApiWrite(plan)} max={MAX_API_TOKENS} origin={origin} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("mcp.title")}</CardTitle>
+            <CardDescription>{t("mcp.description")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <McpSetupSnippets origin={origin} />
           </CardContent>
         </Card>
       </section>
