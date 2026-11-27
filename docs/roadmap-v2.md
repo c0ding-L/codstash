@@ -76,7 +76,7 @@ nor custom types exist. A1 and A2 come first, and the rest of A follows in small
   prompts). If it does, that is the main argument for the warning.
 - Must ship before C3 and D1.
 
-### A7. AI streaming
+### A7. AI streaming — done 2026-11-27 (`11e900b`)
 - A defect in a feature Pro users already pay for: answers take 5–90 s, and one Explain call
   timed out at 60 s.
 - Move Explain, Description, Optimize and Tags to a route handler that streams the answer.

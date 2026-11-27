@@ -1,117 +1,22 @@
-# Current Feature: A7 AI streaming and timeouts
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-Spec: `@context/features/ai-streaming-spec.md`. Seventh step of `docs/roadmap-v2.md` § A7.
-
-- `src/lib/ai-client.ts` gains `completeStream(messages, { maxTokens, timeoutMs, signal })`
-  returning a `ReadableStream<string>` of deltas, with a pure `parseSseChunk(buffer)` →
-  `{ events, rest }` (split lines, `:` keep-alive comments, `[DONE]`, JSON error events) and
-  the adapters' `body()` taking a `stream` flag. `complete()` is unchanged.
-- Errors before any text throw `AiProviderError` with `complete()`'s codes; errors after text
-  end the stream with an error. `finish_reason` of the last chunk is exposed.
-- Timeouts: 60 s to the first token, then a 30 s idle timeout between chunks; a long answer
-  that keeps arriving is never cut.
-- `aiGate` moves from `src/actions/ai.ts` to `src/lib/ai-gate.ts`, shared by actions and routes.
-- `POST /api/ai/explain` and `POST /api/ai/optimize` `{ itemId }`: zod → auth 401 → item by
-  owner 404 → type check → `aiGate` 403/429 with translated messages; `200 text/plain;
-  charset=utf-8`, `Cache-Control: no-store`, `maxDuration = 120`.
-- Markers: `\n\n[[cortex:error:<message>]]` on a mid-stream error, `\n\n[[cortex:cutoff]]` on
-  `finish_reason: "length"` or when Explain passes the ~4,000-character cap (server stops
-  forwarding past it). Explain keeps `FRENCH_ANSWER_INSTRUCTION`.
-- `explainCode` and `optimizePrompt` server actions removed; their tests move to the routes.
-- `src/lib/ai-stream-client.ts`: `streamAi(url, body, { onText, signal })`, `onText` throttled
-  to one call per animation frame, throws the server message on non-2xx or the error marker,
-  strips the markers.
-- Explain tab: Markdown renders while streaming with a blinking caret; the button becomes
-  "Stop" (AbortController), partial text kept and marked "stopped"; cut-off shows a notice.
-- Optimize: same streaming view; "Use" / "Discard" only after the stream ends without a
-  cut-off and passes the existing parse and length check. Cut-off = the existing error.
-- Drawer actions (Favorite, Pin, Save) no longer blocked while AI runs.
-- `maxDuration = 60` covering the Suggest Tags and Description server actions.
-- Tests: `parseSseChunk`, `completeStream` (fake timers, hand-made stream), `ai-gate.test.ts`,
-  route tests for both, optimize validation in `ai-output.test.ts`. Browser check in EN and FR.
-- First-token latency on the free model measured and written in the History.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-Checked while loading, to settle before or during implementation:
+<!-- Additional context, constraints, or details from spec -->
 
-- **The spec's `cleanExplanation` does not exist.** The function in `src/lib/ai-output.ts` is
-  `parseExplanation` (fence strip + `EXPLANATION_MAX_LENGTH` = 4,000 cap, cut at a word
-  boundary with `…`). Plan: use it as-is on the client; no rename. Its `…` on cap and the
-  server's cut-off marker need to agree, so the server cap should cut at the same length.
-- **`maxDuration` on a layout vs. server actions.** The Next 16 docs
-  (`02-route-segment-config/maxDuration.md`) list `layout.tsx` as a valid place for the option
-  in general, but the "Server Actions" section says to set it **at the page level** to change
-  the timeout of the actions used on the page. Reading that literally, the layout export is not
-  guaranteed to apply to actions, so the safe choice is to set `maxDuration = 60` on each of the
-  9 `(app)` pages (dashboard, favorites, profile, settings, settings/billing, upgrade,
-  collections list, collections/[id], items/[type]). Can be confirmed from the build output
-  (`.next` function config) if we want to try the layout first.
-- **Vercel prerequisite is already done:** A1 recorded Fluid compute on, checked by the
-  author, with `maxDuration` 300 on `/api/export`. Nothing to recheck.
-- `aiGate` is a private function at `src/actions/ai.ts:84`; `getItemForExplain` lives in
-  `src/lib/db/items.ts`. Existing route handlers with `maxDuration` (`export`, `import`,
-  `import/gists`) are the pattern for the new routes and their tests.
-- Browser test needs the demo account set to Pro on the Neon **develop** branch, then reset
-  afterwards (never production).
+---
 
-### Implementation decisions
-
-- **`completeStream` returns `{ stream, finishReason() }`**, not a bare `ReadableStream<string>`:
-  the stream alone cannot carry `finish_reason`. It resolves only once the first text arrives,
-  so every failure before that throws `AiProviderError` and the route can still answer JSON.
-  An answer with no text at all throws `length` / `empty_response`, as `complete()` does.
-- **Timers:** one AbortController with a re-armed timer (not `AbortSignal.timeout`). Keep-alive
-  comments do not count as the first token. The 30 s idle timer runs only while a read waits, so
-  a slow reader never trips it. The timer and the caller's abort also cancel the body reader.
-- **Route order follows the spec:** zod → auth → item (404) → type, empty and too-long checks →
-  `aiGate`. A refused request spends no limiter slot. This flips the old actions' order (gate
-  first). `aiGate` now returns `{ status: 403 | 429, error }`. `answerLocale` moved with it to
-  `src/lib/ai-gate.ts`.
-- **Status codes:** 400 for invalid input, wrong type, empty or too-long content; 401; 404;
-  403/429 from the gate; 502 for a provider failure before text; 500 for anything else.
-- **Route self-deadline (110 s):** `maxDuration` 120 could kill a long Optimize midway. The
-  stream would then end with no marker, and the client would treat half a prompt as whole. So
-  `aiStreamResponse` stops at 110 s with the cut-off marker.
-- **Explain cap:** the server forwards at most `EXPLANATION_MAX_LENGTH` (4,000) raw characters,
-  then the cut-off marker, and cancels upstream. The client runs `parseStreamingExplanation`
-  (`parseExplanation`, the spec's `cleanExplanation`, plus dropping an unclosed opening
-  ```` ```markdown ```` fence) on each render and on the final text, so a cut-off answer inside
-  that fence does not turn into one code block at the end.
-- **Mid-stream error messages** are translated before the response returns
-  (`aiErrorMessages()`), since the body can fail after the request scope has gone.
-- **Markers** live in `src/lib/ai-stream-protocol.ts`, pure, shared by routes and browser. Only
-  a marker at the very end counts. A marker that is still arriving is hidden while streaming.
-- **First-token timeout is 60 s for both routes** (`STREAM_FIRST_TOKEN_TIMEOUT_MS`).
-  `EXPLAIN_TIMEOUT_MS` and `OPTIMIZE_TIMEOUT_MS` (whole-answer timeouts) were removed.
-- **Stop** is on Explain only (spec). Optimize aborts on unmount but has no Stop button.
-- **`maxDuration = 60` on each of the 9 `(app)` pages**, as the docs say for server actions. The
-  build's `functions-config-manifest.json` shows 60 for the pages and 120 for both AI routes.
-- New strings: `ai.stop`, `ai.stopHint`, `editor.explanationStopped`,
-  `editor.explanationCutOff`. French comes from DeepL (glossary, `prefer_more`, with a context
-  hint). The only changes were curly apostrophes.
-
-### Browser check (dev server, develop branch)
-
-- The demo user's `proUntil` was already 2027-11-26, so it was Pro without any write.
-- Explain (EN): Stop showed at once, text grew while streaming, and Favorite toggled in 192 ms
-  mid-stream (later toggled back). Stop kept the partial text with "stopped" shown.
-- FR: the "Arrêter" label showed and the explanation came back in French.
-- Optimize: the seeded prompts answer "already clear". For the test, one prompt's content was
-  weakened on develop and restored afterwards (same md5 and `updatedAt`). "Use this" appears
-  only after the stream ends; Discard goes back to Preview; Use saved and showed "Prompt updated".
-  Use writes only `content` (+ `updatedAt`), so the restore is exact.
-- Other writes to develop during the check: `useDebounce` Favorite toggled twice (back to its
-  original `true`). Opening the drawers is not recorded as a use (A5 records copy/download/open
-  link only).
-- **First-token latency, free model:** Explain 7.1 s (whole answer 12.8 s); Optimize 6.2–8.9 s
-  (whole answer 9–11 s).
+Previous feature (completed) — A7 AI streaming and timeouts: Explain and Optimize stream their
+answers through route handlers, so the drawer stays usable while they run. Seventh step of
+`docs/roadmap-v2.md`. Outcome in the History below.
 
 ---
 
@@ -2845,3 +2750,33 @@ Environment notes that outlive any one feature:
     ask. Test items deleted. Not run in a browser: Suggest Tags, Description, Optimize (same
     hook).
   - 1,303 tests, build and lint green. Merged into `main` (fast-forward); branch deleted.
+- 2026-11-27 — A7 AI streaming and timeouts (`11e900b`).
+  - Spec: `context/features/ai-streaming-spec.md`.
+  - **Client:** `completeStream` in `src/lib/ai-client.ts` returns `{ stream, finishReason() }`
+    (the stream alone cannot carry `finish_reason`) and resolves only once the first text
+    arrives, so earlier failures throw `AiProviderError` with `complete()`'s codes. Pure
+    `parseSseChunk`. 60 s to the first token (keep-alives do not count), then 30 s idle, timed
+    only while a read waits. `EXPLAIN_TIMEOUT_MS` / `OPTIMIZE_TIMEOUT_MS` removed.
+  - **Routes:** `POST /api/ai/explain` and `/api/ai/optimize`, `maxDuration` 120. Order: zod →
+    auth → item 404 → type, empty and length checks → `aiGate` (moved to `src/lib/ai-gate.ts`,
+    now `{ status: 403 | 429, error }`), so a refused request spends no limiter slot. 502 for a
+    provider failure before text. Markers in `src/lib/ai-stream-protocol.ts`: cut-off on
+    `finish_reason: "length"`, on Explain's 4,000-character cap (upstream cancelled) and at a
+    110 s self-deadline (so a platform kill never passes for a whole answer); error marker with
+    a message translated before the response returns.
+  - **Browser:** `streamAi` (one update per frame, markers stripped). Explain renders as it
+    streams with a caret and a Stop button that keeps the partial text; Optimize offers Use /
+    Discard only after the whole rewrite passed `parseOptimizedPrompt`. `parseStreamingExplanation`
+    drops an unclosed opening ```` ```markdown ```` fence. The `explainCode` / `optimizePrompt`
+    actions are gone.
+  - **`maxDuration = 60` on each of the 9 `(app)` pages** (the docs say page level for server
+    actions); the build manifest shows 60 for the pages and 120 for the AI routes. Vercel Fluid
+    compute already checked in A1.
+  - **First-token latency, free model:** Explain 7.1 s (whole answer 12.8 s); Optimize
+    6.2–8.9 s (whole answer 9–11 s).
+  - **Browser-checked** on develop: Explain streams, Stop keeps the partial text, Favorite
+    toggles in 192 ms mid-stream; FR label and French answer; Optimize streams, Discard and Use
+    work. The demo user was already Pro (`proUntil` 2027-11-26, `isPro` false). One prompt was
+    weakened for the test and restored (same md5 and `updatedAt`); Favorite toggled back.
+  - French from DeepL with a context hint; changed: curly apostrophes.
+  - 1,339 tests, build and lint green. Merged into `main` (fast-forward); branch deleted.
