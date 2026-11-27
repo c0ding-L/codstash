@@ -497,6 +497,35 @@
     "addTag": "Add tag {tag}",
     "dismissTag": "Dismiss tag {tag}"
   },
+  "secrets": {
+    "title": "This looks like a secret",
+    "body": "Anyone you share it with, and the AI features, will see it.",
+    "aiProvider": "The AI provider logs requests to improve its products.",
+    "place": "{field}, line {line}",
+    "edit": "Edit",
+    "saveAnyway": "Save anyway",
+    "sendAnyway": "Send anyway",
+    "fields": {
+      "title": "Title",
+      "description": "Description",
+      "content": "Content",
+      "url": "URL"
+    },
+    "kinds": {
+      "privateKey": "Private key",
+      "aws": "AWS access key",
+      "github": "GitHub token",
+      "openai": "OpenAI API key",
+      "anthropic": "Anthropic API key",
+      "openrouter": "OpenRouter API key",
+      "stripe": "Stripe key",
+      "slack": "Slack token",
+      "google": "Google API key",
+      "jwt": "JSON Web Token",
+      "connectionString": "Database URL with a password",
+      "envAssignment": "Secret in a variable"
+    }
+  },
   "newItem": {
     "title": "New item",
     "description": "Choose a type, then fill in its fields.",

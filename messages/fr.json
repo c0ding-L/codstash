@@ -497,6 +497,35 @@
     "addTag": "Ajouter le tag {tag}",
     "dismissTag": "Ignorer le tag {tag}"
   },
+  "secrets": {
+    "title": "On dirait un secret",
+    "body": "Toute personne à qui vous le partagez, ainsi que les fonctionnalités d’IA, pourront le voir.",
+    "aiProvider": "Le fournisseur d’IA enregistre les requêtes afin d’améliorer ses produits.",
+    "place": "{field}, ligne {line}",
+    "edit": "Modifier",
+    "saveAnyway": "Enregistrer quand même",
+    "sendAnyway": "Envoyer quand même",
+    "fields": {
+      "title": "Titre",
+      "description": "Description",
+      "content": "Contenu",
+      "url": "URL"
+    },
+    "kinds": {
+      "privateKey": "Clé privée",
+      "aws": "Clé d’accès AWS",
+      "github": "Jeton GitHub",
+      "openai": "Clé API OpenAI",
+      "anthropic": "Clé API Anthropic",
+      "openrouter": "Clé API OpenRouter",
+      "stripe": "Clé Stripe",
+      "slack": "Jeton Slack",
+      "google": "Clé API Google",
+      "jwt": "JSON Web Token",
+      "connectionString": "URL de la base de données avec un mot de passe",
+      "envAssignment": "Un secret dans une variable"
+    }
+  },
   "newItem": {
     "title": "Nouvel élément",
     "description": "Choisissez un type, puis remplissez ses champs.",

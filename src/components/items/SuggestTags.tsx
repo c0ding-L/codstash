@@ -6,6 +6,7 @@ import { Suspense, use, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { generateAutoTags } from "@/actions/ai";
+import { useSecretCheck } from "@/components/items/SecretWarningDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { toTags } from "@/lib/tags";
@@ -25,8 +26,14 @@ export function useTagSuggestions({ title, content, tags, onAccept }: TagSuggest
   const [suggestions, setSuggestions] = useState<string[]>([]);
   // Disables the button while a request runs, so a double click does not spend two.
   const [pending, startTransition] = useTransition();
+  const secretCheck = useSecretCheck();
 
   function suggest() {
+    // The same fields the request sends: the title and the content.
+    secretCheck.check({ title, content }, "ai", request);
+  }
+
+  function request() {
     startTransition(async () => {
       const result = await generateAutoTags({ title, content, tags: toTags(tags) });
       if (!result.success) {
@@ -43,7 +50,7 @@ export function useTagSuggestions({ title, content, tags, onAccept }: TagSuggest
     dismiss(tag);
   };
 
-  return { suggestions, pending, canSuggest: title.trim() !== "", suggest, accept, dismiss };
+  return { suggestions, pending, canSuggest: title.trim() !== "", suggest, accept, dismiss, secretDialog: secretCheck.dialog };
 }
 
 export type TagSuggestions = ReturnType<typeof useTagSuggestions>;
@@ -77,6 +84,7 @@ export function SuggestTagsButton({ aiAllowed, state, disabled }: SuggestTagsPro
           <Sparkles aria-hidden />
           {state.pending ? t("suggesting") : t("suggestTags")}
         </Button>
+        {state.secretDialog}
       </ShownIf>
     </Suspense>
   );

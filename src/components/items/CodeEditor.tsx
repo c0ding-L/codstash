@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { explainCode } from "@/actions/ai";
 import { useEditorPreferences } from "@/components/editor/EditorPreferencesContext";
 import { AiHeaderButton } from "@/components/items/AiHeaderButton";
+import { useSecretCheck } from "@/components/items/SecretWarningDialog";
 import { markdownComponents } from "@/components/items/MarkdownEditor";
 import { Button } from "@/components/ui/button";
 import { useClipboard } from "@/i18n/labels";
@@ -92,8 +93,15 @@ export function CodeEditor({ value, language, onChange, ariaLabel: ariaLabelProp
   // Disables the button while a request runs, so a double click does not spend two.
   const [pending, startTransition] = useTransition();
   const shown: View = explanation === null ? "code" : view;
+  const secretCheck = useSecretCheck();
 
+  // The server sends the saved code, which is what this read-only view shows.
   function runExplain() {
+    if (!explain) return;
+    secretCheck.check({ content: value }, "ai", requestExplain);
+  }
+
+  function requestExplain() {
     if (!explain) return;
     startTransition(async () => {
       const result = await explainCode({ itemId: explain.itemId });
@@ -150,6 +158,7 @@ export function CodeEditor({ value, language, onChange, ariaLabel: ariaLabelProp
             />
           </Suspense>
         ) : null}
+        {secretCheck.dialog}
         <Button
           type="button"
           variant="ghost"

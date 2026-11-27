@@ -11,6 +11,7 @@ import { type CreatableType, createItem, type CreateItemField, type CreateItemIn
 import { FillFromFileButton } from "@/components/items/FillFromFileButton";
 import { FileUpload } from "@/components/items/FileUpload";
 import { GenerateDescriptionButton } from "@/components/items/GenerateDescription";
+import { useSecretCheck } from "@/components/items/SecretWarningDialog";
 import { SuggestTagsButton, TagSuggestionList, useTagSuggestions } from "@/components/items/SuggestTags";
 import { CollectionsField, ContentField, Field, LanguageField, TagsField, useFieldErrors } from "@/components/items/item-form-fields";
 import {
@@ -181,6 +182,7 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed
       clearFor("tags");
     },
   });
+  const secretCheck = useSecretCheck();
   const uploadKind = !customType && isUploadKind(type) ? type : null;
   const canSubmit = title.trim() !== "" && (!hasUrl || url.trim() !== "") && (!uploadKind || file !== null);
 
@@ -224,6 +226,14 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed
       ...(hasUrl && { url }),
     };
 
+    secretCheck.check(
+      { title, description, content: hasContent ? content : null, url: hasUrl ? url : null },
+      "save",
+      () => save(input),
+    );
+  }
+
+  function save(input: CreateItemInput) {
     startSaving(async () => {
       if (uploadKind && file) {
         setProgress(0);
@@ -255,6 +265,7 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed
 
   return (
     <form onSubmit={handleSubmit} noValidate className="flex min-w-0 flex-col gap-4">
+      {secretCheck.dialog}
       <TypePicker
         value={type}
         customValue={customTypeId}

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { updateItem, type UpdateItemField, type UpdateItemInput } from "@/actions/items";
 import { GenerateDescriptionButton } from "@/components/items/GenerateDescription";
+import { useSecretCheck } from "@/components/items/SecretWarningDialog";
 import { SuggestTagsButton, TagSuggestionList, useTagSuggestions } from "@/components/items/SuggestTags";
 import { CollectionsField, ContentField, Field, LanguageField, TagsField, useFieldErrors } from "@/components/items/item-form-fields";
 import { Button } from "@/components/ui/button";
@@ -69,6 +70,8 @@ export function ItemEditForm({ card, detail, slug, isCustom, onCancel, onSaved, 
     },
   });
 
+  const secretCheck = useSecretCheck();
+
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -83,6 +86,14 @@ export function ItemEditForm({ card, detail, slug, isCustom, onCancel, onSaved, 
       ...(hasUrl && { url }),
     };
 
+    secretCheck.check(
+      { title, description, content: hasContent ? content : null, url: hasUrl ? url : null },
+      "save",
+      () => save(input),
+    );
+  }
+
+  function save(input: UpdateItemInput) {
     startSaving(async () => {
       const result = await updateItem(card.id, input);
       if (!result.success) {
@@ -104,6 +115,7 @@ export function ItemEditForm({ card, detail, slug, isCustom, onCancel, onSaved, 
 
   return (
     <form onSubmit={handleSubmit} noValidate className="flex min-h-0 flex-1 flex-col">
+      {secretCheck.dialog}
       <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto border-t border-border p-4">
         <Field id={`${id}-title`} label={t("title")} error={messageFor("title")}>
           <Input value={title} {...fieldProps("title", setTitle)} />

@@ -1,16 +1,57 @@
-# Current Feature
+# Current Feature: A6 Secret detection
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- `src/lib/secrets.ts` (pure, client-safe): `detectSecrets(text)` returns
+  `SecretFinding[]` (`{ kind, line, preview }`), the preview masked to the first 4 characters
+  then `…`, never the whole value.
+- Kinds: `privateKey`, `aws`, `github`, `openai` / `anthropic` / `openrouter`, `stripe`,
+  `slack`, `google`, `jwt`, `connectionString`, `envAssignment` (patterns in the spec).
+- Placeholders ignored: values of only `x`/`X`/`*`/`.`, `<...>`, `${...}`, `{{...}}`, values
+  containing `your`, `example`, `changeme`, `placeholder`, `dummy`, `fake` (any case), `sk-`
+  with fewer than 20 real characters, and the literal `password` in a connection string.
+- Linear time: no nested quantifiers, input capped at `ITEM_LIMITS.content`; a 100,000-character
+  input scans in under 50 ms.
+- `scanItem({ title, description, content, url })` scans every field, the URL included.
+- `containsSecrets(item)` boolean helper for D1 (block sharing) and C3 (MCP warning line).
+- `SecretWarningDialog` lists each kind, line and masked preview, with the "looks like a secret"
+  copy:
+  - on save (New Item and the drawer's edit form): "Edit" / "Save anyway"; no server-side block.
+  - before an AI call (Suggest Tags, Description, Explain, Optimize): "Send anyway" / "Cancel",
+    scanning what is on screen, no extra request.
+- Once confirmed for an item, do not ask again for the same content in the session (in-memory,
+  keyed by a hash of the content).
+- Strings in `secrets.*`, EN and FR (FR via DeepL + glossary).
+- Tests in `src/lib/secrets.test.ts`: one made-up true positive and one placeholder per kind,
+  the line number, the masking, the 100k timing, `scanItem` covering the URL.
+- Browser check: a note with a fake `ghp_…` token shows the dialog and "Save anyway" saves it;
+  Explain on a snippet with a fake key shows the dialog before any request.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- Spec: `context/features/secret-detection-spec.md`. Roadmap: `docs/roadmap-v2.md` § A6. Must
+  ship before C3 (MCP) and D1 (public collections). Only D1 sharing hard-blocks; save and AI
+  only warn.
+- Before writing the dialog copy, check the current terms of the free OpenRouter model in use
+  (`nvidia/nemotron-3-ultra-550b-a55b:free`, `src/lib/ai-client.ts`): does the provider log or
+  train on prompts? Record the answer here with its source link and date, and claim nothing
+  unverified.
+- **Checked 2026-11-27.** NVIDIA is the only provider of the `:free` variant. Its notice on
+  https://openrouter.ai/nvidia/nemotron-3-ultra-550b-a55b:free/providers says: "Your use is logged
+  for security purposes and to improve NVIDIA products and services", the logged data "is not
+  linked to your identity", and "please do not upload any confidential information or personal
+  data". OpenRouter itself "does not use your Inputs or Outputs for model training"
+  (https://openrouter.ai/privacy, updated 2026-08-31). **Not verified:** whether NVIDIA trains on
+  prompts, and how long it keeps them (the NVIDIA API Trial Terms PDF could not be read). So the
+  dialog says only that the provider logs requests to improve its products; it says nothing about
+  training or retention.
+- Not a guarantee: the copy says "looks like", never claims full detection.
+- Content cap: `ITEM_LIMITS` in `src/lib/item-limits.ts`.
+- Made-up test values only, never real keys.
 
 ---
 

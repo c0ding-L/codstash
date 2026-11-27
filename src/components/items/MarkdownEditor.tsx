@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { optimizePrompt } from "@/actions/ai";
 import { applyOptimizedPrompt } from "@/actions/items";
 import { AiHeaderButton } from "@/components/items/AiHeaderButton";
+import { useSecretCheck } from "@/components/items/SecretWarningDialog";
 import type { SavedItem } from "@/components/items/ItemEditForm";
 import { Button } from "@/components/ui/button";
 import { useClipboard } from "@/i18n/labels";
@@ -75,7 +76,15 @@ export function MarkdownEditor({
   const tabs: Tab[] = comparing ? ["original", "optimized"] : readOnly ? ["preview"] : ["write", "preview"];
   const shown: Tab = tabs.includes(tab) ? tab : tabs[0]!;
 
+  const secretCheck = useSecretCheck();
+
+  // The server sends the saved prompt, which is what this read-only view shows.
   function runOptimize() {
+    if (!optimize) return;
+    secretCheck.check({ content: value }, "ai", requestOptimize);
+  }
+
+  function requestOptimize() {
     if (!optimize) return;
     startOptimizing(async () => {
       const result = await optimizePrompt({ itemId: optimize.itemId });
@@ -155,6 +164,7 @@ export function MarkdownEditor({
                 onClick={runOptimize}
               />
             </Suspense>
+            {secretCheck.dialog}
           </span>
         ) : null}
         <Button

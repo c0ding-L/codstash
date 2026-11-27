@@ -6,6 +6,7 @@ import { Suspense, useTransition } from "react";
 import { toast } from "sonner";
 
 import { generateDescription, type DescriptionInput } from "@/actions/ai";
+import { useSecretCheck } from "@/components/items/SecretWarningDialog";
 import { ShownIf } from "@/components/items/SuggestTags";
 import { Button } from "@/components/ui/button";
 
@@ -29,8 +30,14 @@ export function GenerateDescriptionButton({ aiAllowed, input, onGenerated, disab
   const t = useTranslations("ai");
   const [pending, startTransition] = useTransition();
   const canGenerate = input.title.trim() !== "";
+  const secretCheck = useSecretCheck();
 
   function generate() {
+    // The text fields the request sends.
+    secretCheck.check({ title: input.title, content: input.content, url: input.url }, "ai", request);
+  }
+
+  function request() {
     startTransition(async () => {
       const result = await generateDescription(input);
       if (!result.success) {
@@ -56,6 +63,7 @@ export function GenerateDescriptionButton({ aiAllowed, input, onGenerated, disab
           <Sparkles aria-hidden />
           {pending ? t("generating") : t("generateDescription")}
         </Button>
+        {secretCheck.dialog}
       </ShownIf>
     </Suspense>
   );

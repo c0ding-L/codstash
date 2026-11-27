@@ -84,3 +84,16 @@ and before an AI call. It **hard-blocks only public sharing** (D1). Roadmap:
 
 - Not a guarantee: the dialog says "looks like", and no copy claims full detection.
 - Strings in `secrets.*` (EN/FR).
+- Known gaps, decided on review: a `sk-` value with no digit is not a key (no real key lacks
+  one; this avoids names like `sk-learn-…`), and a database URL whose password holds a raw `/`
+  is not reported (the password stops at `/` to keep the scan linear; URLs percent-encode it).
+- **Data policy, checked 2026-11-27.** NVIDIA is the only provider of
+  `nvidia/nemotron-3-ultra-550b-a55b:free` (the model in use: `AI_MODEL` is empty, so
+  `ai-client.ts` uses its default). Its notice on
+  https://openrouter.ai/nvidia/nemotron-3-ultra-550b-a55b:free/providers says: "Your use is logged
+  for security purposes and to improve NVIDIA products and services", the logged data "is not
+  linked to your identity", and "please do not upload any confidential information or personal
+  data". OpenRouter "does not use your Inputs or Outputs for model training"
+  (https://openrouter.ai/privacy, updated 2026-08-31). **Not verified:** whether NVIDIA trains on
+  prompts, and for how long it keeps them (the NVIDIA API Trial Terms PDF could not be read).
+  So the AI dialog says only "The AI provider logs requests to improve its products."
