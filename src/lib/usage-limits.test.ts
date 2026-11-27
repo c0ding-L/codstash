@@ -7,6 +7,7 @@ import {
   FREE_LIMITS,
   canCreateCollection,
   canCreateItem,
+  canShare,
   canUploadFiles,
   canUseAi,
 } from "@/lib/usage-limits";
@@ -66,5 +67,17 @@ describe("limit messages", () => {
   it("has them in French", () => {
     expect(fr("items", { max: FREE_LIMITS.items })).toContain("50 éléments");
     expect(fr("ai")).toBe("Les fonctionnalités d’IA sont réservées à la formule Pro.");
+  });
+});
+
+describe("canShare", () => {
+  it("lets Free turn on 3 public links, collections and items together", () => {
+    expect(FREE_LIMITS.shared).toBe(3);
+    expect(canShare({ isPro: false }, 2)).toBe(true);
+    expect(canShare({ isPro: false }, 3)).toBe(false);
+  });
+
+  it("lets Pro share without a cap", () => {
+    expect(canShare({ isPro: true }, 300)).toBe(true);
   });
 });

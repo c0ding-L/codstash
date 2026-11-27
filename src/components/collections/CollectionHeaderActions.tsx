@@ -1,6 +1,6 @@
 "use client";
 
-import { ClipboardCopy, FileDown, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { ClipboardCopy, FileDown, MoreHorizontal, Pencil, Share2, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { DeleteCollectionDialog } from "@/components/collections/DeleteCollectionDialog";
 import { EditCollectionDialog } from "@/components/collections/EditCollectionDialog";
 import { FavoriteButton } from "@/components/favorites/FavoriteButton";
+import { ShareDialog } from "@/components/share/ShareDialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -21,12 +22,14 @@ import { CONTEXT_COPY_MAX_CHARS, contextFileName } from "@/lib/context-export";
 import type { CollectionSummary } from "@/lib/db/collections";
 import { responseError } from "@/lib/response-error";
 
-/** Edit, favorite and delete buttons in a collection page's header, and the context export menu. */
+/** Favorite, share, edit and delete buttons in a collection page's header, and the context export menu. */
 export function CollectionHeaderActions({ collection }: { collection: CollectionSummary }) {
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const t = useTranslations("collections");
+  const ts = useTranslations("share");
   const { copyFromPromise } = useClipboard();
 
   const contextUrl = `/api/collections/${encodeURIComponent(collection.id)}/context`;
@@ -83,6 +86,9 @@ export function CollectionHeaderActions({ collection }: { collection: Collection
         size="icon"
         className="text-foreground"
       />
+      <Button variant="ghost" size="icon" aria-label={ts("action")} onClick={() => setShareOpen(true)}>
+        <Share2 aria-hidden />
+      </Button>
       <Button variant="ghost" size="icon" aria-label={t("edit")} onClick={() => setEditOpen(true)}>
         <Pencil aria-hidden />
       </Button>
@@ -113,6 +119,7 @@ export function CollectionHeaderActions({ collection }: { collection: Collection
         </DropdownMenuContent>
       </DropdownMenu>
 
+      <ShareDialog kind="collection" id={collection.id} open={shareOpen} onOpenChange={setShareOpen} />
       <EditCollectionDialog collection={collection} open={editOpen} onOpenChange={setEditOpen} />
       <DeleteCollectionDialog
         collection={collection}

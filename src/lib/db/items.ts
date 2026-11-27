@@ -28,6 +28,8 @@ export interface DashboardItem {
   url: string | null;
   isPinned: boolean;
   isFavorite: boolean;
+  /** Whether a public link is on (D1). The link itself is only read by the share dialog. */
+  isShared: boolean;
   updatedAt: Date;
   /** `Item.typeId` is required, so every item has one. */
   type: TypeRef & { id: string };
@@ -53,6 +55,7 @@ const dashboardItemSelect = {
   url: true,
   isPinned: true,
   isFavorite: true,
+  shareId: true,
   updatedAt: true,
   type: { select: { id: true, slug: true, name: true, icon: true, color: true, isSystem: true } },
   collections: {
@@ -62,13 +65,14 @@ const dashboardItemSelect = {
 } as const;
 
 /** What the select above returns: a `DashboardItem` with the links unflattened. */
-type SelectedItem = Omit<DashboardItem, "collections"> & {
+type SelectedItem = Omit<DashboardItem, "collections" | "isShared"> & {
+  shareId: string | null;
   collections: { collection: ItemCollectionRef }[];
 };
 
 function toDashboardItem(item: SelectedItem): DashboardItem {
-  const { collections, ...rest } = item;
-  return { ...rest, collections: collections.map(({ collection }) => collection) };
+  const { collections, shareId, ...rest } = item;
+  return { ...rest, isShared: shareId !== null, collections: collections.map(({ collection }) => collection) };
 }
 
 /**

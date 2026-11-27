@@ -5,6 +5,7 @@ import { FavoriteButton } from "@/components/favorites/FavoriteButton";
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
 import { Card, CardContent } from "@/components/ui/card";
 import { TypeIconTile } from "@/components/items/TypeIconTile";
+import { SharedBadge } from "@/components/share/SharedBadge";
 import type { DashboardItem } from "@/lib/db/items";
 import { useFileSize, useRelativeTime, useTypeView } from "@/i18n/labels";
 import { formatCollectionNames } from "@/lib/format";
@@ -43,6 +44,7 @@ export function ItemCard({ item, now }: ItemCardProps) {
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex items-center gap-1.5">
             <h2 className="truncate font-medium">{item.title}</h2>
+            {item.isShared ? <SharedBadge /> : null}
             {item.isPinned ? (
               <Pin className="size-3 shrink-0 text-muted-foreground" aria-label={tc("pinned")} />
             ) : null}

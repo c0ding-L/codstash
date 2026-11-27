@@ -137,6 +137,12 @@ model Collection {
   // Links, not items: an item can sit in several collections.
   items ItemCollection[]
 
+  // Public sharing (D1): a random id for `/s/...`, null while not shared.
+  shareId        String?   @unique
+  sharedAt       DateTime?
+  shareIndexable Boolean   @default(false)
+  shareShowOwner Boolean   @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -175,6 +181,12 @@ model Item {
   collections ItemCollection[]
 
   tags ItemTag[]
+
+  // Public sharing (D1): a random id for `/s/...`, null while not shared.
+  shareId        String?   @unique
+  sharedAt       DateTime?
+  shareIndexable Boolean   @default(false)
+  shareShowOwner Boolean   @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

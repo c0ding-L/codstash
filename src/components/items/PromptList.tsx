@@ -3,6 +3,7 @@ import { useTranslations } from "next-intl";
 
 import { ItemCopyButton } from "@/components/items/ItemCopyButton";
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
+import { SharedBadge } from "@/components/share/SharedBadge";
 import type { DashboardItem, PromptPreview } from "@/lib/db/items";
 import { useRelativeTime } from "@/i18n/labels";
 
@@ -39,6 +40,7 @@ function PromptEntry({ item, preview, now }: { item: DashboardItem; preview: Pro
 
       <div className="flex items-center gap-1.5">
         <h2 className="truncate font-medium">{item.title}</h2>
+        {item.isShared ? <SharedBadge /> : null}
         {item.isPinned ? (
           <Pin className="size-3 shrink-0 text-muted-foreground" aria-label={tc("pinned")} />
         ) : null}

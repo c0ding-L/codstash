@@ -7,6 +7,7 @@ import { auth } from "@/auth";
 import { Pagination } from "@/components/Pagination";
 import { CollectionHeaderActions } from "@/components/collections/CollectionHeaderActions";
 import { ItemCard } from "@/components/items/ItemCard";
+import { SharedBadge } from "@/components/share/SharedBadge";
 import { getCollection } from "@/lib/db/collections";
 import { getItemsByCollection } from "@/lib/db/items";
 import { ITEMS_PER_PAGE, pageCount, pageOffset, parsePageParam } from "@/lib/pagination";
@@ -55,7 +56,10 @@ export default async function CollectionPage({ params, searchParams }: Collectio
     <div className="flex flex-col gap-6">
       <div className="flex items-baseline justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="text-2xl font-semibold">{collection.name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-semibold">{collection.name}</h1>
+            {collection.isShared ? <SharedBadge className="size-4" /> : null}
+          </div>
           {collection.description ? (
             <p className="text-sm text-muted-foreground">{collection.description}</p>
           ) : null}

@@ -1,7 +1,8 @@
 // The Free plan rules, pure and client-safe, so the Phase 2 gates and UI share
 // one source. Not to be confused with `src/lib/db/limits.ts` (list ceilings).
 
-export const FREE_LIMITS = { items: 50, collections: 3 } as const;
+/** `shared`: public links, collections and items counted together (D1). */
+export const FREE_LIMITS = { items: 50, collections: 3, shared: 3 } as const;
 
 /** The `getPlanStatus` shape, minus `proUntil`. */
 export interface PlanUsage {
@@ -43,12 +44,17 @@ export function canUseCustomTypes(plan: Pick<PlanUsage, "isPro">) {
   return plan.isPro;
 }
 
+/** Turning on one more public link (D1): Free has `FREE_LIMITS.shared`, collections and items together. */
+export function canShare(plan: Pick<PlanUsage, "isPro">, sharedCount: number) {
+  return plan.isPro || sharedCount < FREE_LIMITS.shared;
+}
+
 /**
  * Thrown by the create queries when, re-counted under a lock, the Free limit
  * is already reached: two requests racing past the action's early check.
  */
 export class LimitReachedError extends Error {
-  constructor(readonly limit: "items" | "collections" | "customTypes" | "apiTokens") {
+  constructor(readonly limit: "items" | "collections" | "customTypes" | "apiTokens" | "shared") {
     // Internal: the action that catches it answers with the `errors.limits` message.
     super(`${limit} limit reached`);
     this.name = "LimitReachedError";

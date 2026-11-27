@@ -1,9 +1,11 @@
 "use client";
 
-import { Copy, Pencil, Pin, Star, Trash2 } from "lucide-react";
+import { Copy, Pencil, Pin, Share2, Star, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 
 import { useTemplateCopy } from "@/components/items/FillVariablesDialog";
+import { ShareDialog } from "@/components/share/ShareDialog";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useFavoriteToggle } from "@/hooks/use-favorite-toggle";
@@ -70,6 +72,10 @@ export function ItemActionBar({ card, detail, onEdit, onDelete, onFavoriteChange
   const typeSlug = card.type.isSystem ? card.type.slug : null;
   const favorite = useFavoriteToggle("item", card.id, card.isFavorite, onFavoriteChanged);
   const pin = usePinToggle(card.id, card.isPinned, onPinnedChanged);
+  const ts = useTranslations("share");
+  const [shareOpen, setShareOpen] = useState(false);
+  // File and image items are left out of public sharing in v1.
+  const shareable = card.fileName === null;
 
   return (
     <div className="flex items-center gap-1 border-y border-border px-4 py-2">
@@ -106,6 +112,11 @@ export function ItemActionBar({ card, detail, onEdit, onDelete, onFavoriteChange
       <IconAction label={tc("edit")} hint={tc("edit")} disabled={!onEdit} onClick={() => onEdit?.()}>
         <Pencil aria-hidden />
       </IconAction>
+      {shareable ? (
+        <IconAction label={ts("action")} hint={ts("titleItem")} iconOnly onClick={() => setShareOpen(true)}>
+          <Share2 aria-hidden />
+        </IconAction>
+      ) : null}
       <IconAction
         label={tc("delete")}
         hint={tc("delete")}
@@ -118,6 +129,7 @@ export function ItemActionBar({ card, detail, onEdit, onDelete, onFavoriteChange
         <Trash2 aria-hidden />
       </IconAction>
       {dialog}
+      {shareable ? <ShareDialog kind="item" id={card.id} open={shareOpen} onOpenChange={setShareOpen} /> : null}
     </div>
   );
 }

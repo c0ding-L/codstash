@@ -801,7 +801,8 @@
       "ai": "AI features are a Pro feature.",
       "export": "Exporting your data is a Pro feature.",
       "customTypes": "Custom item types are a Pro feature.",
-      "apiWrite": "Read + write API tokens are a Pro feature."
+      "apiWrite": "Read + write API tokens are a Pro feature.",
+      "shared": "Free accounts can have {max, number} public links. Upgrade to Pro in Settings."
     },
     "tooManyAttempts": "Too many attempts. Please try again in {minutes, plural, one {# minute} other {# minutes}}.",
     "somethingWrong": "Something went wrong. Try again.",
@@ -935,6 +936,14 @@
       "notFound": "This token no longer exists.",
       "createFailed": "Could not create the token. Try again.",
       "revokeFailed": "Could not revoke the token. Try again."
+    },
+    "share": {
+      "fileItem": "Files and images can't be shared yet.",
+      "itemSecret": "This item looks like it holds a secret, such as an API key or a password. Remove it before sharing.",
+      "collectionSecrets": "Some items look like they hold a secret: {titles}. Remove the secrets before sharing.",
+      "titlesMore": "{titles} and {count, plural, one {# more} other {# more}}",
+      "failed": "Could not update sharing. Try again.",
+      "quotedTitle": "“{title}”"
     }
   },
   "emails": {
@@ -1163,5 +1172,40 @@
       "account": "Account",
       "rights": "© {year} Cortex. All rights reserved."
     }
+  },
+  "share": {
+    "action": "Share",
+    "titleCollection": "Share this collection",
+    "titleItem": "Share this item",
+    "descriptionCollection": "Anyone with the link can see this collection's text items and links, without an account. Files and images are left out.",
+    "descriptionItem": "Anyone with the link can see this item, without an account.",
+    "switch": "Public link",
+    "linkLabel": "Link",
+    "copyLink": "Copy link",
+    "openLink": "Open the public page",
+    "reset": "Reset link",
+    "resetHint": "The current link stops working.",
+    "resetDone": "New link created. The old one no longer works.",
+    "indexable": "Allow search engines",
+    "indexableHint": "Off: the page asks search engines not to list it.",
+    "showOwner": "Show my name",
+    "showOwnerHint": "Your email is never shown.",
+    "usage": "{used, number} of {max, number} public links used on the Free plan.",
+    "upgrade": "Upgrade to Pro",
+    "hiddenCollection": "{count, plural, one {# item is hidden} other {# items are hidden}} on the public page because {count, plural, one {it looks} other {they look}} like a secret.",
+    "hiddenItem": "This item looks like it holds a secret, so its public page shows “not found” until you remove it.",
+    "loading": "Loading the sharing settings…",
+    "on": "Public link on. Anyone with the link can see it.",
+    "off": "Public link off. The link no longer works.",
+    "badge": "Shared publicly"
+  },
+  "publicShare": {
+    "sharedBy": "Shared by {name}",
+    "updated": "Updated {date}",
+    "empty": "This collection has nothing to show yet.",
+    "copied": "Copied",
+    "footer": "Shared with Cortex",
+    "footerCta": "Build your own technical memory",
+    "openLink": "Open link"
   }
 }

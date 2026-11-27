@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
 import { LinkCopyButton } from "@/components/items/LinkCopyButton";
 import { LinkLogo } from "@/components/items/LinkLogo";
+import { SharedBadge } from "@/components/share/SharedBadge";
 import { buttonVariants } from "@/components/ui/button";
 import type { DashboardItem } from "@/lib/db/items";
 import { parseLinkUrl } from "@/lib/link-url";
@@ -46,6 +47,7 @@ function LinkRow({ item }: { item: DashboardItem }) {
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             <h2 className="truncate font-medium">{item.title}</h2>
+            {item.isShared ? <SharedBadge /> : null}
             {item.isPinned ? (
               <Pin className="size-3 shrink-0 text-muted-foreground" aria-label={tc("pinned")} />
             ) : null}

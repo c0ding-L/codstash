@@ -149,6 +149,8 @@ export interface RecentCollection {
   name: string;
   description: string | null;
   isFavorite: boolean;
+  /** Whether a public link is on (D1). */
+  isShared: boolean;
   itemCount: number;
   updatedAt: Date;
   /**
@@ -188,6 +190,7 @@ async function loadCollectionCards(
     name: collection.name,
     description: collection.description,
     isFavorite: collection.isFavorite,
+    isShared: collection.shareId !== null,
     itemCount: collection._count.items,
     updatedAt: collection.updatedAt,
     types: aggregateCollectionTypes(typeCounts.get(collection.id) ?? [], typeById),
@@ -240,20 +243,28 @@ export interface CollectionSummary {
   name: string;
   description: string | null;
   isFavorite: boolean;
+  /** Whether a public link is on (D1). The link itself is only read by the share dialog. */
+  isShared: boolean;
 }
 
-const COLLECTION_SUMMARY_SELECT = { id: true, name: true, description: true, isFavorite: true } as const;
+const COLLECTION_SUMMARY_SELECT = { id: true, name: true, description: true, isFavorite: true, shareId: true } as const;
+
+function toSummary({ shareId, ...collection }: { id: string; name: string; description: string | null; isFavorite: boolean; shareId: string | null }): CollectionSummary {
+  return { ...collection, isShared: shareId !== null };
+}
 
 /**
  * One collection, or null when it does not exist or is another user's. Cached per
  * request so the layout's 404 check and the page share one query.
  */
 export const getCollection = cache(
-  async (userId: string, id: string): Promise<CollectionSummary | null> =>
-    prisma.collection.findFirst({
+  async (userId: string, id: string): Promise<CollectionSummary | null> => {
+    const collection = await prisma.collection.findFirst({
       where: { id, userId },
       select: COLLECTION_SUMMARY_SELECT,
-    }),
+    });
+    return collection ? toSummary(collection) : null;
+  },
 );
 
 export interface CollectionCreate {
@@ -280,7 +291,7 @@ export async function createCollection(
           return tx.collection.create(args);
         });
 
-  return { ...created, itemCount: 0, types: [] };
+  return { ...created, isShared: false, itemCount: 0, types: [] };
 }
 
 /**
@@ -292,11 +303,13 @@ export async function updateCollection(
   id: string,
   { name, description }: CollectionCreate,
 ): Promise<CollectionSummary> {
-  return prisma.collection.update({
-    where: { id, userId },
-    data: { name, description: description ?? null },
-    select: COLLECTION_SUMMARY_SELECT,
-  });
+  return toSummary(
+    await prisma.collection.update({
+      where: { id, userId },
+      data: { name, description: description ?? null },
+      select: COLLECTION_SUMMARY_SELECT,
+    }),
+  );
 }
 
 /**

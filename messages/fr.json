@@ -801,7 +801,8 @@
       "ai": "Les fonctionnalités d’IA sont réservées à la formule Pro.",
       "export": "L’exportation de vos données est réservée à la formule Pro.",
       "customTypes": "Les types d’éléments personnalisés sont réservés à la formule Pro.",
-      "apiWrite": "Les jetons API de lecture et d’écriture sont une fonctionnalité réservée à la formule Pro."
+      "apiWrite": "Les jetons API de lecture et d’écriture sont une fonctionnalité réservée à la formule Pro.",
+      "shared": "Les comptes gratuits peuvent comporter {max, number} liens publics. Passez à Pro dans les Paramètres."
     },
     "tooManyAttempts": "Trop de tentatives. Réessayez dans {minutes, plural, one {# minute} other {# minutes}}.",
     "somethingWrong": "Une erreur s’est produite. Réessayez.",
@@ -935,6 +936,14 @@
       "notFound": "Ce jeton n’existe plus.",
       "createFailed": "Impossible de créer le jeton. Veuillez réessayer.",
       "revokeFailed": "Impossible de révoquer le jeton. Veuillez réessayer."
+    },
+    "share": {
+      "fileItem": "Il n’est pas encore possible de partager des fichiers et des images.",
+      "itemSecret": "Cet élément semble contenir une information confidentielle, telle qu’une clé API ou un mot de passe. Veuillez la supprimer avant de le partager.",
+      "collectionSecrets": "Certains éléments semblent receler un secret : {titles}. Veuillez supprimer ces secrets avant de les partager.",
+      "failed": "Impossible de mettre à jour le partage. Veuillez réessayer.",
+      "titlesMore": "{titles} et {count, plural, one {# autre} other {# autres}}",
+      "quotedTitle": "« {title} »"
     }
   },
   "emails": {
@@ -1163,5 +1172,40 @@
       "account": "Compte",
       "rights": "© {year} Cortex. Tous droits réservés."
     }
+  },
+  "share": {
+    "action": "Partager",
+    "titleCollection": "Partager cette collection",
+    "titleItem": "Partager cet élément",
+    "descriptionCollection": "Toute personne disposant du lien peut consulter les éléments textuels et les liens de cette collection, sans avoir besoin d’un compte. Les fichiers et les images ne sont pas accessibles.",
+    "descriptionItem": "Toute personne disposant du lien peut consulter cet élément, même sans compte.",
+    "switch": "Lien public",
+    "linkLabel": "Lien",
+    "copyLink": "Copier le lien",
+    "openLink": "Ouvrez la page publique",
+    "reset": "Réinitialiser le lien",
+    "resetHint": "Le lien actuel ne fonctionne plus.",
+    "resetDone": "Un nouveau lien a été créé. L’ancien ne fonctionne plus.",
+    "indexable": "Autoriser les moteurs de recherche",
+    "indexableHint": "Désactivé : la page demande aux moteurs de recherche de ne pas l’indexer.",
+    "showOwner": "Afficher mon nom",
+    "showOwnerHint": "Votre adresse e-mail n’est jamais affichée.",
+    "usage": "{used, number} sur {max, number} liens publics utilisés dans le cadre de la formule gratuite.",
+    "upgrade": "Passer à Pro",
+    "hiddenItem": "Cet élément semble receler un secret ; sa page publique affiche donc le message « Page introuvable » tant que vous ne l’avez pas supprimé.",
+    "loading": "Chargement des paramètres de partage…",
+    "on": "Lien public activé. Toute personne disposant du lien peut le consulter.",
+    "off": "Lien public désactivé. Le lien ne fonctionne plus.",
+    "badge": "Partagé publiquement",
+    "hiddenCollection": "{count, plural, one {# élément est masqué sur la page publique, car il ressemble} other {# éléments sont masqués sur la page publique, car ils ressemblent}} à un secret."
+  },
+  "publicShare": {
+    "sharedBy": "Partagé par {name}",
+    "updated": "Mis à jour le {date}",
+    "empty": "Cette collection ne contient pour l’instant aucun élément à afficher.",
+    "copied": "Copié",
+    "footer": "Partagé avec Cortex",
+    "footerCta": "Constituez-vous votre propre mémoire technique",
+    "openLink": "Ouvrir le lien"
   }
 }

@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 
 import { CollectionCardMenu } from "@/components/collections/CollectionCardMenu";
 import { FavoriteButton } from "@/components/favorites/FavoriteButton";
+import { SharedBadge } from "@/components/share/SharedBadge";
 import { TypeIconTile } from "@/components/items/TypeIconTile";
 import { Card, CardContent } from "@/components/ui/card";
 import type { CollectionType, RecentCollection } from "@/lib/db/collections";
@@ -70,7 +71,10 @@ export function CollectionCard({ collection, now }: { collection: RecentCollecti
         </div>
 
         <div className="flex flex-col gap-1">
-          <h3 className="font-medium">{collection.name}</h3>
+          <div className="flex items-center gap-1.5">
+            <h3 className="font-medium">{collection.name}</h3>
+            {collection.isShared ? <SharedBadge /> : null}
+          </div>
           {collection.description ? <p className="text-sm text-muted-foreground">{collection.description}</p> : null}
         </div>
 

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
+import { SharedBadge } from "@/components/share/SharedBadge";
 import type { RecentCollection } from "@/lib/db/collections";
 import type { DashboardItem } from "@/lib/db/items";
 import { useRelativeTime, useTypeView } from "@/i18n/labels";
@@ -80,6 +81,7 @@ export function FavoriteItemRow({ item, now }: { item: DashboardItem; now: strin
       <ItemDrawerTrigger item={item} />
       <RowIcon icon={Icon} color={color} />
       <span className="min-w-0 flex-1 truncate">{item.title}</span>
+      {item.isShared ? <SharedBadge /> : null}
       <TypeBadge label={label} color={color} />
       <RowDate date={item.updatedAt} now={now} />
     </li>
@@ -102,6 +104,7 @@ export function FavoriteCollectionRow({ collection, now }: { collection: RecentC
       >
         <RowIcon icon={primary?.Icon ?? null} color={color} />
         <span className="min-w-0 flex-1 truncate">{collection.name}</span>
+        {collection.isShared ? <SharedBadge /> : null}
         <span className="shrink-0 text-[0.7rem] text-muted-foreground tabular-nums">
           {t("common.itemCount", { count: collection.itemCount })}
         </span>

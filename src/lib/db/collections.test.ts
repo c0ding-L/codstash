@@ -220,9 +220,17 @@ describe("getCollection", () => {
 
   it("returns the collection's name, description and favorite flag", async () => {
     const row = { id: "col_1", name: "DevOps", description: "Infra notes", isFavorite: true };
-    findCollection.mockResolvedValue(row);
+    findCollection.mockResolvedValue({ ...row, shareId: null });
 
-    expect(await getCollection(USER, "col_1")).toEqual(row);
+    expect(await getCollection(USER, "col_1")).toEqual({ ...row, isShared: false });
+  });
+
+  it("says whether the collection is shared, without returning its link", async () => {
+    findCollection.mockResolvedValue({ id: "col_1", name: "DevOps", description: null, isFavorite: false, shareId: "x".repeat(22) });
+
+    const collection = await getCollection(USER, "col_1");
+    expect(collection).toMatchObject({ isShared: true });
+    expect(collection).not.toHaveProperty("shareId");
   });
 });
 
@@ -231,13 +239,13 @@ describe("updateCollection", () => {
 
   it("updates only the owner's collection and stores a missing description as null", async () => {
     const row = { id: "col_1", name: "Ops", description: null, isFavorite: false };
-    update.mockResolvedValue(row);
+    update.mockResolvedValue({ ...row, shareId: null });
 
-    expect(await updateCollection(USER, "col_1", { name: "Ops" })).toEqual(row);
+    expect(await updateCollection(USER, "col_1", { name: "Ops" })).toEqual({ ...row, isShared: false });
     expect(update).toHaveBeenCalledWith({
       where: { id: "col_1", userId: USER },
       data: { name: "Ops", description: null },
-      select: { id: true, name: true, description: true, isFavorite: true },
+      select: { id: true, name: true, description: true, isFavorite: true, shareId: true },
     });
   });
 });
@@ -294,7 +302,7 @@ describe("createCollection", () => {
     const row = { id: "col_1", name: "React", description: null, isFavorite: false, updatedAt: new Date(1) };
     createRow.mockResolvedValue(row);
 
-    await expect(createCollection(USER, { name: "React" })).resolves.toEqual({ ...row, itemCount: 0, types: [] });
+    await expect(createCollection(USER, { name: "React" })).resolves.toEqual({ ...row, isShared: false, itemCount: 0, types: [] });
     expect(createRow).toHaveBeenCalledWith(
       expect.objectContaining({
         data: { name: "React", description: null, user: { connect: { id: USER } } },

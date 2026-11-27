@@ -3,6 +3,7 @@ import { useTranslations } from "next-intl";
 
 import { CommandCopyButton } from "@/components/items/CommandCopyButton";
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
+import { SharedBadge } from "@/components/share/SharedBadge";
 import { commandFirstLine, tokenizeCommand, type CommandTokenKind } from "@/lib/command-text";
 import type { CommandText, DashboardItem } from "@/lib/db/items";
 import { useRelativeTime } from "@/i18n/labels";
@@ -83,6 +84,7 @@ function CommandRow({
           ) : null}
           {relativeTime(item.updatedAt.toISOString(), now)}
         </span>
+        {item.isShared ? <SharedBadge /> : null}
         {item.isPinned ? <Pin className="size-3 shrink-0" aria-label={tc("pinned")} /> : null}
         {item.isFavorite ? (
           <Star className="size-3 shrink-0 fill-amber-400 text-amber-400" aria-label={tc("favorite")} />

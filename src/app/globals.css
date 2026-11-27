@@ -143,6 +143,10 @@
     counter-increment: line;
     content: counter(line);
   }
+  /* A shared item's full code on its public page scrolls instead of clipping long lines. */
+  .snippet-code.shared-code pre {
+    @apply overflow-x-auto;
+  }
 }
 
 /* Rendered Markdown in MarkdownEditor. Always on its dark #1e1e1e surface, so the colours are fixed. */
