@@ -50,7 +50,7 @@ nor custom types exist. A1 and A2 come first, and the rest of A follows in small
 - With a richer collection description (stack, conventions), this replaces a separate "Project"
   entity.
 
-### A4. Import
+### A4. Import — done 2026-11-27 (`65815fa`)
 - Re-import a JSON export (A1's round trip), with title conflicts resolved by "skip" or
   "duplicate".
 - Loose files: `.md`/`.txt` become notes, and code files become snippets with the language
