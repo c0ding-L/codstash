@@ -60,7 +60,7 @@ nor custom types exist. A1 and A2 come first, and the rest of A follows in small
   they are out.
 - Counts against the Free limits (`usage-limits.ts`).
 
-### A5. Recently used
+### A5. Recently used — done 2026-11-27 (`8530aab`)
 - `Item.lastUsedAt DateTime?`, set when an item is copied or opened in the drawer, with a
   throttle so one session does not write each time.
 - A "Recently used" section on the dashboard, and a sort option in the lists.
