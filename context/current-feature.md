@@ -1,36 +1,22 @@
-# Current Feature: Fix — stable sort
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-Found while checking A5 (2026-11-27); a separate fix at the author's request.
-
-- Every date-sorted list gets `id` as a second sort key, so items or collections that share a
-  date always come back in the same order. The seeded items all share one `updatedAt`, and the
-  dashboard's "Recent items" reshuffled between loads.
-- Follows the existing pattern `[{ updatedAt: "desc" }, { id: "asc" }]` (`getFavoriteItems`,
-  `pinnedFirstOrder`, `getCollectionsPage`).
-- Queries fixed:
-  - `src/lib/db/items.ts`: `getPinnedItems`, `getRecentItems`, `getRecentlyUsedItems`,
-    `getSearchItems`;
-  - `src/lib/db/collections.ts`: the sidebar's recent collections;
-  - `src/lib/db/context-export.ts`: the collection's items;
-  - `src/lib/db/import.ts`: the user's collections, oldest first, when matching by name.
-- Tests assert the second key on each.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Name sorts (`name: "asc"`) are left as they are: collection names can repeat, but those
-  lists were not reported, and the fix stays on dates.
-- **Progress (2026-11-27)**: done; 1,254 tests, lint and build pass. Not committed.
-  - Also the export's collections (`src/lib/db/export.ts`, `createdAt` then `id`), found by the
-    same search.
-  - New `src/lib/db/context-export.test.ts` (it had none): owner filter, sort, 404 case.
-  - **Browser-checked** with the demo account: four loads of the dashboard, the same "Recent
-    items" order each time.
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous fix (completed) — Stable sort: date-sorted lists break ties by id, so items saved
+together keep one order. Outcome in the History below.
+
 ---
 
 Previous feature (completed) — A5 Recently used: items record when they are copied, downloaded or
@@ -2717,3 +2703,12 @@ Environment notes that outlive any one feature:
     The demo keeps two uses on develop.
   - 1,250 tests, build and lint green. Merged into `main` (`8530aab`, fast-forward); branch
     deleted.
+- 2026-11-27 — Fix: stable sort (`450e999`).
+  - Found while checking A5: the seeded items share one `updatedAt`, and the date-sorted
+    queries had no second key, so the dashboard's "Recent items" reshuffled between loads.
+  - Every date sort now ends with `id` (the existing pattern of `getFavoriteItems` and the
+    collections page): pinned, recent, recently used and palette items, the sidebar's recent
+    collections, the context export, the export's collections and import's match of
+    collections by name. Name sorts left as they are.
+  - New `src/lib/db/context-export.test.ts`. Browser: four dashboard loads, one order.
+  - 1,254 tests, build and lint green. Merged into `main` (fast-forward); branch deleted.
