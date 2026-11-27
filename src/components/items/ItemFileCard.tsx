@@ -6,8 +6,17 @@ import { extensionOf } from "@/lib/files";
 import { useFileSize } from "@/i18n/labels";
 import { cn } from "@/lib/utils";
 
+interface ItemFileCardProps {
+  href: string;
+  fileName: string;
+  fileSize: number | null;
+  isImage: boolean;
+  /** Called when the download button is clicked: the drawer records a use of the item (A5). */
+  onDownload?: () => void;
+}
+
 /** The uploaded file: its icon, name and extension, with the download button, in a light frame. */
-export function ItemFileCard({ href, fileName, fileSize, isImage }: { href: string; fileName: string; fileSize: number | null; isImage: boolean }) {
+export function ItemFileCard({ href, fileName, fileSize, isImage, onDownload }: ItemFileCardProps) {
   const tc = useTranslations("common");
   const formatFileSize = useFileSize();
   const Icon = isImage ? ImageIcon : FileText;
@@ -28,7 +37,7 @@ export function ItemFileCard({ href, fileName, fileSize, isImage }: { href: stri
             .join(" · ")}
         </p>
       </div>
-      <a href={href} download={fileName} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "shrink-0")}>
+      <a href={href} download={fileName} onClick={onDownload} className={cn(buttonVariants({ variant: "outline", size: "sm" }), "shrink-0")}>
         <Download aria-hidden />
         {tc("download")}
       </a>

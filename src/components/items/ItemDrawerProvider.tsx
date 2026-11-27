@@ -8,6 +8,7 @@ import { ItemDetails, type ItemDetailState } from "@/components/items/ItemDetail
 import type { SavedItem } from "@/components/items/ItemEditForm";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import type { DashboardItem, ItemDetailJson } from "@/lib/db/items";
+import { markUsed } from "@/lib/item-usage";
 
 type OpenItem = (item: DashboardItem) => void;
 
@@ -63,6 +64,8 @@ export function ItemDrawerProvider({
     setDetail({ status: "loading" });
     setOpenCount((count) => count + 1);
     setOpen(true);
+    // Once per opening (A5); the server throttles repeated openings to one write per 5 minutes.
+    markUsed(item.id);
 
     try {
       const response = await fetch(`/api/items/${encodeURIComponent(item.id)}`, {

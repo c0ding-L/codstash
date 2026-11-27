@@ -6,6 +6,7 @@ import { auth } from "@/auth";
 import { PinnedItems } from "@/components/dashboard/PinnedItems";
 import { RecentCollections } from "@/components/dashboard/RecentCollections";
 import { RecentItems } from "@/components/dashboard/RecentItems";
+import { RecentlyUsedItems } from "@/components/dashboard/RecentlyUsedItems";
 import { StatsCards } from "@/components/dashboard/StatsCards";
 import { pageMetadata } from "@/i18n/labels-server";
 
@@ -32,7 +33,11 @@ export default async function DashboardPage() {
       {/* grid-cols-1 (minmax(0, 1fr)) lets long descriptions truncate instead of widening the page on mobile. */}
       <div className="grid grid-cols-1 gap-8 xl:grid-cols-2">
         <PinnedItems userId={session.user.id} />
-        <RecentItems userId={session.user.id} />
+        {/* Recently used sits above Recent items, in the same column. */}
+        <div className="flex min-w-0 flex-col gap-8">
+          <RecentlyUsedItems userId={session.user.id} />
+          <RecentItems userId={session.user.id} />
+        </div>
       </div>
     </div>
   );

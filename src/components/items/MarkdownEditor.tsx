@@ -44,6 +44,8 @@ interface MarkdownEditorProps {
    * the server reads the item by its id, and `onApplied` gets the item once the user accepts.
    */
   optimize?: { itemId: string; aiAllowed: Promise<boolean>; onApplied: (saved: SavedItem) => void };
+  /** Called after a successful copy. The drawer's read view records a use of the item (A5). */
+  onCopied?: () => void;
 }
 
 /** Markdown with Write/Preview tabs and a copy button, in the same dark window as `CodeEditor`. */
@@ -56,6 +58,7 @@ export function MarkdownEditor({
   describedBy,
   className,
   optimize,
+  onCopied,
 }: MarkdownEditorProps) {
   const t = useTranslations("editor");
   const ta = useTranslations("ai");
@@ -162,7 +165,11 @@ export function MarkdownEditor({
           aria-label={shown === "optimized" ? t("copyOptimized") : t("copyMarkdown")}
           disabled={!value}
           // Copies what is shown: the suggestion on the Optimized tab, the saved text otherwise.
-          onClick={() => void copyToClipboard(shown === "optimized" && suggestion !== null ? suggestion : value)}
+          onClick={() =>
+            void copyToClipboard(shown === "optimized" && suggestion !== null ? suggestion : value).then(
+              (copied) => copied && onCopied?.(),
+            )
+          }
         >
           <Copy aria-hidden />
         </Button>

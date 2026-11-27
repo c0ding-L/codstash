@@ -63,6 +63,7 @@ function LinkRow({ item }: { item: DashboardItem }) {
       <div className="flex w-27 shrink-0 items-center justify-end gap-2">
         {url ? (
           <LinkCopyButton
+            itemId={item.id}
             url={url}
             title={item.title}
             // Hidden until hover only with a mouse: a touch screen, even a wide one, never hovers.

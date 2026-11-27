@@ -1,17 +1,94 @@
-# Current Feature
+# Current Feature: A5 Recently used
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+Spec: `@context/features/recently-used-spec.md`. Fifth step of `docs/roadmap-v2.md` § A5.
+
+- `Item.lastUsedAt DateTime?` with `@@index([userId, lastUsedAt])`, through a migration
+  `item_last_used` made with `prisma migrate dev` on develop only.
+- Recording a use never touches `updatedAt`: `markItemUsed(userId, id)` in
+  `src/lib/db/items.ts` runs one raw `$executeRaw` tagged-template `UPDATE`, filtered on the
+  owner and throttled in SQL (only when `lastUsedAt` is null or older than 5 minutes), with no
+  read first.
+- `POST /api/items/[id]/used`: 401 without a session, 204 otherwise (also when the throttle
+  skipped the write). A route, not a server action, so it never queues behind Favorite and Pin.
+- `markUsed(itemId)` in `src/lib/item-usage.ts`: `fetch` POST with `keepalive`, fire and
+  forget, errors ignored.
+- An item counts as used when it is copied whole (`ItemCopyButton`, `CommandCopyButton`,
+  `LinkCopyButton`, the `ItemActionBar` copy, the drawer's `CodeEditor` / `MarkdownEditor`
+  copy in read view only), when its file is downloaded, and when the drawer opens on it (once
+  per opening, `ItemDrawerProvider`).
+- Dashboard: a "Recently used" section (`History` icon) above "Recent items", up to 6 items by
+  `lastUsedAt` descending through `getRecentlyUsedItems(userId, limit)` (`DashboardItem` rows),
+  hidden when nothing has been used yet.
+- Command palette: with an empty query, a first group "Recently used" (5 items).
+  `/api/search` returns `lastUsedAt` with each item, and the palette sorts on it.
+- No sort option in the lists (left out on purpose).
+- Tests: `markItemUsed` (the `$executeRaw` mock's arguments carry the owner filter),
+  `getRecentlyUsedItems` (not null, owner, order, limit), and a route test (401, 204, the
+  session user). Browser: copy a command, reload, it shows in Recently used with "Recent
+  items" unchanged; open an item twice within a minute, one write only.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
-
+- **Schema change:** after `prisma migrate dev` (which runs `prisma generate`), a running dev
+  server keeps the old client. Ask the author before restarting it, and do not start a second
+  server (memory "Restart dev server after prisma generate"). Develop only; production is off
+  limits.
+- **Existing raw-SQL pattern:** `setItemFavorite` and `setItemPinned` in
+  `src/lib/db/items.ts` already use `$executeRaw` so `@updatedAt` is not bumped; `markItemUsed`
+  follows them.
+- **Where things are:**
+  - The dashboard page composes `PinnedItems` and `RecentItems`
+    (`src/app/(app)/dashboard/page.tsx:34–35`, components in `src/components/dashboard/`);
+    the new section goes between them.
+  - `getSearchItems` (`src/lib/db/items.ts`, ordered by `updatedAt`) feeds `/api/search`; the
+    palette (`src/components/search/CommandPalette.tsx:81`) rebuilds `updatedAt` as a `Date`
+    and will need the same for `lastUsedAt`.
+  - The copy buttons named in the spec all exist in `src/components/items/`, and `CodeEditor`
+    and `MarkdownEditor` both call `copyToClipboard`.
+- **To decide at `start`:** a file download goes through `GET /api/items/[id]/download`. The use
+  can be recorded there, on the server after the ownership check, rather than by a client
+  call.
+- Section title in `dashboard.recentlyUsed`, EN and FR (French from DeepL).
+- **Progress (2026-11-27)**: implemented; 1,249 tests and lint pass. Not committed.
+  - Migration `20261127021635_item_last_used` (column + index), made with
+    `migrate dev --create-only` and applied to develop with `migrate deploy`, so the
+    destructive seed could not run. Client regenerated.
+  - **Download decided differently from the load note:** the download route also serves the
+    `<img>` of image items (drawer, gallery), so recording there would mark every displayed
+    image as used. The use is recorded on the drawer's Download button instead
+    (`ItemFileCard` `onDownload`).
+  - `copyToClipboard` / `copyFromPromise` now return `true` when the copy worked, so a use is
+    recorded only after a successful copy. The editors take an `onCopied` that only the
+    drawer's read view (`ItemBody`) passes; the edit forms never record a use.
+  - `LinkCopyButton` takes the item id. The palette shows "Recently used" only while the query
+    is empty (`useCommandState`), with its own cmdk values (`recent-<id>`), the rows shared
+    through `ItemRow`.
+  - Dashboard: `RecentlyUsedItems` stacked above `RecentItems` in the grid's second column.
+  - French: DeepL's « Récemment utilisés », unchanged.
+  - **Browser-checked** on develop with the demo account (dev server restarted by the author
+    after the migration):
+    - copying "Undo the last commit…" set its `lastUsedAt` (`updatedAt` untouched) and it
+      shows in Recently used, with "Recent items" in the same order; on the very first copy
+      the dashboard rendered before the POST landed, most likely the dev compile of the new
+      route;
+    - opening "Deploy to production" three times: three POSTs, one write (`lastUsedAt`
+      stayed at the first opening);
+    - palette: "Recently used" first with an empty query, gone once something is typed;
+    - FR headings.
+  - The demo account keeps these two uses on develop.
+  - Build green.
+  - **Author's adjustment:** the dashboard shows 5 "Pinned items" (`DASHBOARD_PINNED_ITEMS_LIMIT`,
+    was the 100-item ceiling) and 5 "Recent items" (`DASHBOARD_RECENT_ITEMS_LIMIT`, was 10).
+    "Recently used" aligned on 5 too (`DASHBOARD_RECENTLY_USED_LIMIT`, the spec said 6).
+  - **Found while checking, left for a separate fix (author's choice):** the seeded items share
+    one `updatedAt`, and the date-sorted lists have no tie-breaker, so their order changes
+    between loads. Fix after A5: add `id` as a second sort key.
 ---
 
 Previous feature (completed) — Fill from a file: the New item dialog fills its title, content

@@ -9,6 +9,7 @@ import { ItemFileCard } from "@/components/items/ItemFileCard";
 import { MarkdownEditor } from "@/components/items/MarkdownEditor";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isCodeType } from "@/lib/code-language";
+import { markUsed } from "@/lib/item-usage";
 import { isWebUrl } from "@/lib/utils";
 import type { ItemTypeSlug } from "@/types/item-type";
 
@@ -64,7 +65,13 @@ export function ItemBody({
       ) : null}
 
       {fileName ? (
-        <ItemFileCard href={fileHref} fileName={fileName} fileSize={fileSize} isImage={slug === "image"} />
+        <ItemFileCard
+          href={fileHref}
+          fileName={fileName}
+          fileSize={fileSize}
+          isImage={slug === "image"}
+          onDownload={() => markUsed(itemId)}
+        />
       ) : null}
 
       {content && isCodeType(slug) ? (
@@ -75,6 +82,7 @@ export function ItemBody({
           language={language}
           ariaLabel={t("content")}
           explain={{ itemId, aiAllowed }}
+          onCopied={() => markUsed(itemId)}
         />
       ) : content ? (
         // Keyed by item, so a suggestion never carries over to another item.
@@ -83,6 +91,7 @@ export function ItemBody({
           value={content}
           ariaLabel={t("content")}
           optimize={slug === "prompt" ? { itemId, aiAllowed, onApplied: onSaved } : undefined}
+          onCopied={() => markUsed(itemId)}
         />
       ) : null}
 

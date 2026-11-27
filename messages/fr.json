@@ -85,6 +85,7 @@
     "empty": "Aucun résultat.",
     "loading": "Chargement…",
     "loadFailed": "Impossible de charger vos éléments. Fermez et réessayez.",
+    "recentlyUsed": "Récemment utilisés",
     "items": "Éléments",
     "collections": "Collections",
     "itemCount": "{count, plural, one {# élément} other {# éléments}}"
@@ -376,6 +377,7 @@
     },
     "recentItems": "Éléments récents",
     "recentItemsCount": "{shown} sur {total}",
+    "recentlyUsed": "Récemment utilisés",
     "noItems": "Aucun élément pour l’instant.",
     "recentCollections": "Collections récentes",
     "collectionCount": "{count, plural, one {# collection} other {# collections}}",

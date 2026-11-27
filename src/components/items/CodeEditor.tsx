@@ -70,12 +70,14 @@ interface CodeEditorProps {
    * saved snippet or command: the server reads the item by its id.
    */
   explain?: { itemId: string; aiAllowed: Promise<boolean> };
+  /** Called after a successful copy. The drawer's read view records a use of the item (A5). */
+  onCopied?: () => void;
 }
 
 type View = "code" | "explain";
 
 /** Monaco in a macOS-style window: traffic-light dots, the language and a copy button on top. */
-export function CodeEditor({ value, language, onChange, ariaLabel: ariaLabelProp, className, explain }: CodeEditorProps) {
+export function CodeEditor({ value, language, onChange, ariaLabel: ariaLabelProp, className, explain, onCopied }: CodeEditorProps) {
   const t = useTranslations("editor");
   const ta = useTranslations("ai");
   const { copyToClipboard } = useClipboard();
@@ -154,7 +156,7 @@ export function CodeEditor({ value, language, onChange, ariaLabel: ariaLabelProp
           size="icon-sm"
           aria-label={t("copyCode")}
           disabled={!value}
-          onClick={() => void copyToClipboard(value)}
+          onClick={() => void copyToClipboard(value).then((copied) => copied && onCopied?.())}
         >
           <Copy aria-hidden />
         </Button>

@@ -85,6 +85,7 @@
     "empty": "No results.",
     "loading": "Loading…",
     "loadFailed": "Could not load your items. Close and try again.",
+    "recentlyUsed": "Recently used",
     "items": "Items",
     "collections": "Collections",
     "itemCount": "{count, plural, one {# item} other {# items}}"
@@ -376,6 +377,7 @@
     },
     "recentItems": "Recent items",
     "recentItemsCount": "{shown} of {total}",
+    "recentlyUsed": "Recently used",
     "noItems": "No items yet.",
     "recentCollections": "Recent collections",
     "collectionCount": "{count, plural, one {# collection} other {# collections}}",

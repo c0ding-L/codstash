@@ -1,5 +1,6 @@
 "use client";
 
+import { useCommandState } from "cmdk";
 import { Folder, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
@@ -78,7 +79,11 @@ function useSearchData() {
         const json = (await response.json()) as { items: SearchItemJson[]; collections: SearchCollection[] };
         // The drawer formats the date, so it is a `Date` again before any item can open.
         const items = json.items.map((json) => {
-          const item: SearchItem = { ...json, updatedAt: new Date(json.updatedAt) };
+          const item: SearchItem = {
+            ...json,
+            updatedAt: new Date(json.updatedAt),
+            lastUsedAt: json.lastUsedAt ? new Date(json.lastUsedAt) : null,
+          };
           return { entry: item, keywords: itemKeywords(item) };
         });
         const collections = json.collections.map((collection) => ({
@@ -194,41 +199,35 @@ interface PaletteResultsProps {
   onSelectCollection: (collection: SearchCollection) => void;
 }
 
+/** Items in the palette's "Recently used" group, shown only while the query is empty (A5). */
+const RECENTLY_USED_IN_PALETTE = 5;
+
 function PaletteResults({ data, onSelectItem, onSelectCollection }: PaletteResultsProps) {
   const t = useTranslations();
-  const typeView = useTypeView();
+  const search = useCommandState((state) => state.search);
+  const recentlyUsed = search.trim()
+    ? []
+    : data.items
+        .filter(({ entry }) => entry.lastUsedAt !== null)
+        .sort((a, b) => b.entry.lastUsedAt!.getTime() - a.entry.lastUsedAt!.getTime())
+        .slice(0, RECENTLY_USED_IN_PALETTE);
 
   return (
     <>
+      {recentlyUsed.length > 0 ? (
+        <CommandGroup heading={t("search.recentlyUsed")}>
+          {recentlyUsed.map(({ entry: item, keywords }) => (
+            // Its own value: the same item is listed again under Items, and cmdk needs them distinct.
+            <ItemRow key={item.id} value={`recent-${item.id}`} item={item} keywords={keywords} onSelect={onSelectItem} />
+          ))}
+        </CommandGroup>
+      ) : null}
+
       {data.items.length > 0 ? (
         <CommandGroup heading={t("search.items")}>
-          {data.items.map(({ entry: item, keywords }) => {
-            // System types in the UI language; a custom type keeps its own name.
-            const view = typeView(item.type);
-            return (
-            <CommandItem
-              key={item.id}
-              value={`item-${item.id}`}
-              keywords={keywords}
-              onSelect={() => onSelectItem(item)}
-            >
-              <TypeIconTile
-                icon={view.Icon}
-                color={view.color}
-                className="size-7 shrink-0 rounded-md"
-                iconClassName="size-4"
-                mutedFallback
-              />
-              <span className="flex min-w-0 flex-col">
-                <span className="truncate">{item.title}</span>
-                {item.preview ? (
-                  <span className="truncate text-xs text-muted-foreground">{item.preview}</span>
-                ) : null}
-              </span>
-              <CommandShortcut className="tracking-normal">{view.label}</CommandShortcut>
-            </CommandItem>
-            );
-          })}
+          {data.items.map(({ entry: item, keywords }) => (
+            <ItemRow key={item.id} value={`item-${item.id}`} item={item} keywords={keywords} onSelect={onSelectItem} />
+          ))}
         </CommandGroup>
       ) : null}
 
@@ -253,5 +252,34 @@ function PaletteResults({ data, onSelectItem, onSelectCollection }: PaletteResul
         </CommandGroup>
       ) : null}
     </>
+  );
+}
+
+interface ItemRowProps {
+  value: string;
+  item: SearchItem;
+  keywords: string[];
+  onSelect: (item: SearchItem) => void;
+}
+
+function ItemRow({ value, item, keywords, onSelect }: ItemRowProps) {
+  const typeView = useTypeView();
+  // System types in the UI language; a custom type keeps its own name.
+  const view = typeView(item.type);
+  return (
+    <CommandItem value={value} keywords={keywords} onSelect={() => onSelect(item)}>
+      <TypeIconTile
+        icon={view.Icon}
+        color={view.color}
+        className="size-7 shrink-0 rounded-md"
+        iconClassName="size-4"
+        mutedFallback
+      />
+      <span className="flex min-w-0 flex-col">
+        <span className="truncate">{item.title}</span>
+        {item.preview ? <span className="truncate text-xs text-muted-foreground">{item.preview}</span> : null}
+      </span>
+      <CommandShortcut className="tracking-normal">{view.label}</CommandShortcut>
+    </CommandItem>
   );
 }

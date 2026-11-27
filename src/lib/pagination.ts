@@ -8,7 +8,12 @@ export const COLLECTIONS_PER_PAGE = 9;
 export const DASHBOARD_COLLECTIONS_LIMIT = 6;
 
 /** Rows in the dashboard's "Recent items" section. */
-export const DASHBOARD_RECENT_ITEMS_LIMIT = 10;
+export const DASHBOARD_RECENT_ITEMS_LIMIT = 5;
+/** Items in the dashboard's "Pinned items" section. */
+export const DASHBOARD_PINNED_ITEMS_LIMIT = 5;
+
+/** Items in the dashboard's "Recently used" section (A5). */
+export const DASHBOARD_RECENTLY_USED_LIMIT = 5;
 
 /**
  * The page a `?page=` search param asks for, or null when it is not a valid page

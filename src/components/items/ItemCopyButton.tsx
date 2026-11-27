@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { buttonVariants } from "@/components/ui/button";
 import { useClipboard } from "@/i18n/labels";
 import type { ItemDetailJson } from "@/lib/db/items";
+import { markUsed } from "@/lib/item-usage";
 import { cn } from "@/lib/utils";
 
 /** The item's full content, which the lists never have: content has no length cap. */
@@ -32,7 +33,7 @@ export function ItemCopyButton({ itemId, title, label, className }: ItemCopyButt
     <button
       type="button"
       aria-label={tc("copyItem", { name: title })}
-      onClick={() => copyFromPromise(fetchItemContent(itemId))}
+      onClick={() => void copyFromPromise(fetchItemContent(itemId)).then((copied) => copied && markUsed(itemId))}
       className={cn(buttonVariants({ variant: "outline", size: "sm" }), "relative z-20", className)}
     >
       <Copy data-icon="inline-start" aria-hidden />

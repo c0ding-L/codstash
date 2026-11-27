@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { useClipboard } from "@/i18n/labels";
 import type { ItemDetailJson } from "@/lib/db/items";
+import { markUsed } from "@/lib/item-usage";
 import { cn } from "@/lib/utils";
 
 interface CommandCopyButtonProps {
@@ -28,13 +29,17 @@ export function CommandCopyButton({ itemId, title, text, isCut, className }: Com
   const { copyToClipboard } = useClipboard();
 
   async function copy() {
-    if (!isCut) return copyToClipboard(text);
+    // A successful copy records a use of the item (A5).
+    if (!isCut) {
+      if (await copyToClipboard(text)) markUsed(itemId);
+      return;
+    }
 
     try {
       const response = await fetch(`/api/items/${encodeURIComponent(itemId)}`);
       if (!response.ok) throw new Error(String(response.status));
       const detail = (await response.json()) as ItemDetailJson;
-      await copyToClipboard(detail.content ?? "");
+      if (await copyToClipboard(detail.content ?? "")) markUsed(itemId);
     } catch {
       toast.error(t("commandCopyFailed"));
     }

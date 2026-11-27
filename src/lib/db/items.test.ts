@@ -16,8 +16,10 @@ import {
   getPromptPreviews,
   getSnippetPreviews,
   getRecentItems,
+  getRecentlyUsedItems,
   getSearchItems,
   isFileKeyInUse,
+  markItemUsed,
   setItemFavorite,
   setItemPinned,
   updateItem,
@@ -25,7 +27,12 @@ import {
 } from "@/lib/db/items";
 import { assertBelowLimit } from "@/lib/db/billing";
 import { MAX_ITEM_LIMIT } from "@/lib/db/limits";
-import { DASHBOARD_RECENT_ITEMS_LIMIT, ITEMS_PER_PAGE } from "@/lib/pagination";
+import {
+  DASHBOARD_PINNED_ITEMS_LIMIT,
+  DASHBOARD_RECENT_ITEMS_LIMIT,
+  DASHBOARD_RECENTLY_USED_LIMIT,
+  ITEMS_PER_PAGE,
+} from "@/lib/pagination";
 import { prisma } from "@/lib/prisma";
 
 vi.mock("@/lib/db/billing", () => ({ assertBelowLimit: vi.fn() }));
@@ -133,6 +140,18 @@ describe("getSearchItems", () => {
     expect(item!.preview.length).toBeLessThanOrEqual(151);
     expect(item!.tags).toEqual(["llm", "review"]);
     expect(item!.collections).toEqual([{ id: "col_1", name: "AI" }]);
+  });
+
+  it("returns when each item was last used, for the palette's Recently used group", async () => {
+    const lastUsedAt = new Date("2026-11-27T09:00:00.000Z");
+    findMany.mockResolvedValue([
+      { id: "a", content: "x", language: null, lastUsedAt, type: { slug: "note", name: "Note", icon: null, color: "slate", isSystem: true }, collections: [], tags: [] },
+    ]);
+
+    const [item] = await getSearchItems(USER);
+
+    expect(findMany.mock.calls[0]![0].select).toMatchObject({ lastUsedAt: true });
+    expect(item!.lastUsedAt).toEqual(lastUsedAt);
   });
 
   it("previews a custom type's item as Markdown, like a note", async () => {
@@ -276,6 +295,37 @@ describe("getRecentItems", () => {
   it("rejects a negative limit, which Prisma would read backwards", async () => {
     await expect(getRecentItems(USER, -5)).rejects.toThrow(RangeError);
     expect(findMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("getPinnedItems", () => {
+  it("reads at most the dashboard's 5 pinned items, newest first", async () => {
+    await getPinnedItems(USER);
+
+    expect(DASHBOARD_PINNED_ITEMS_LIMIT).toBe(5);
+    expect(findMany.mock.calls[0]![0]).toMatchObject({ orderBy: { updatedAt: "desc" }, take: DASHBOARD_PINNED_ITEMS_LIMIT });
+  });
+});
+
+describe("getRecentlyUsedItems", () => {
+  it("reads only the user's used items, latest use first, up to the dashboard's count", async () => {
+    findMany.mockResolvedValue([
+      { id: "a", type: { slug: "note", name: "Note", icon: null, color: "slate", isSystem: true }, collections: [{ collection: { id: "c", name: "C" } }] },
+    ]);
+
+    const items = await getRecentlyUsedItems(USER);
+
+    expect(findMany.mock.calls[0]![0]).toMatchObject({
+      where: { userId: USER, lastUsedAt: { not: null } },
+      orderBy: { lastUsedAt: "desc" },
+      take: DASHBOARD_RECENTLY_USED_LIMIT,
+    });
+    expect(items[0]!.collections).toEqual([{ id: "c", name: "C" }]);
+  });
+
+  it("clamps a limit above the ceiling", async () => {
+    await getRecentlyUsedItems(USER, MAX_ITEM_LIMIT + 1);
+    expect(findMany.mock.calls[0]![0].take).toBe(MAX_ITEM_LIMIT);
   });
 });
 
@@ -860,5 +910,30 @@ describe("setItemPinned", () => {
     executeRaw.mockResolvedValue(0);
 
     await expect(setItemPinned(USER, "item_1", false)).resolves.toBe(false);
+  });
+});
+
+describe("markItemUsed", () => {
+  const executeRaw = prisma.$executeRaw as unknown as Mock;
+
+  it("stamps the user's own item, throttled in the query, leaving updatedAt alone", async () => {
+    executeRaw.mockResolvedValue(1);
+
+    await expect(markItemUsed(USER, "item_1")).resolves.toBe(true);
+
+    const [strings, ...values] = executeRaw.mock.calls[0];
+    const sql = (strings as TemplateStringsArray).join("?").replace(/\s+/g, " ");
+    expect(sql).toMatch(/UPDATE "Item" SET "lastUsedAt" = now\(\)/);
+    expect(sql).toMatch(/"id" = \? AND "userId" = \?/);
+    expect(sql).toMatch(/\("lastUsedAt" IS NULL OR "lastUsedAt" < now\(\) - interval '5 minutes'\)/);
+    expect(sql).not.toMatch(/updatedAt/);
+    // Values are bound, never concatenated into the SQL.
+    expect(values).toEqual(["item_1", USER]);
+  });
+
+  it("is false when the throttle skipped the write, or the item is missing or not the user's", async () => {
+    executeRaw.mockResolvedValue(0);
+
+    await expect(markItemUsed(USER, "item_1")).resolves.toBe(false);
   });
 });

@@ -27,7 +27,7 @@ describe("copyToClipboard", () => {
   it("copies the text and confirms with a success toast", async () => {
     writeText.mockResolvedValue(undefined);
 
-    await copyToClipboard("npm test", MESSAGES);
+    await expect(copyToClipboard("npm test", MESSAGES)).resolves.toBe(true);
 
     expect(writeText).toHaveBeenCalledWith("npm test");
     expect(toast.success).toHaveBeenCalledWith("Copied to clipboard.");
@@ -37,7 +37,7 @@ describe("copyToClipboard", () => {
   it("shows an error toast instead of throwing when the clipboard refuses", async () => {
     writeText.mockRejectedValue(new DOMException("Denied", "NotAllowedError"));
 
-    await expect(copyToClipboard("npm test", MESSAGES)).resolves.toBeUndefined();
+    await expect(copyToClipboard("npm test", MESSAGES)).resolves.toBe(false);
 
     expect(toast.error).toHaveBeenCalledWith("Could not copy to the clipboard.");
     expect(toast.success).not.toHaveBeenCalled();
@@ -52,7 +52,7 @@ describe("copyFromPromise", () => {
       expect(await (await item!.items["text/plain"]!).text()).toBe("Review the diff");
     });
 
-    await copyFromPromise(Promise.resolve("Review the diff"), MESSAGES);
+    await expect(copyFromPromise(Promise.resolve("Review the diff"), MESSAGES)).resolves.toBe(true);
 
     expect(write).toHaveBeenCalledOnce();
     expect(writeText).not.toHaveBeenCalled();
@@ -74,7 +74,7 @@ describe("copyFromPromise", () => {
       await item!.items["text/plain"];
     });
 
-    await expect(copyFromPromise(Promise.reject(new Error("404")), MESSAGES)).resolves.toBeUndefined();
+    await expect(copyFromPromise(Promise.reject(new Error("404")), MESSAGES)).resolves.toBe(false);
 
     expect(toast.error).toHaveBeenCalledWith("Could not copy to the clipboard.");
     expect(toast.success).not.toHaveBeenCalled();

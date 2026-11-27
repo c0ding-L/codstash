@@ -1,7 +1,13 @@
 import type { Prisma } from "@/generated/prisma/client";
 import { clipCommand } from "@/lib/command-text";
 import { clampLimit, MAX_ITEM_LIMIT } from "@/lib/db/limits";
-import { DASHBOARD_RECENT_ITEMS_LIMIT, ITEMS_PER_PAGE, pageOffset } from "@/lib/pagination";
+import {
+  DASHBOARD_PINNED_ITEMS_LIMIT,
+  DASHBOARD_RECENT_ITEMS_LIMIT,
+  DASHBOARD_RECENTLY_USED_LIMIT,
+  ITEMS_PER_PAGE,
+  pageOffset,
+} from "@/lib/pagination";
 import { assertBelowLimit } from "@/lib/db/billing";
 import { prisma } from "@/lib/prisma";
 import { countWords, estimateTokens, markdownToPlainText, promptExcerpt } from "@/lib/prompt-text";
@@ -72,12 +78,12 @@ function collectionLinks(collectionIds: string[]) {
   return [...new Set(collectionIds)].map((id) => ({ collection: { connect: { id } } }));
 }
 
-/** Pinned items, newest first, up to the ceiling. Empty when nothing is pinned. */
+/** Pinned items for the dashboard, newest first, 5 at most. Empty when nothing is pinned. */
 export async function getPinnedItems(userId: string): Promise<DashboardItem[]> {
   const items = await prisma.item.findMany({
     where: { userId, isPinned: true },
     orderBy: { updatedAt: "desc" },
-    take: MAX_ITEM_LIMIT,
+    take: DASHBOARD_PINNED_ITEMS_LIMIT,
     select: dashboardItemSelect,
   });
 
@@ -118,6 +124,20 @@ export async function getRecentItems(
   ]);
 
   return { items: items.map(toDashboardItem), totalCount };
+}
+
+/** Items in "Recently used": the user's items they copied, downloaded or opened, latest first. */
+export async function getRecentlyUsedItems(
+  userId: string,
+  limit: number = DASHBOARD_RECENTLY_USED_LIMIT,
+): Promise<DashboardItem[]> {
+  const items = await prisma.item.findMany({
+    where: { userId, lastUsedAt: { not: null } },
+    orderBy: { lastUsedAt: "desc" },
+    take: clampLimit(limit, MAX_ITEM_LIMIT),
+    select: dashboardItemSelect,
+  });
+  return items.map(toDashboardItem);
 }
 
 /**
@@ -188,6 +208,8 @@ export async function getItemsByCollection(
  */
 export interface SearchItem extends DashboardItem {
   preview: string;
+  /** Last copy, download or opening; null when never used. Sorts the palette's "Recently used". */
+  lastUsedAt: Date | null;
   /** The whole content, not clipped: a match deep inside it must still be found. */
   content: string | null;
   language: string | null;
@@ -195,7 +217,7 @@ export interface SearchItem extends DashboardItem {
 }
 
 /** `SearchItem` after a JSON round trip: the date arrives as a string. */
-export type SearchItemJson = Omit<SearchItem, "updatedAt"> & { updatedAt: string };
+export type SearchItemJson = Omit<SearchItem, "updatedAt" | "lastUsedAt"> & { updatedAt: string; lastUsedAt: string | null };
 
 /** The user's items for the command palette, most recently updated first, up to the ceiling. */
 export async function getSearchItems(userId: string): Promise<SearchItem[]> {
@@ -207,14 +229,16 @@ export async function getSearchItems(userId: string): Promise<SearchItem[]> {
       ...dashboardItemSelect,
       content: true,
       language: true,
+      lastUsedAt: true,
       tags: { select: { tag: { select: { name: true } } }, orderBy: { tag: { name: "asc" } } },
     },
   });
 
-  return items.map(({ content, language, tags, ...item }) => ({
+  return items.map(({ content, language, lastUsedAt, tags, ...item }) => ({
     ...toDashboardItem(item),
     // A custom type is Markdown, like a note.
     preview: searchPreview(content, item.type.isSystem ? item.type.slug : "note"),
+    lastUsedAt,
     content,
     language,
     tags: tags.map(({ tag }) => tag.name),
@@ -612,6 +636,22 @@ export async function setItemFavorite(userId: string, id: string, isFavorite: bo
 }
 
 /** Like `setItemFavorite`: raw SQL so `@updatedAt` is not bumped and the item keeps its place in recent lists. */
+/**
+ * Records a use of one of the user's items (A5): a copy, a download or an opening in the
+ * drawer. Raw SQL, like favorite and pin, so `@updatedAt` is not bumped and "Recent items"
+ * keeps its order. Throttled in the query itself: at most one write per item every 5
+ * minutes, with no read first. False when nothing was written (throttled, missing or not
+ * the user's).
+ */
+export async function markItemUsed(userId: string, id: string): Promise<boolean> {
+  const updated = await prisma.$executeRaw`
+    UPDATE "Item" SET "lastUsedAt" = now()
+    WHERE "id" = ${id} AND "userId" = ${userId}
+      AND ("lastUsedAt" IS NULL OR "lastUsedAt" < now() - interval '5 minutes')
+  `;
+  return updated > 0;
+}
+
 export async function setItemPinned(userId: string, id: string, isPinned: boolean): Promise<boolean> {
   const updated = await prisma.$executeRaw`
     UPDATE "Item" SET "isPinned" = ${isPinned} WHERE "id" = ${id} AND "userId" = ${userId}

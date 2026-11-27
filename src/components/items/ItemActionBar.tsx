@@ -9,6 +9,7 @@ import { useFavoriteToggle } from "@/hooks/use-favorite-toggle";
 import { usePinToggle } from "@/hooks/use-pin-toggle";
 import { useClipboard } from "@/i18n/labels";
 import type { DashboardItem, ItemDetailJson } from "@/lib/db/items";
+import { markUsed } from "@/lib/item-usage";
 import { cn } from "@/lib/utils";
 
 interface IconActionProps extends React.ComponentProps<typeof Button> {
@@ -96,7 +97,7 @@ export function ItemActionBar({ card, detail, onEdit, onDelete, onFavoriteChange
         hint={!copyText ? t("nothingToCopy") : detail?.content ? t("copyContent") : t("copyUrl")}
         disabled={!copyText}
         onClick={() => {
-          if (copyText) void copyToClipboard(copyText);
+          if (copyText) void copyToClipboard(copyText).then((copied) => copied && markUsed(card.id));
         }}
       >
         <Copy aria-hidden />

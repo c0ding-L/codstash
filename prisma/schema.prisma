@@ -158,6 +158,9 @@ model Item {
   isFavorite  Boolean @default(false)
   isPinned    Boolean @default(false)
   language    String?
+  /// Last copy, download or opening in the drawer (A5). Written with raw SQL, throttled to
+  /// once per 5 minutes, so `updatedAt` never moves for a use.
+  lastUsedAt  DateTime?
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -180,6 +183,7 @@ model Item {
   @@index([userId, updatedAt])
   @@index([userId, isPinned])
   @@index([userId, isFavorite])
+  @@index([userId, lastUsedAt])
 }
 
 model Tag {

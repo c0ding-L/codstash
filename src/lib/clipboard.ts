@@ -9,13 +9,15 @@ export interface ClipboardMessages {
 /** Rejects the text given to `copyFromPromise`: nothing is copied, and its message shows instead of `failed`. */
 export class CopyRefusedError extends Error {}
 
-/** Copies text to the clipboard and says how it went in a toast. */
-export async function copyToClipboard(text: string, messages: ClipboardMessages) {
+/** Copies text to the clipboard and says how it went in a toast. True when it was copied. */
+export async function copyToClipboard(text: string, messages: ClipboardMessages): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);
     toast.success(messages.copied);
+    return true;
   } catch {
     toast.error(messages.failed);
+    return false;
   }
 }
 
@@ -23,9 +25,10 @@ export async function copyToClipboard(text: string, messages: ClipboardMessages)
  * Copies text that is still on its way, such as an item fetched on click. Safari
  * only allows a clipboard write during the click itself, not after an `await`,
  * so the write starts at once with a ClipboardItem holding the pending text, and
- * the browser waits for it. Where ClipboardItem is missing, it waits, then writes.
+ * the browser waits for it. Where ClipboardItem is missing, it waits, then writes. True when
+ * it was copied.
  */
-export async function copyFromPromise(text: Promise<string>, messages: ClipboardMessages) {
+export async function copyFromPromise(text: Promise<string>, messages: ClipboardMessages): Promise<boolean> {
   // The browser reports a rejected ClipboardItem with an error of its own, so the text's
   // reason is kept here.
   const reason = text.then(
@@ -40,8 +43,10 @@ export async function copyFromPromise(text: Promise<string>, messages: Clipboard
       await navigator.clipboard.writeText(await text);
     }
     toast.success(messages.copied);
+    return true;
   } catch {
     const error = await reason;
     toast.error(error instanceof CopyRefusedError ? error.message : messages.failed);
+    return false;
   }
 }
