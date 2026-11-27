@@ -105,13 +105,13 @@ nor custom types exist. A1 and A2 come first, and the rest of A follows in small
 - Managed in Settings › API tokens (create, list and revoke).
 - Bearer auth helper shared by C2 and C3, rate limited per token (Upstash).
 
-### C2. REST API v1
+### C2. REST API v1 — done 2026-11-27 (`78d8a2c`)
 - `/api/v1/items` (search, list, create), `/api/v1/items/[id]` (get, update) and
   `/api/v1/collections`.
 - Reuses `src/lib/db/*` and the existing zod schemas, and the same Free limits.
 - A short reference page in `docs/api.md`.
 
-### C3. MCP server
+### C3. MCP server — done 2026-11-27 (`9c50147`)
 - A Streamable HTTP endpoint (`/api/mcp`) authenticated with an API token.
 - Tools: `search_items`, `get_item`, `create_item`, `list_collections` and
   `get_collection_context` (A3's output). Prompts with variables (B) can be exposed as MCP
@@ -119,11 +119,11 @@ nor custom types exist. A1 and A2 come first, and the rest of A follows in small
 - Library choice (official `@modelcontextprotocol/sdk` or a Next adapter) to check against
   Next 16 before the spec.
 
-### C4. CLI `cod`
+### C4. CLI `cortex`
 - Lives in `cli/` in this repo and is published to npm.
-- `cod login` (pastes a token), `cod search`, `cod get <id>` (prints or copies it),
-  `cod run <command>` (fills variables, shows the command and asks before it runs), and
-  `cod save` (from stdin or a file).
+- `cortex login` (pastes a token), `cortex search`, `cortex get <id>` (prints or copies it),
+  `cortex run <command>` (fills variables, shows the command and asks before it runs), and
+  `cortex save` (from stdin or a file).
 - Built on the REST API (C2).
 
 ---
@@ -180,7 +180,7 @@ Defaults written into the specs, **all confirmed by the author on 2026-11-26**:
 | 5 | B | Variables only in prompts and commands. |
 | 6 | C1 | A password change revokes all API tokens. |
 | 7 | C2 | No DELETE in API v1. |
-| 8 | C4 | Binary `cod`, package name chosen by the author. |
+| 8 | C4 | Binary `cortex` (was `cod`; changed by the author on 2026-11-27 for the Cortex rename), package `@<author-scope>/cortex-cli`. |
 | 9 | C4 | CLI messages in English. |
 | 10 | D1 | Free: 1 shared collection. |
 | 11 | D1 | Shared pages `noindex` by default (toggle per collection). |

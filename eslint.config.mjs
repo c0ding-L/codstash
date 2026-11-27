@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The CLI is its own package, with its own tsconfig.
+    "cli/**",
   ]),
 ]);
 

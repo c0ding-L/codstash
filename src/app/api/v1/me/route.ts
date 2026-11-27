@@ -2,7 +2,7 @@ import { authenticateApi } from "@/lib/api-auth";
 import { apiData, apiNotFound, apiServerError } from "@/lib/api-v1";
 import { getApiMe } from "@/lib/db/api-items";
 
-/** The token's owner and plan, for `cod whoami` and `cod login`. */
+/** The token's owner and plan, for `cortex whoami` and `cortex login`. */
 export async function GET(request: Request) {
   const caller = await authenticateApi(request, "read");
   if (caller instanceof Response) return caller;

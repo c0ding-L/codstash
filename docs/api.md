@@ -1,7 +1,7 @@
 # CodStash REST API v1
 
 A small JSON API for the CLI, scripts and other tools. Every path starts with `/api/v1`. The
-examples read the base URL from `$CODSTASH_URL`, for example `http://localhost:3000` in
+examples read the base URL from `$CORTEX_URL`, for example `http://localhost:3000` in
 development.
 
 ## Authentication
@@ -9,9 +9,9 @@ development.
 Create a token in **Settings › API tokens**, then send it as a bearer token on every request:
 
 ```bash
-export CODSTASH_URL=http://localhost:3000
-export CODSTASH_TOKEN=cstash_...
-curl -H "Authorization: Bearer $CODSTASH_TOKEN" $CODSTASH_URL/api/v1/me
+export CORTEX_URL=http://localhost:3000
+export CORTEX_TOKEN=cstash_...
+curl -H "Authorization: Bearer $CORTEX_TOKEN" $CORTEX_URL/api/v1/me
 ```
 
 - A **Read** token can call every `GET` endpoint. Read tokens are free.
@@ -47,7 +47,7 @@ them.
 The token's owner and plan.
 
 ```bash
-curl -H "Authorization: Bearer $CODSTASH_TOKEN" $CODSTASH_URL/api/v1/me
+curl -H "Authorization: Bearer $CORTEX_TOKEN" $CORTEX_URL/api/v1/me
 ```
 
 ```json
@@ -83,7 +83,7 @@ A page of your items, most recently updated first.
 | `cursor` | The `nextCursor` of the previous page. |
 
 ```bash
-curl -G -H "Authorization: Bearer $CODSTASH_TOKEN" $CODSTASH_URL/api/v1/items \
+curl -G -H "Authorization: Bearer $CORTEX_TOKEN" $CORTEX_URL/api/v1/items \
   --data-urlencode "q=useEffect" --data-urlencode "type=snippet" --data-urlencode "limit=10"
 ```
 
@@ -122,7 +122,7 @@ flag. For a file or image item, `file` is `{ "name": "...", "size": 1234 }` (the
 bytes). The API does not serve the file itself.
 
 ```bash
-curl -H "Authorization: Bearer $CODSTASH_TOKEN" $CODSTASH_URL/api/v1/items/ITEM_ID
+curl -H "Authorization: Bearer $CORTEX_TOKEN" $CORTEX_URL/api/v1/items/ITEM_ID
 ```
 
 ### `POST /api/v1/items` (write)
@@ -145,8 +145,8 @@ A field that the type does not use is ignored. A custom type can also be given a
 the API: they answer `422 unsupported_type`.
 
 ```bash
-curl -X POST $CODSTASH_URL/api/v1/items \
-  -H "Authorization: Bearer $CODSTASH_TOKEN" -H "Content-Type: application/json" \
+curl -X POST $CORTEX_URL/api/v1/items \
+  -H "Authorization: Bearer $CORTEX_TOKEN" -H "Content-Type: application/json" \
   -d '{"type":"command","title":"Prune Docker","content":"docker system prune -af","language":"bash","tags":["docker"],"collectionIds":[]}'
 ```
 
@@ -158,8 +158,8 @@ they are sent. A field that the item's type does not use gives a `422`, for exam
 snippet or `content` on a file.
 
 ```bash
-curl -X PATCH $CODSTASH_URL/api/v1/items/ITEM_ID \
-  -H "Authorization: Bearer $CODSTASH_TOKEN" -H "Content-Type: application/json" \
+curl -X PATCH $CORTEX_URL/api/v1/items/ITEM_ID \
+  -H "Authorization: Bearer $CORTEX_TOKEN" -H "Content-Type: application/json" \
   -d '{"title":"Prune Docker (all)","tags":["docker","cleanup"]}'
 ```
 
@@ -168,7 +168,7 @@ curl -X PATCH $CODSTASH_URL/api/v1/items/ITEM_ID \
 All your collections, sorted by name.
 
 ```bash
-curl -H "Authorization: Bearer $CODSTASH_TOKEN" $CODSTASH_URL/api/v1/collections
+curl -H "Authorization: Bearer $CORTEX_TOKEN" $CORTEX_URL/api/v1/collections
 ```
 
 ```json
@@ -181,8 +181,8 @@ The collection as a Markdown context file for an AI coding assistant. It is the 
 **Export context** in the app, served as `text/markdown`. Errors are still JSON.
 
 ```bash
-curl -H "Authorization: Bearer $CODSTASH_TOKEN" \
-  $CODSTASH_URL/api/v1/collections/COLLECTION_ID/context > CONTEXT.md
+curl -H "Authorization: Bearer $CORTEX_TOKEN" \
+  $CORTEX_URL/api/v1/collections/COLLECTION_ID/context > CONTEXT.md
 ```
 
 ## Error codes

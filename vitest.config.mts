@@ -8,8 +8,10 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    // Server actions, route handlers and utilities only. Components are deliberately not tested.
+    // Server actions, route handlers and utilities only, plus the CLI (`cli/`). Components are
+    // deliberately not tested.
     include: [
+      "cli/src/**/*.test.ts",
       "src/actions/**/*.test.ts",
       "src/app/api/**/*.test.ts",
       "src/i18n/**/*.test.ts",

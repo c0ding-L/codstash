@@ -35,12 +35,18 @@ every route) and `npm run lint`.
 `tsc` is not exposed as a script; `npx tsc --noEmit` works if you want typecheck without the
 full build.
 
+The CLI (`cli/`, binary `cortex`) is its own npm package, outside the root `tsconfig.json` and
+ESLint. Its tests run with the root `npm test`; it builds and typechecks from `cli/`, through
+Windows npm like the rest: `cmd.exe /c "E: && cd \PROGRAMMING\CODE\codstash\cli && npm install && npm run typecheck && npm run build"`.
+The build bakes in the production URL, the `PRODUCTION_URL` constant in `cli/tsup.config.ts`
+(`CORTEX_DEFAULT_URL` overrides it), and fails without one.
+
 ## Testing
 
 Vitest runs in a Node environment and only picks up `src/actions/**/*.test.ts`,
-`src/app/api/**/*.test.ts`, `src/i18n/**/*.test.ts` and `src/lib/**/*.test.ts`. **Server
-actions, route handlers and utilities only — components are not tested**, so there is no jsdom or Testing Library. Tests sit
-next to the file they cover.
+`src/app/api/**/*.test.ts`, `src/i18n/**/*.test.ts`, `src/lib/**/*.test.ts` and
+`cli/src/**/*.test.ts`. **Server actions, route handlers, utilities and the CLI only — components
+are not tested**, so there is no jsdom or Testing Library. Tests sit next to the file they cover.
 
 - `setupFiles` mocks `next-intl/server` with the real catalogs, in English; call
   `setTestLocale("fr")` from `@/lib/__fixtures__/i18n-setup` for a French case. A route handler

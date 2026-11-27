@@ -1,0 +1,25 @@
+{
+  "name": "@author-scope/cortex-cli",
+  "version": "0.1.0",
+  "description": "Command-line client for Cortex: search, copy, run and save snippets, prompts and commands.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "cortex": "dist/cortex.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "tsup": "^8.5.0",
+    "typescript": "^5"
+  }
+}
