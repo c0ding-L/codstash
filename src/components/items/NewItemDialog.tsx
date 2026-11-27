@@ -99,7 +99,7 @@ export function NewItemDialog({ uploadsAllowed, aiAllowed, customTypes, label, i
       <DialogTrigger render={<Button size="lg" aria-label={triggerLabel} />}>
         <Plus aria-hidden />
         {/* In the top bar, icon only on narrow screens, like "New Collection". */}
-        <span className={cn(iconOnlyOnMobile && "hidden sm:inline")}>{triggerLabel}</span>
+        <span className={cn(iconOnlyOnMobile && "hidden xl:inline")}>{triggerLabel}</span>
       </DialogTrigger>
       {/* Capped to the viewport and scrollable: a long snippet would push "Create item" off screen. */}
       <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg" showCloseButton={!saving}>

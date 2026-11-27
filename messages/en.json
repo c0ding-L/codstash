@@ -69,6 +69,7 @@
   "nav": {
     "types": "Types",
     "favorites": "Favorites",
+    "favoriteCollections": "Favorite collections",
     "recent": "Recent",
     "viewAllCollections": "View all collections",
     "upgrade": "Upgrade",
@@ -1001,8 +1002,9 @@
     },
     "register": {
       "title": "Create your account",
-      "description": "Register with your email and a password.",
+      "description": "Register with your email and a password, or GitHub.",
       "submit": "Create account",
+      "github": "Continue with GitHub",
       "pending": "Creating account…",
       "already": "Already registered?",
       "signIn": "Sign in",

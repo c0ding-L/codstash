@@ -131,13 +131,16 @@ export async function getRecentItems(
   return { items: items.map(toDashboardItem), totalCount };
 }
 
-/** Items in "Recently used": the user's items they copied, downloaded or opened, latest first. */
+/**
+ * Items in "Recently used": the user's items they copied, downloaded or opened, latest first.
+ * Pinned items are left out, since the dashboard already lists them under "Pinned items".
+ */
 export async function getRecentlyUsedItems(
   userId: string,
   limit: number = DASHBOARD_RECENTLY_USED_LIMIT,
 ): Promise<DashboardItem[]> {
   const items = await prisma.item.findMany({
-    where: { userId, lastUsedAt: { not: null } },
+    where: { userId, lastUsedAt: { not: null }, isPinned: false },
     orderBy: [{ lastUsedAt: "desc" }, { id: "asc" }],
     take: clampLimit(limit, MAX_ITEM_LIMIT),
     select: dashboardItemSelect,

@@ -314,7 +314,7 @@ describe("getPinnedItems", () => {
 });
 
 describe("getRecentlyUsedItems", () => {
-  it("reads only the user's used items, latest use first, up to the dashboard's count", async () => {
+  it("reads only the user's used, unpinned items, latest use first, up to the dashboard's count", async () => {
     findMany.mockResolvedValue([
       { id: "a", type: { slug: "note", name: "Note", icon: null, color: "slate", isSystem: true }, collections: [{ collection: { id: "c", name: "C" } }] },
     ]);
@@ -322,7 +322,7 @@ describe("getRecentlyUsedItems", () => {
     const items = await getRecentlyUsedItems(USER);
 
     expect(findMany.mock.calls[0]![0]).toMatchObject({
-      where: { userId: USER, lastUsedAt: { not: null } },
+      where: { userId: USER, lastUsedAt: { not: null }, isPinned: false },
       orderBy: [{ lastUsedAt: "desc" }, { id: "asc" }],
       take: DASHBOARD_RECENTLY_USED_LIMIT,
     });

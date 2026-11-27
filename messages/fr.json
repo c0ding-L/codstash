@@ -69,6 +69,7 @@
   "nav": {
     "types": "Types",
     "favorites": "Favoris",
+    "favoriteCollections": "Collections favorites",
     "recent": "Récents",
     "viewAllCollections": "Voir toutes les collections",
     "upgrade": "Passer à Pro",
@@ -1001,8 +1002,9 @@
     },
     "register": {
       "title": "Créez votre compte",
-      "description": "Inscrivez-vous avec votre adresse e-mail et un mot de passe.",
+      "description": "Inscrivez-vous avec votre adresse e-mail et un mot de passe, ou via GitHub.",
       "submit": "Créer le compte",
+      "github": "Continuer avec GitHub",
       "pending": "Création du compte…",
       "already": "Vous avez déjà un compte ?",
       "signIn": "Se connecter",

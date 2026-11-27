@@ -32,7 +32,7 @@ export function NewCollectionDialog() {
       <DialogTrigger render={<Button size="lg" variant="outline" aria-label={t("newCollection")} />}>
         <FolderPlus aria-hidden />
         {/* Icon only on narrow screens, so both buttons fit beside the search. */}
-        <span className="hidden sm:inline">{t("newCollection")}</span>
+        <span className="hidden xl:inline">{t("newCollection")}</span>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg" showCloseButton={!saving}>
         <DialogHeader>

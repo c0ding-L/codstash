@@ -53,7 +53,7 @@ function SnippetRow({
   const relativeTime = useRelativeTime();
   const collectionNames = formatCollectionNames(item.collections);
   return (
-    <li className="group relative grid transition-colors hover:bg-foreground/[0.02] sm:grid-cols-[minmax(0,1fr)_minmax(0,3fr)]">
+    <li className="group relative grid transition-colors hover:bg-foreground/[0.02] sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
       <ItemDrawerTrigger item={item} />
 
       {/* Literal emerald: hover variants need class names Tailwind can see, and this list is only snippets. */}

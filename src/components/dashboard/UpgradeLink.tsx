@@ -19,7 +19,7 @@ export async function UpgradeLink({ show }: { show: Promise<boolean> }) {
       className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "text-muted-foreground")}
     >
       <Sparkles aria-hidden />
-      <span className="hidden sm:inline">{t("upgrade")}</span>
+      <span className="hidden xl:inline">{t("upgrade")}</span>
     </Link>
   );
 }

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { signInWithGitHub } from "@/actions/auth";
 import { ResendVerificationButton } from "@/components/auth/ResendVerificationButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -111,6 +112,12 @@ export function RegisterForm() {
         {unverifiedEmail ? <ResendVerificationButton email={unverifiedEmail} /> : null}
         <Button type="submit" size="lg" disabled={pending}>
           {pending ? t("register.pending") : t("register.submit")}
+        </Button>
+      </form>
+
+      <form action={signInWithGitHub}>
+        <Button type="submit" variant="outline" size="lg" className="w-full">
+          {t("register.github")}
         </Button>
       </form>
 

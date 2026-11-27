@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock, Folders, Layers, type LucideIcon, Star } from "lucide-react";
+import { Clock, Folders, LayoutDashboard, Layers, type LucideIcon, Star } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { connection } from "next/server";
@@ -8,6 +8,7 @@ import { Suspense } from "react";
 import { auth } from "@/auth";
 import { UserMenu } from "@/components/auth/UserMenu";
 import { AppSidebarSkeleton } from "@/components/dashboard/AppSidebarSkeleton";
+import { SidebarNavButton } from "@/components/dashboard/SidebarNavButton";
 import { TypeIconTile } from "@/components/items/TypeIconTile";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,7 +20,6 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import {
@@ -99,6 +99,24 @@ async function AppSidebarBody() {
   return (
     <>
       <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarNavButton href="/dashboard" exact tooltip={t("dashboard.title")}>
+                  <LayoutDashboard aria-hidden />
+                  <span>{t("dashboard.title")}</span>
+                </SidebarNavButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarNavButton href="/favorites" exact tooltip={t("favorites.title")}>
+                  <Star aria-hidden />
+                  <span>{t("favorites.title")}</span>
+                </SidebarNavButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
         <SidebarTypesGroup
           label={t("nav.types")}
           itemTypes={itemTypes
@@ -107,7 +125,7 @@ async function AppSidebarBody() {
         />
         {customTypes.length > 0 ? <SidebarCustomTypesGroup label={t("nav.customTypes")} types={customTypes} /> : null}
         <SidebarCollectionsGroup
-          label={t("nav.favorites")}
+          label={t("nav.favoriteCollections")}
           variant="favorite"
           collections={favoriteCollections.map((collection) => ({ ...collection, primary: primaryView(collection) }))}
         />
@@ -122,13 +140,10 @@ async function AppSidebarBody() {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton
-                  tooltip={t("nav.viewAllCollections")}
-                  render={<Link href="/collections" />}
-                >
+                <SidebarNavButton href="/collections" exact tooltip={t("nav.viewAllCollections")}>
                   <Folders aria-hidden />
                   <span>{t("nav.viewAllCollections")}</span>
-                </SidebarMenuButton>
+                </SidebarNavButton>
               </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
@@ -169,10 +184,7 @@ function SidebarTypesGroup({ label, itemTypes }: { label: string; itemTypes: (It
 
             return (
               <SidebarMenuItem key={type.id}>
-                <SidebarMenuButton
-                  tooltip={label}
-                  render={<Link href={itemTypeHref(slug)} />}
-                >
+                <SidebarNavButton href={itemTypeHref(slug)} tooltip={label}>
                   <Icon
                     className={cn(color && colorClasses[color])}
                     aria-hidden
@@ -186,7 +198,7 @@ function SidebarTypesGroup({ label, itemTypes }: { label: string; itemTypes: (It
                       PRO
                     </Badge>
                   ) : null}
-                </SidebarMenuButton>
+                </SidebarNavButton>
               </SidebarMenuItem>
             );
           })}
@@ -209,13 +221,13 @@ function SidebarCustomTypesGroup({ label, types }: { label: string; types: Custo
             return (
               <SidebarMenuItem key={type.id}>
                 {/* The author's own name, never translated. */}
-                <SidebarMenuButton tooltip={type.name} render={<Link href={`/items/${type.slug}`} />}>
+                <SidebarNavButton href={`/items/${type.slug}`} tooltip={type.name}>
                   <Icon className={colorClasses[color]} aria-hidden />
                   <span>{type.name}</span>
                   <span className="ml-auto text-xs text-muted-foreground tabular-nums group-data-[collapsible=icon]:hidden">
                     {type.itemCount}
                   </span>
-                </SidebarMenuButton>
+                </SidebarNavButton>
               </SidebarMenuItem>
             );
           })}
@@ -250,10 +262,7 @@ function SidebarCollectionsGroup({ label, variant, collections }: SidebarCollect
 
             return (
               <SidebarMenuItem key={collection.id}>
-                <SidebarMenuButton
-                  tooltip={collection.name}
-                  render={<Link href={`/collections/${collection.id}`} />}
-                >
+                <SidebarNavButton href={`/collections/${collection.id}`} tooltip={collection.name}>
                   {variant === "favorite" ? (
                     <FavoriteIcon icon={icon} color={color} />
                   ) : (
@@ -265,7 +274,7 @@ function SidebarCollectionsGroup({ label, variant, collections }: SidebarCollect
                     />
                   )}
                   <span>{collection.name}</span>
-                </SidebarMenuButton>
+                </SidebarNavButton>
               </SidebarMenuItem>
             );
           })}

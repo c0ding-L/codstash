@@ -39,17 +39,17 @@ export async function StatsCards({ userId }: { userId: string }) {
   ];
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
       {cards.map(({ label, value, hint, icon: Icon }) => (
         <Card key={label}>
           <CardContent className="flex flex-col gap-1">
-            <div className="flex items-center justify-between">
+            <div className="flex items-start justify-between gap-2">
               <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                 {label}
               </span>
-              <Icon className="size-4 text-muted-foreground" aria-hidden />
+              <Icon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
             </div>
-            <span className="text-3xl font-semibold tabular-nums">{value}</span>
+            <span className="text-2xl font-semibold tabular-nums sm:text-3xl">{value}</span>
             <span className="text-xs text-muted-foreground">{hint}</span>
           </CardContent>
         </Card>
