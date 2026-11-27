@@ -14,6 +14,12 @@ Not Started
 
 ---
 
+Previous feature (completed) — UI layout fixes: from a Playwright UI review, the sidebar
+highlights the current page and the register page offers GitHub, plus tablet and phone layout
+fixes. Outcome in the History below.
+
+---
+
 Previous feature (completed) — D1 Public sharing: a collection or a single item gets a
 read-only public link (`/s/<id>`, `/s/i/<id>`) to send to a friend or a colleague, no account
 needed. Outcome in the History below.
@@ -3150,3 +3156,27 @@ Environment notes that outlive any one feature:
     "on" requests for one target can leave the first link dead; the public top bar shows
     "Sign In" to a signed-in owner.
   - 1,700 tests, build and lint green. Fast-forward merged into `main`; branch deleted.
+- 2026-11-27 — UI layout fixes, from a Playwright UI review (`740e7b0`).
+  - Asked by the author: review the UI with Playwright, then fix everything. The ui-reviewer
+    agent could not run (Playwright MCP failed to connect); a Playwright script in the
+    scratchpad drove the pages instead.
+  - Sidebar: `SidebarNavButton` (client leaf, `usePathname`) sets `isActive` and
+    `aria-current`; `isNavActive` in `src/lib/nav-active.ts` (prefix only on a whole segment,
+    tested). New top group Dashboard / Favorites (reusing `dashboard.title`, `favorites.title`);
+    favorites group renamed `nav.favoriteCollections`.
+  - Below 1024px the sidebar is the sheet: `MOBILE_BREAKPOINT` 1024 and `md:` → `lg:` in
+    `ui/sidebar.tsx` (shadcn file edited, approved). The sheet closes when a link is picked.
+  - Top-bar labels (Upgrade, New Collection, New Item) from `xl`: with `lg`, the open sidebar
+    left ~768px between 1024 and 1280 and the search collapsed under its `⌘K` badge again.
+  - Register: "Continue with GitHub" / « Continuer avec GitHub » (DeepL rendered "Sign up with
+    GitHub" as « Inscrivez-vous sur GitHub »). « Collections favorites » replaces DeepL's
+    « Collections favoris » (glossary forces « favoris »), matching
+    `dashboard.stats.favoriteCollections`.
+  - Dashboard stats 2×2 on phones; `getRecentlyUsedItems` excludes pinned items. Snippet list
+    columns 1fr/2fr (the preview fade already existed). Dropped from the review: top-bar icon
+    buttons already had `aria-label`s.
+  - Known limit, from review: with more than 5 pinned items, the ones past the "Pinned items"
+    cap show in neither dashboard list.
+  - 1,704 tests, build and lint green. Playwright checked active links, the GitHub button, the
+    sheet at 768px and no overflow at 390/768/1024/1100px. Fast-forward merged into `main`;
+    branch deleted.
