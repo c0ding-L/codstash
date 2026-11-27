@@ -14,6 +14,12 @@ Not Started
 
 ---
 
+Previous feature (completed) — C3 MCP server: a Model Context Protocol endpoint at `/api/mcp`
+so Claude Code, Cursor and other MCP clients search, read and save items with C1's tokens.
+Third step of `docs/roadmap-v2.md` § C. Outcome in the History below.
+
+---
+
 Previous feature (completed) — C2 REST API v1: a JSON API under `/api/v1`, authenticated with
 C1's tokens, for the CLI, scripts and a later browser extension. Second step of
 `docs/roadmap-v2.md` § C. Outcome in the History below.
@@ -2915,3 +2921,53 @@ Environment notes that outlive any one feature:
   - Not done: the existing schema cases still live in `src/actions/items.test.ts`;
     `item-schemas.test.ts` keeps its 2 link cases.
   - 1,491 tests, build and lint green. Merged into `main` (fast-forward); branch deleted.
+- 2026-11-27 — C3 MCP server (`9c50147`, prompts `480ebb6`).
+  - Spec: `context/features/mcp-server-spec.md`.
+  - **Library:** `@modelcontextprotocol/server@2.4.0`, its `createMcpHandler`: a fresh server per
+    request, no session store, serving the 2026-07-28 protocol and 2025-era clients (stateless
+    fallback; GET/DELETE answer 405). Both candidates checked in Context7 first:
+    - Not `mcp-handler@2.4.0`: it wraps the same package, adds OpenTelemetry peers, and its
+      auth wrapper targets MCP OAuth (out of scope).
+    - Not `@modelcontextprotocol/sdk@1.x`: the older stack, which pulls in express and hono.
+  - **Route** `src/app/api/mcp/route.ts` (`maxDuration = 60`): `authenticateApi(request,
+    "read")` first, so a missing or bad bearer is a 401 before any MCP processing and every
+    request counts against `api`. The caller goes to the server in `authInfo.extra`;
+    `ApiCaller` gained `isPro`.
+  - **Tools** (`src/lib/mcp-tools.ts`, plain functions; registered in `src/lib/mcp-server.ts`):
+    - `search_items` (limit clamped to 20, 200-character one-line previews),
+      `get_item` (fields, then the content fenced with `fenceFor`), `list_collections`,
+      `get_collection_context` (`renderCollectionContext` capped at 100,000 characters,
+      warning included), `create_item`.
+    - `create_item` checks the write scope, Pro and `apiWrite` itself, each failure a tool
+      error. Validation messages go through the new `englishIssues` (`api-v1.ts`).
+    - A6's warning line on `create_item` (item still created), `get_item` and
+      `get_collection_context`.
+    - Bad input (zod) is already a tool error from the SDK.
+  - **Shared create:** `src/lib/api-create-item.ts` (`createItemFromApi`), used by
+    `POST /api/v1/items` and `create_item`; REST behaviour and tests unchanged.
+  - **Prompts** (second commit): `prompts/list` and `prompts/get` set on the low-level server,
+    not `registerPrompt`, so prompts are read only for those methods.
+    - Name `<slugify(title) ?? "prompt">-<shortId(id)>`.
+    - Arguments from `variableFields(parseVariables())`, all optional, defaults as
+      descriptions.
+    - `prompts/get` finds the row by id suffix, then matches the full name; unknown is
+      `-32602`. A prompt older than the 50 listed can still be fetched by name.
+  - **Setup card** (Settings › API tokens): Claude Code and Cursor snippets
+    (`src/lib/mcp-setup.ts`). In the one-time token view they are filled with the new token,
+    in a collapsed `<details>`.
+    - Origin: `AUTH_URL`, else the request host. Not `APP_URL`: in dev it is the
+      payment-webhook tunnel.
+    - French from DeepL (glossary, `prefer_more`). Fixed by hand: "Cursor" (DeepL wrote
+      « Curseur »), « espace de stockage » for stash, « Lecture + écriture », « Copier »,
+      curly apostrophes. One English sentence was reworded and run through DeepL again.
+  - **Manual check:**
+    - Tools and prompts were also called with curl.
+    - Claude Code 2.1.332 (`claude -p`, temporary MCP config) against `next dev`, on the
+      develop demo account, set to Pro for the test, then back to `proUntil = null`.
+      `search_items` "debounce" found useDebounce, `get_item` returned the fenced TypeScript,
+      and `create_item` saved "Claude Code MCP check", seen in Notes. Back on Free,
+      `create_item` returned the Pro tool error.
+    - Test notes, the `mcp` tag and both tokens were deleted or revoked afterwards.
+  - The running dev server (Windows) missed WSL edits to `api-auth.ts` until the file was
+    touched: restart it after editing from WSL.
+  - 1,519 tests, build and lint green. Merged into `main` (fast-forward); branch deleted.
