@@ -3,7 +3,7 @@ import { getRequestConfig } from "next-intl/server";
 import { cache } from "react";
 
 import { auth } from "@/auth";
-import { LOCALE_COOKIE, resolveLocale, type Locale, type LocaleSource } from "@/lib/locale";
+import { isLocale, LOCALE_COOKIE, resolveLocale, type Locale, type LocaleSource } from "@/lib/locale";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -41,10 +41,11 @@ async function savedUserLocale(): Promise<string | null> {
 
 /**
  * next-intl's per-request config. No locale routing, so this always returns a locale itself;
- * without one next-intl throws "Unable to find next-intl locale".
+ * without one next-intl throws "Unable to find next-intl locale". A locale passed explicitly
+ * (`getTranslations({ locale: "en" })`, as the REST API does) wins over the request's.
  */
-export default getRequestConfig(async () => {
-  const { locale } = await getRequestLocale();
+export default getRequestConfig(async ({ locale: explicit }) => {
+  const locale = isLocale(explicit) ? explicit : (await getRequestLocale()).locale;
 
   return {
     locale,

@@ -145,6 +145,7 @@
       "heading": "Jetons API",
       "title": "Jetons API personnels",
       "description": "Les jetons permettent à l’interface en ligne de commande (CLI), au serveur MCP et à l’API REST d’accéder à votre espace de stockage. L’accès en lecture est gratuit ; l’accès en lecture et en écriture nécessite la formule Pro. Nombre maximal de jetons actifs : {max, number}. La modification ou la réinitialisation de votre mot de passe entraîne la révocation de tous ces jetons.",
+      "docs": "Consultez la documentation de l’API",
       "empty": "Il n’y a pas encore de jetons API.",
       "new": "Nouveau jeton",
       "atCap": "Vous disposez de {max, number} jetons actifs. Révoquez-en un pour en créer un autre.",

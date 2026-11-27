@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import type { ErrorKey } from "@/i18n/error-keys";
+import type { Locale } from "@/lib/locale";
 
 interface IssueLike {
   message?: string;
@@ -13,9 +14,10 @@ interface IssueLike {
 /**
  * The `errors` messages in the request's language, for server actions and route handlers.
  * `issue` turns a zod issue whose message is an `ErrorKey` into its text, `{max}` included.
+ * `locale` overrides the request's: the REST API (C2) always answers in English.
  */
-export async function getErrors() {
-  const t = await getTranslations("errors");
+export async function getErrors({ locale }: { locale?: Locale } = {}) {
+  const t = locale ? await getTranslations({ locale, namespace: "errors" }) : await getTranslations("errors");
 
   const message = (key: ErrorKey, values?: Record<string, string | number>) => t(key, values);
 
@@ -25,5 +27,8 @@ export async function getErrors() {
     return t(key as ErrorKey, { max: Number(found?.maximum ?? 0), min: Number(found?.minimum ?? 0) });
   };
 
-  return { message, issue };
+  /** Whether this text is a key of the `errors` messages, rather than a message already. */
+  const isKey = (text: string) => t.has(text as ErrorKey);
+
+  return { message, issue, isKey };
 }

@@ -23,7 +23,13 @@ afterEach(() => {
 
 vi.mock("next-intl/server", () => ({
   getLocale: async () => testLocale,
-  getTranslations: async (namespace?: string) =>
+  // The config callback itself, so `src/i18n/request.ts` can be called in a test.
+  getRequestConfig: (create: unknown) => create,
+  // A string namespace follows the test locale; `{ locale, namespace }` forces one, as on the server.
+  getTranslations: async (arg?: string | { locale: "en" | "fr"; namespace?: string }) => {
+    const locale = typeof arg === "object" ? arg.locale : testLocale;
+    const namespace = typeof arg === "object" ? arg.namespace : arg;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- the namespace is a runtime string here
-    createTranslator({ locale: testLocale, messages: testLocale === "fr" ? fr : en, namespace: namespace as any }),
+    return createTranslator({ locale, messages: locale === "fr" ? fr : en, namespace: namespace as any });
+  },
 }));

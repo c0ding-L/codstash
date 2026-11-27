@@ -9,7 +9,12 @@ export default defineConfig({
   test: {
     environment: "node",
     // Server actions, route handlers and utilities only. Components are deliberately not tested.
-    include: ["src/actions/**/*.test.ts", "src/app/api/**/*.test.ts", "src/lib/**/*.test.ts"],
+    include: [
+      "src/actions/**/*.test.ts",
+      "src/app/api/**/*.test.ts",
+      "src/i18n/**/*.test.ts",
+      "src/lib/**/*.test.ts",
+    ],
     // Mocks `next-intl/server` with the real message catalogs, for every test file.
     setupFiles: ["src/lib/__fixtures__/i18n-setup.ts"],
     // Without this, Node loads next-auth directly, and it can't resolve its

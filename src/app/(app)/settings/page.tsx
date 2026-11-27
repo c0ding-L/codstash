@@ -25,6 +25,9 @@ import { getProfile } from "@/lib/db/profile";
 import { FREE_LIMITS, canUseApiWrite, canUseCustomTypes } from "@/lib/usage-limits";
 import { pageMetadata } from "@/i18n/labels-server";
 
+/** The REST API reference (C2), `docs/api.md` in the repository. */
+const API_DOCS_URL = "https://github.com/c0ding-L/codstash/blob/main/docs/api.md";
+
 /** Server actions take the page's limit: Suggest Tags and Description wait on a slow free model. */
 export const maxDuration = 60;
 
@@ -152,7 +155,17 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         <Card>
           <CardHeader>
             <CardTitle>{t("api.title")}</CardTitle>
-            <CardDescription>{t("api.description", { max: MAX_API_TOKENS })}</CardDescription>
+            <CardDescription className="flex flex-col gap-2">
+              <span>{t("api.description", { max: MAX_API_TOKENS })}</span>
+              <a
+                href={API_DOCS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-fit text-primary underline underline-offset-4"
+              >
+                {t("api.docs")}
+              </a>
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <ApiTokensManager tokens={apiTokens} canWrite={canUseApiWrite(plan)} max={MAX_API_TOKENS} />

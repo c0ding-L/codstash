@@ -145,6 +145,7 @@
       "heading": "API tokens",
       "title": "Personal API tokens",
       "description": "Tokens let the CLI, the MCP server and the REST API reach your stash. Read access is free; read + write needs Pro. At most {max, number} active tokens. Changing or resetting your password revokes them all.",
+      "docs": "Read the API documentation",
       "empty": "No API tokens yet.",
       "new": "New token",
       "atCap": "You have {max, number} active tokens. Revoke one to create another.",

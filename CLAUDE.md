@@ -38,8 +38,8 @@ full build.
 ## Testing
 
 Vitest runs in a Node environment and only picks up `src/actions/**/*.test.ts`,
-`src/app/api/**/*.test.ts` and `src/lib/**/*.test.ts`. **Server actions, route handlers and
-utilities only — components are not tested**, so there is no jsdom or Testing Library. Tests sit
+`src/app/api/**/*.test.ts`, `src/i18n/**/*.test.ts` and `src/lib/**/*.test.ts`. **Server
+actions, route handlers and utilities only — components are not tested**, so there is no jsdom or Testing Library. Tests sit
 next to the file they cover.
 
 - `setupFiles` mocks `next-intl/server` with the real catalogs, in English; call
