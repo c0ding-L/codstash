@@ -65,7 +65,7 @@ nor custom types exist. A1 and A2 come first, and the rest of A follows in small
   throttle so one session does not write each time.
 - A "Recently used" section on the dashboard, and a sort option in the lists.
 
-### A6. Secret detection
+### A6. Secret detection — done 2026-11-27 (`ce8de92`)
 - A pure `src/lib/secrets.ts` matches known patterns: AWS keys, `ghp_…`/`github_pat_…`, `sk-…`,
   `-----BEGIN … PRIVATE KEY-----`, JWTs and `.env`-style `KEY=value` lines.
 - **Warn and confirm, never block**, on save and before an AI call. Regexes catch fakes

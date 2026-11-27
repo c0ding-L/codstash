@@ -1,57 +1,22 @@
-# Current Feature: A6 Secret detection
+# Current Feature
 
 ## Status
 
-In Progress
+Not Started
 
 ## Goals
 
-- `src/lib/secrets.ts` (pure, client-safe): `detectSecrets(text)` returns
-  `SecretFinding[]` (`{ kind, line, preview }`), the preview masked to the first 4 characters
-  then `…`, never the whole value.
-- Kinds: `privateKey`, `aws`, `github`, `openai` / `anthropic` / `openrouter`, `stripe`,
-  `slack`, `google`, `jwt`, `connectionString`, `envAssignment` (patterns in the spec).
-- Placeholders ignored: values of only `x`/`X`/`*`/`.`, `<...>`, `${...}`, `{{...}}`, values
-  containing `your`, `example`, `changeme`, `placeholder`, `dummy`, `fake` (any case), `sk-`
-  with fewer than 20 real characters, and the literal `password` in a connection string.
-- Linear time: no nested quantifiers, input capped at `ITEM_LIMITS.content`; a 100,000-character
-  input scans in under 50 ms.
-- `scanItem({ title, description, content, url })` scans every field, the URL included.
-- `containsSecrets(item)` boolean helper for D1 (block sharing) and C3 (MCP warning line).
-- `SecretWarningDialog` lists each kind, line and masked preview, with the "looks like a secret"
-  copy:
-  - on save (New Item and the drawer's edit form): "Edit" / "Save anyway"; no server-side block.
-  - before an AI call (Suggest Tags, Description, Explain, Optimize): "Send anyway" / "Cancel",
-    scanning what is on screen, no extra request.
-- Once confirmed for an item, do not ask again for the same content in the session (in-memory,
-  keyed by a hash of the content).
-- Strings in `secrets.*`, EN and FR (FR via DeepL + glossary).
-- Tests in `src/lib/secrets.test.ts`: one made-up true positive and one placeholder per kind,
-  the line number, the masking, the 100k timing, `scanItem` covering the URL.
-- Browser check: a note with a fake `ghp_…` token shows the dialog and "Save anyway" saves it;
-  Explain on a snippet with a fake key shows the dialog before any request.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Spec: `context/features/secret-detection-spec.md`. Roadmap: `docs/roadmap-v2.md` § A6. Must
-  ship before C3 (MCP) and D1 (public collections). Only D1 sharing hard-blocks; save and AI
-  only warn.
-- Before writing the dialog copy, check the current terms of the free OpenRouter model in use
-  (`nvidia/nemotron-3-ultra-550b-a55b:free`, `src/lib/ai-client.ts`): does the provider log or
-  train on prompts? Record the answer here with its source link and date, and claim nothing
-  unverified.
-- **Checked 2026-11-27.** NVIDIA is the only provider of the `:free` variant. Its notice on
-  https://openrouter.ai/nvidia/nemotron-3-ultra-550b-a55b:free/providers says: "Your use is logged
-  for security purposes and to improve NVIDIA products and services", the logged data "is not
-  linked to your identity", and "please do not upload any confidential information or personal
-  data". OpenRouter itself "does not use your Inputs or Outputs for model training"
-  (https://openrouter.ai/privacy, updated 2026-08-31). **Not verified:** whether NVIDIA trains on
-  prompts, and how long it keeps them (the NVIDIA API Trial Terms PDF could not be read). So the
-  dialog says only that the provider logs requests to improve its products; it says nothing about
-  training or retention.
-- Not a guarantee: the copy says "looks like", never claims full detection.
-- Content cap: `ITEM_LIMITS` in `src/lib/item-limits.ts`.
-- Made-up test values only, never real keys.
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — A6 Secret detection: content that looks like a secret is flagged
+before it is saved or sent to the AI provider, with a masked preview. Sixth step of
+`docs/roadmap-v2.md`. Outcome in the History below.
 
 ---
 
@@ -2753,3 +2718,29 @@ Environment notes that outlive any one feature:
     collections by name. Name sorts left as they are.
   - New `src/lib/db/context-export.test.ts`. Browser: four dashboard loads, one order.
   - 1,254 tests, build and lint green. Merged into `main` (fast-forward); branch deleted.
+- 2026-11-27 — A6 Secret detection (`ce8de92`).
+  - Spec: `context/features/secret-detection-spec.md`.
+  - **Detector:** pure `src/lib/secrets.ts`. `detectSecrets` (kind, line, preview of the first
+    4 characters then `…`), `scanItem` (title, description, content, URL, with the field) and
+    `containsSecrets` for D1 and C3. The 12 kinds of the spec; the spec's placeholders ignored.
+    Scanned per line, capped at `ITEM_LIMITS.content`. JWTs, database URLs and env lines are
+    matched as one run and checked in code, so near-miss input cannot backtrack (100k
+    characters under 50 ms, adversarial inputs included). The Google pattern ends on a
+    lookahead instead of the spec's `\b`, which fails on a key ending in `-` or `_`.
+  - **Known gaps, decided on review:** a `sk-` value without a digit is not a key (avoids
+    `sk-learn-…`); a database password holding a raw `/` is not reported (URLs encode it).
+  - **Dialog:** `useSecretCheck` + `SecretWarningDialog`. On save in New Item and the edit form
+    ("Edit" / "Save anyway"), before Suggest Tags, Description, Explain and Optimize ("Cancel" /
+    "Send anyway"), each scanning the fields its request sends. A confirmation is remembered in
+    memory by a hash of the content **and the mode**: agreeing to save is not agreeing to send.
+  - **AI provider policy, checked 2026-11-27:** NVIDIA (sole provider of the free model) logs
+    use "to improve NVIDIA products and services"; training and retention not verified. The AI
+    dialog says only that. Sources in the spec's Notes.
+  - French from DeepL; changed: curly apostrophes and « Clé Stripe » (DeepL: « Clé de bande »).
+    « à qui vous le partagez » kept as DeepL wrote it.
+  - **Browser-checked** on develop: save warning on Content, no request before confirming,
+    "Edit" keeps the form, "Save anyway" saves; Explain (demo set to Pro for the test, then
+    back) warns before any request, Cancel sends nothing, "Send anyway" one request, no second
+    ask. Test items deleted. Not run in a browser: Suggest Tags, Description, Optimize (same
+    hook).
+  - 1,303 tests, build and lint green. Merged into `main` (fast-forward); branch deleted.
