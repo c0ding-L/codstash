@@ -1,17 +1,82 @@
-# Current Feature
+# Current Feature: Fill from a file (New item dialog)
 
 ## Status
 
-Not Started
+In Progress
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+Spec: `@context/features/fill-from-file-spec.md`. Follow-up to A4 Import, outside
+`docs/roadmap-v2.md`; proposed by the author on 2026-11-27.
+
+- In the New item dialog, a "Fill from a file" button next to the Content label (`FileUp`
+  icon) opens the file picker and fills the form from one local text file, read in the
+  browser. The item is then created through the existing `createItem` action, with the usual
+  limits (Free and Pro).
+- Shown only for types with a content field: Snippet, Command, Prompt, Note and custom types.
+  Never for File and Image, and no new drop zone.
+- **The type chosen in the dialog is kept.** The title is filled only when empty, the content
+  always, and the language (Snippet, Command, custom types) from the extension through
+  `languageForExtension`; an unknown extension leaves the language as it is. Description, tags
+  and collections are untouched.
+- Content that is empty, or equal to the custom type's untouched template, is replaced without
+  asking. Otherwise a confirm dialog ("Replace the content with this file?", Replace / Cancel)
+  asks first.
+- Refused with a toast, nothing filled: an extension A4 does not import
+  (`isImportableFileName`), content over 100,000 characters (a file over 400,000 bytes is
+  refused unread), a file that cannot be read.
+- A pure `fileToFormFill(name, text, type)` returns `{ title, content, language? }` or
+  `{ error: "unsupported" | "tooLong" }`, with unit tests.
+- A link "Import several items…" in the dialog goes to `/settings#data` and closes the dialog.
+- EN and FR strings (FR from DeepL). Browser checks: `.ts` into a Snippet, `.md` into a Note,
+  confirm and cancel over typed content, a custom type with its template, a refused `.png`,
+  the Settings link, FR at 375 px.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
-
+- **Where the button goes:** `ContentField` (`src/components/items/item-form-fields.tsx:110`)
+  is shared by `NewItemDialog` and `ItemEditForm` (the drawer, out of scope). `Field` already
+  has an `action` slot next to its label (line 37, used by `TagsField` for Suggest Tags), so
+  `ContentField` can take an optional `action` that only `NewItemDialog` passes.
+- **Dialog state:** `NewItemDialog.tsx` holds `title`, `content` and `language` in
+  `useState` (lines 146–151). `hasContent` and `hasLanguage` are at lines 158–159; a custom
+  type renders with the note fields plus a language (`fieldsSlug`, line 157). The template
+  rule ("fills the content only while nothing has been typed") is at line 236: the "untouched
+  template" check compares with the selected custom type's `template`.
+- **Reuse from A4** (`src/lib/import.ts`): `detectFileType` (line 309) and
+  `isImportableFileName` (line 318). `titleOf` (line 299) is not exported: export it, or put
+  `fileToFormFill` in `import.ts` next to it. `languageForExtension` is in `code-language.ts`.
+- **No collision:** the File/Image drop zone (`FileUpload`) renders only when that type is
+  chosen (`NewItemDialog.tsx:274`). The new control is a button, so it must not look like
+  that zone.
+- **To check before implementing:** what Monaco (`CodeEditor.tsx`) and the Markdown editor do
+  with a dropped file. Neither has an `onDrop` handler. Leave their behaviour as it is; the
+  spec adds no drop target.
+- The confirm dialog: `src/components/ui/alert-dialog.tsx` exists, as used by the delete
+  dialogs.
+- Never translated: the file's text is user content (memory "Translate ours, never user
+  input").
+- Branch: `feature/fill-from-file`. The spec file is still untracked; commit it with the
+  feature.
+- **Progress (2026-11-27)**: implemented; 1,241 tests, lint and build pass. Not committed.
+  - `fileToFormFill` and `MAX_FILL_FILE_BYTES` in `src/lib/import.ts`; `FillFromFileButton`
+    (`src/components/items/`); `ContentField` takes an optional `action`; the confirm dialog
+    and the "Import several items…" link in `NewItemDialog`.
+  - A `.md` file gives the language `markdown` to a type that has a language (Markdown is a
+    listed language); a `.txt` file gives none.
+  - French from DeepL. Fixed by hand: « Remplir depuis un fichier » instead of DeepL's
+    « Importer à partir d’un fichier » (which would read like the bulk import), typography.
+  - **Browser-checked** with the demo account, no item created: `.ts` into a Snippet (title,
+    TypeScript, code), typed content then `.md` (confirm shown, Cancel keeps, Replace swaps,
+    title kept), `.md` into a Note, `.png` refused with a toast, the link closes the dialog on
+    `/settings#data`, FR at 375 px without overflow.
+  - **Not verified in the browser:** a custom type with its untouched template (the demo has
+    no custom type on develop); the rule is in `handleFill`.
+  - **Review fixes:** the Settings link is inert while saving (closing there got past the
+    dialog's guard with a create in flight); the file type is checked before the size, so a
+    large image says "file type" and not "too long" (checked in the browser with a 2 MB
+    `.png`); `FileFill` lives in `import.ts`. The author keeps the link as it is: it drops what
+    was typed, like Cancel.
 ---
 
 Previous feature (completed) — A4 Import: any user imports items from a Cortex JSON export,

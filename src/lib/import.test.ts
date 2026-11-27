@@ -9,6 +9,7 @@ import {
   emptyImportResult,
   fromCortexExport,
   fromGist,
+  fileToFormFill,
   fromLooseFile,
   importBatchSchema,
   jsonBytes,
@@ -289,5 +290,34 @@ describe("mergeImportResults", () => {
     expect(merged).toMatchObject({ created: 5, collectionsCreated: 1, collectionLinksDropped: 2 });
     expect(merged.skipped).toEqual({ duplicate: 1, file: 0, tooLong: 0, invalid: 0, limit: 4 });
     expect(merged.invalidTitles).toHaveLength(MAX_INVALID_TITLES);
+  });
+});
+
+describe("fileToFormFill", () => {
+  it("fills the title without folders or extension, the content, and the language when asked", () => {
+    expect(fileToFormFill("src/hooks/useDebounce.ts", "export {}", { withLanguage: true })).toEqual({
+      title: "useDebounce",
+      content: "export {}",
+      language: "typescript",
+    });
+    expect(fileToFormFill("C:\\scripts\\deploy.sh", "npm start", { withLanguage: true })).toMatchObject({ title: "deploy", language: "shell" });
+  });
+
+  it("gives no language for a type without one, or an extension that names none", () => {
+    expect(fileToFormFill("query.sql", "SELECT 1", { withLanguage: false })).toMatchObject({ language: null });
+    expect(fileToFormFill("notes.txt", "Hi", { withLanguage: true })).toMatchObject({ title: "notes", language: null });
+    expect(fileToFormFill("notes.md", "# Hi", { withLanguage: true })).toMatchObject({ language: "markdown" });
+    expect(fileToFormFill("build.bat", "echo", { withLanguage: true })).toMatchObject({ language: null });
+  });
+
+  it("refuses a file type the import does not take, and content over the cap", () => {
+    expect(fileToFormFill("photo.png", "PNG", { withLanguage: true })).toEqual({ error: "unsupported" });
+    expect(fileToFormFill("Makefile", "all:", { withLanguage: true })).toEqual({ error: "unsupported" });
+    expect(fileToFormFill("big.md", "x".repeat(ITEM_LIMITS.content + 1), { withLanguage: false })).toEqual({ error: "tooLong" });
+  });
+
+  it("caps a very long file name to the title limit", () => {
+    const fill = fileToFormFill(`${"a".repeat(300)}.md`, "x", { withLanguage: false });
+    expect("title" in fill && fill.title.length).toBe(ITEM_LIMITS.title);
   });
 });

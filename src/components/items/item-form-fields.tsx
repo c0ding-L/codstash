@@ -104,15 +104,17 @@ interface ContentFieldProps {
   language: string;
   error?: string;
   onChange: (value: string) => void;
+  /** Shown next to the label: the New item dialog's "Fill from a file". */
+  action?: React.ReactNode;
 }
 
 /** The content: Monaco for code types, the Markdown editor for the others. */
-export function ContentField({ id, slug, value, language, error, onChange }: ContentFieldProps) {
+export function ContentField({ id, slug, value, language, error, onChange, action }: ContentFieldProps) {
   const t = useTranslations("itemForm");
   const fieldId = `${id}-content`;
 
   return (
-    <Field id={fieldId} label={t("content")} error={error}>
+    <Field id={fieldId} label={t("content")} error={error} action={action}>
       {isCodeType(slug) ? (
         <CodeEditor value={value} language={language} ariaLabel={t("content")} onChange={onChange} />
       ) : (

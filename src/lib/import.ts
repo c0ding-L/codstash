@@ -430,3 +430,31 @@ export const importBatchSchema = z.object({
   types: z.array(z.unknown()).max(IMPORT_BATCH_MAX_ITEMS).default([]),
   collections: z.array(z.unknown()).max(IMPORT_BATCH_MAX_ITEMS * ITEM_LIMITS.collections).default([]),
 });
+
+/** A file larger than this is over the content cap without reading it: UTF-8 is at most 4 bytes a character. */
+export const MAX_FILL_FILE_BYTES = ITEM_LIMITS.content * 4;
+
+/** What a file fills in the New item form. */
+export interface FileFill {
+  title: string;
+  content: string;
+  language: string | null;
+}
+
+export type FormFill = FileFill | { error: "unsupported" | "tooLong" };
+
+/**
+ * What a local file fills in the New item form, whose type the user already chose: the title
+ * (the name without its extension), the content and, when `withLanguage`, the language its
+ * extension gives (null when the extension names none). Same file types and content cap as
+ * the import's Files tab.
+ */
+export function fileToFormFill(name: string, text: string, { withLanguage }: { withLanguage: boolean }): FormFill {
+  if (!isImportableFileName(name)) return { error: "unsupported" };
+  if (text.length > ITEM_LIMITS.content) return { error: "tooLong" };
+  return {
+    title: titleOf(name).slice(0, ITEM_LIMITS.title),
+    content: text,
+    language: withLanguage ? languageForExtension(extensionOf(name)) : null,
+  };
+}

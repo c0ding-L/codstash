@@ -506,7 +506,15 @@
     "uploading": "Import en cours…",
     "creating": "Création…",
     "create": "Créer l’élément",
-    "customProOnly": "La création d’éléments d’un type personnalisé est réservée à la formule Pro."
+    "customProOnly": "La création d’éléments d’un type personnalisé est réservée à la formule Pro.",
+    "fillFromFile": "Remplir depuis un fichier",
+    "fillUnsupported": "Ce type de fichier ne permet pas de remplir un élément. Veuillez utiliser un fichier Markdown, un fichier texte ou un fichier de code.",
+    "fillTooLong": "Ce fichier contient plus de 100 000 caractères.",
+    "fillUnreadable": "Ce fichier n’a pas pu être lu.",
+    "replaceTitle": "Souhaitez-vous remplacer le contenu par ce fichier ?",
+    "replaceBody": "Ce que vous avez saisi dans le champ « Contenu » sera remplacé par le texte du fichier.",
+    "replace": "Remplacer",
+    "importSeveral": "Importer plusieurs éléments…"
   },
   "upload": {
     "remove": "Retirer le fichier",

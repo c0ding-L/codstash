@@ -1,16 +1,27 @@
 "use client";
 
-import { Crown, Plus } from "lucide-react";
+import { Crown, FileInput, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Suspense, use, useId, useState, useTransition, type TransitionStartFunction } from "react";
 import { toast } from "sonner";
 
 import { type CreatableType, createItem, type CreateItemField, type CreateItemInput } from "@/actions/items";
+import { FillFromFileButton } from "@/components/items/FillFromFileButton";
 import { FileUpload } from "@/components/items/FileUpload";
 import { GenerateDescriptionButton } from "@/components/items/GenerateDescription";
 import { SuggestTagsButton, TagSuggestionList, useTagSuggestions } from "@/components/items/SuggestTags";
 import { CollectionsField, ContentField, Field, LanguageField, TagsField, useFieldErrors } from "@/components/items/item-form-fields";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,6 +37,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { isUploadKind } from "@/lib/files";
+import type { FileFill } from "@/lib/import";
 import {
   colorClasses,
   customTypeIcon,
@@ -152,6 +164,8 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed
   const [url, setUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
+  /** A file read while content was already typed, waiting for the user to confirm the replace. */
+  const [pendingFill, setPendingFill] = useState<FileFill | null>(null);
 
   // A custom type is a text type: a note's Markdown content, plus a language.
   const fieldsSlug = customType ? "note" : type;
@@ -169,6 +183,30 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed
   });
   const uploadKind = !customType && isUploadKind(type) ? type : null;
   const canSubmit = title.trim() !== "" && (!hasUrl || url.trim() !== "") && (!uploadKind || file !== null);
+
+  /**
+   * Fills the form from a file, keeping the chosen type: the title only when empty, the
+   * content, and the language when the type has one and the extension names it.
+   */
+  function applyFill(fill: FileFill) {
+    if (!title.trim()) {
+      setTitle(fill.title);
+      clearFor("title");
+    }
+    setContent(fill.content);
+    clearFor("content");
+    if (hasLanguage && fill.language) {
+      setLanguage(fill.language);
+      clearFor("language");
+    }
+  }
+
+  /** Typed content is replaced only after a confirm; an empty one, or the untouched template, at once. */
+  function handleFill(fill: FileFill) {
+    const untouched = !content.trim() || (customType?.template != null && content === customType.template);
+    if (untouched) applyFill(fill);
+    else setPendingFill(fill);
+  }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -319,8 +357,30 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed
             setContent(value);
             clearFor("content");
           }}
+          action={<FillFromFileButton withLanguage={hasLanguage} disabled={saving} onFill={handleFill} />}
         />
       ) : null}
+
+      <AlertDialog open={pendingFill !== null} onOpenChange={(next) => !next && setPendingFill(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("replaceTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("replaceBody")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{tc("cancel")}</AlertDialogCancel>
+            <Button
+              type="button"
+              onClick={() => {
+                if (pendingFill) applyFill(pendingFill);
+                setPendingFill(null);
+              }}
+            >
+              {t("replace")}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <TagsField
         id={id}
@@ -341,6 +401,26 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed
           clearFor("collectionIds");
         }}
       />
+
+      {/* Bulk import lives in Settings › Data. `onCreated` only closes the dialog, which stays
+          mounted in the top bar across navigations. Inert while saving: closing here would get
+          past the dialog's own guard and leave with a create in flight. */}
+      <Link
+        href="/settings#data"
+        onClick={(event) => {
+          if (saving) event.preventDefault();
+          else onCreated();
+        }}
+        aria-disabled={saving || undefined}
+        tabIndex={saving ? -1 : undefined}
+        className={cn(
+          "flex items-center gap-1.5 self-start text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline",
+          saving && "pointer-events-none opacity-50",
+        )}
+      >
+        <FileInput className="size-3.5" aria-hidden />
+        {t("importSeveral")}
+      </Link>
 
       <DialogFooter>
         <DialogClose render={<Button type="button" variant="ghost" />} disabled={saving}>

@@ -506,7 +506,15 @@
     "uploading": "Uploading…",
     "creating": "Creating…",
     "create": "Create item",
-    "customProOnly": "Creating items of a custom type is a Pro feature."
+    "customProOnly": "Creating items of a custom type is a Pro feature.",
+    "fillFromFile": "Fill from a file",
+    "fillUnsupported": "This file type cannot fill an item. Use a Markdown, text or code file.",
+    "fillTooLong": "This file is over 100,000 characters.",
+    "fillUnreadable": "This file could not be read.",
+    "replaceTitle": "Replace the content with this file?",
+    "replaceBody": "What you typed in Content will be replaced by the file’s text.",
+    "replace": "Replace",
+    "importSeveral": "Import several items…"
   },
   "upload": {
     "remove": "Remove file",
