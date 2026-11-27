@@ -13,7 +13,7 @@ interface PromptListProps {
   now: string;
 }
 
-const EMPTY_PREVIEW: PromptPreview = { excerpt: "", words: 0, tokens: 0, tags: [] };
+const EMPTY_PREVIEW: PromptPreview = { excerpt: "", words: 0, tokens: 0, tags: [], variables: 0 };
 
 /** The prompt list: a reading column, each prompt's own words quoted, ready to copy. */
 export function PromptList({ items, previews, now }: PromptListProps) {
@@ -29,6 +29,7 @@ export function PromptList({ items, previews, now }: PromptListProps) {
 function PromptEntry({ item, preview, now }: { item: DashboardItem; preview: PromptPreview; now: string }) {
   const tc = useTranslations("common");
   const t = useTranslations("items");
+  const tv = useTranslations("variables");
   const relativeTime = useRelativeTime();
   const quote = preview.excerpt || item.description;
 
@@ -43,6 +44,12 @@ function PromptEntry({ item, preview, now }: { item: DashboardItem; preview: Pro
         ) : null}
         {item.isFavorite ? (
           <Star className="size-3 shrink-0 fill-amber-400 text-amber-400" aria-label={tc("favorite")} />
+        ) : null}
+        {preview.variables > 0 ? (
+          <span className="shrink-0 rounded border border-amber-400/30 bg-amber-400/10 px-1 font-mono text-[10px] leading-4 text-amber-500 dark:text-amber-300">
+            <span aria-hidden>{`{{ }} ${preview.variables}`}</span>
+            <span className="sr-only">{tv("count", { count: preview.variables })}</span>
+          </span>
         ) : null}
       </div>
 
@@ -81,6 +88,8 @@ function PromptEntry({ item, preview, now }: { item: DashboardItem; preview: Pro
           itemId={item.id}
           title={item.title}
           label={t("copyPrompt")}
+          type="prompt"
+          hasVariables={preview.variables > 0}
           // Hidden until hover only with a mouse: a touch screen, even a wide one, never hovers.
           className="shrink-0 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:focus-visible:opacity-100"
         />

@@ -3,13 +3,12 @@
 import { Copy, Pencil, Pin, Star, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { useTemplateCopy } from "@/components/items/FillVariablesDialog";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useFavoriteToggle } from "@/hooks/use-favorite-toggle";
 import { usePinToggle } from "@/hooks/use-pin-toggle";
-import { useClipboard } from "@/i18n/labels";
 import type { DashboardItem, ItemDetailJson } from "@/lib/db/items";
-import { markUsed } from "@/lib/item-usage";
 import { cn } from "@/lib/utils";
 
 interface IconActionProps extends React.ComponentProps<typeof Button> {
@@ -65,8 +64,10 @@ interface ItemActionBarProps {
 export function ItemActionBar({ card, detail, onEdit, onDelete, onFavoriteChanged, onPinnedChanged }: ItemActionBarProps) {
   const t = useTranslations("drawer.actions");
   const tc = useTranslations("common");
-  const { copyToClipboard } = useClipboard();
+  const { copyItemText, dialog } = useTemplateCopy();
   const copyText = detail ? detail.content || detail.url : null;
+  // A custom type is never templated, whatever its slug.
+  const typeSlug = card.type.isSystem ? card.type.slug : null;
   const favorite = useFavoriteToggle("item", card.id, card.isFavorite, onFavoriteChanged);
   const pin = usePinToggle(card.id, card.isPinned, onPinnedChanged);
 
@@ -97,7 +98,7 @@ export function ItemActionBar({ card, detail, onEdit, onDelete, onFavoriteChange
         hint={!copyText ? t("nothingToCopy") : detail?.content ? t("copyContent") : t("copyUrl")}
         disabled={!copyText}
         onClick={() => {
-          if (copyText) void copyToClipboard(copyText).then((copied) => copied && markUsed(card.id));
+          if (copyText) copyItemText(copyText, { itemId: card.id, type: typeSlug });
         }}
       >
         <Copy aria-hidden />
@@ -116,6 +117,7 @@ export function ItemActionBar({ card, detail, onEdit, onDelete, onFavoriteChange
       >
         <Trash2 aria-hidden />
       </IconAction>
+      {dialog}
     </div>
   );
 }

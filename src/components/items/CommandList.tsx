@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { CommandCopyButton } from "@/components/items/CommandCopyButton";
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
 import { commandFirstLine, tokenizeCommand, type CommandTokenKind } from "@/lib/command-text";
-import type { DashboardItem } from "@/lib/db/items";
+import type { CommandText, DashboardItem } from "@/lib/db/items";
 import { useRelativeTime } from "@/i18n/labels";
 import { formatCollectionNames } from "@/lib/format";
 
@@ -18,7 +18,7 @@ const tokenClasses: Record<CommandTokenKind, string> = {
 
 interface CommandListProps {
   items: DashboardItem[];
-  texts: Record<string, { text: string; isCut: boolean }>;
+  texts: Record<string, CommandText>;
   /** Passed in so every row measures against the same moment. */
   now: string;
 }
@@ -47,11 +47,11 @@ export function CommandList({ items, texts, now }: CommandListProps) {
 
 function CommandRow({
   item,
-  command = { text: "", isCut: false },
+  command = { text: "", isCut: false, hasVariables: false },
   now,
 }: {
   item: DashboardItem;
-  command?: { text: string; isCut: boolean };
+  command?: CommandText;
   now: string;
 }) {
   const tc = useTranslations("common");
@@ -92,6 +92,7 @@ function CommandRow({
           title={item.title}
           text={command.text}
           isCut={command.isCut}
+          hasVariables={command.hasVariables}
           // Hidden until hover only with a mouse: a touch screen, even a wide one, never hovers.
           className="pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:focus-visible:opacity-100"
         />

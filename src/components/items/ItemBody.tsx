@@ -6,6 +6,7 @@ import { CodeEditor } from "@/components/items/CodeEditor";
 import type { ItemDetailState } from "@/components/items/ItemDetails";
 import type { SavedItem } from "@/components/items/ItemEditForm";
 import { ItemFileCard } from "@/components/items/ItemFileCard";
+import { useTemplateCopy } from "@/components/items/FillVariablesDialog";
 import { MarkdownEditor } from "@/components/items/MarkdownEditor";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isCodeType } from "@/lib/code-language";
@@ -32,6 +33,9 @@ export function ItemBody({
   onSaved: (saved: SavedItem) => void;
 }) {
   const t = useTranslations("drawer");
+  // Fills a prompt's or a command's variables before copying, and records a use (A5).
+  const { copyItemText, dialog } = useTemplateCopy();
+  const copy = (text: string) => copyItemText(text, { itemId, type: slug });
   if (state.status === "loading") {
     return (
       <div role="status" aria-label={t("loadingItem")}>
@@ -82,7 +86,7 @@ export function ItemBody({
           language={language}
           ariaLabel={t("content")}
           explain={{ itemId, aiAllowed }}
-          onCopied={() => markUsed(itemId)}
+          onCopy={copy}
         />
       ) : content ? (
         // Keyed by item, so a suggestion never carries over to another item.
@@ -92,6 +96,8 @@ export function ItemBody({
           ariaLabel={t("content")}
           optimize={slug === "prompt" ? { itemId, aiAllowed, onApplied: onSaved } : undefined}
           onCopied={() => markUsed(itemId)}
+          onCopy={copy}
+          highlightVariables={slug === "prompt"}
         />
       ) : null}
 
@@ -109,6 +115,7 @@ export function ItemBody({
           <p className="break-all">{url}</p>
         )
       ) : null}
+      {dialog}
     </>
   );
 }

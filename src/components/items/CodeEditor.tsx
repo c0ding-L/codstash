@@ -72,8 +72,11 @@ interface CodeEditorProps {
    * saved snippet or command: the server reads the item by its id.
    */
   explain?: { itemId: string; aiAllowed: Promise<boolean> };
-  /** Called after a successful copy. The drawer's read view records a use of the item (A5). */
-  onCopied?: () => void;
+  /**
+   * Copies through the caller instead of straight to the clipboard. The drawer's read view
+   * passes it, to fill a command's variables (B) and record a use of the item (A5).
+   */
+  onCopy?: (text: string) => void;
 }
 
 type View = "code" | "explain";
@@ -81,7 +84,7 @@ type View = "code" | "explain";
 type ExplainStatus = "streaming" | "done" | "stopped" | "cutOff";
 
 /** Monaco in a macOS-style window: traffic-light dots, the language and a copy button on top. */
-export function CodeEditor({ value, language, onChange, ariaLabel: ariaLabelProp, className, explain, onCopied }: CodeEditorProps) {
+export function CodeEditor({ value, language, onChange, ariaLabel: ariaLabelProp, className, explain, onCopy }: CodeEditorProps) {
   const t = useTranslations("editor");
   const ta = useTranslations("ai");
   const te = useTranslations("errors.ai");
@@ -207,7 +210,7 @@ export function CodeEditor({ value, language, onChange, ariaLabel: ariaLabelProp
           size="icon-sm"
           aria-label={t("copyCode")}
           disabled={!value}
-          onClick={() => void copyToClipboard(value).then((copied) => copied && onCopied?.())}
+          onClick={() => (onCopy ? onCopy(value) : void copyToClipboard(value))}
         >
           <Copy aria-hidden />
         </Button>

@@ -13,6 +13,7 @@ import { prisma } from "@/lib/prisma";
 import { countWords, estimateTokens, markdownToPlainText, promptExcerpt } from "@/lib/prompt-text";
 import { searchPreview } from "@/lib/search-text";
 import { snippetPreview } from "@/lib/snippet-text";
+import { parseVariables } from "@/lib/template-vars";
 import type { ItemTypeSlug, TypeRef } from "@/types/item-type";
 
 /** Everything a row on the dashboard renders, flattened out of the relations. */
@@ -249,11 +250,12 @@ export async function getSearchItems(userId: string): Promise<SearchItem[]> {
  * The text of each listed command, for the command list. Kept out of
  * `DashboardItem`, which the dashboard shares and the drawer trigger receives
  * whole; a command over the cap comes back cut, and its copy button fetches it.
+ * `hasVariables` is read on the whole command, so a cut one still opens the variables form.
  */
 export async function getCommandTexts(
   userId: string,
   ids: string[],
-): Promise<Record<string, { text: string; isCut: boolean }>> {
+): Promise<Record<string, CommandText>> {
   if (ids.length === 0) return {};
 
   const rows = await prisma.item.findMany({
@@ -261,7 +263,19 @@ export async function getCommandTexts(
     select: { id: true, content: true },
   });
 
-  return Object.fromEntries(rows.map(({ id, content }) => [id, clipCommand(content ?? "")]));
+  return Object.fromEntries(
+    rows.map(({ id, content }) => {
+      const raw = content ?? "";
+      return [id, { ...clipCommand(raw), hasVariables: parseVariables(raw).length > 0 }];
+    }),
+  );
+}
+
+/** A listed command: its text, cut past `MAX_COMMAND_CHARS`, and whether it holds variables. */
+export interface CommandText {
+  text: string;
+  isCut: boolean;
+  hasVariables: boolean;
 }
 
 /** What the prompt list shows of a prompt beyond its card. */
@@ -273,6 +287,8 @@ export interface PromptPreview {
   tokens: number;
   /** Tag names, sorted. */
   tags: string[];
+  /** Distinct template variables (roadmap § B), for the card's badge and the copy button. */
+  variables: number;
 }
 
 /**
@@ -304,6 +320,7 @@ export async function getPromptPreviews(
           words: countWords(markdownToPlainText(raw)),
           tokens: estimateTokens(raw),
           tags: tagsByItem.get(id) ?? [],
+          variables: parseVariables(raw).length,
         },
       ];
     }),

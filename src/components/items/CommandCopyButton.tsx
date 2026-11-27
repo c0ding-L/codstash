@@ -2,11 +2,10 @@
 
 import { Copy } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { toast } from "sonner";
 
-import { useClipboard } from "@/i18n/labels";
+import { useTemplateCopy } from "@/components/items/FillVariablesDialog";
+import { CopyRefusedError } from "@/lib/clipboard";
 import type { ItemDetailJson } from "@/lib/db/items";
-import { markUsed } from "@/lib/item-usage";
 import { cn } from "@/lib/utils";
 
 interface CommandCopyButtonProps {
@@ -15,47 +14,55 @@ interface CommandCopyButtonProps {
   /** The command as the list has it: whole, unless `isCut`. */
   text: string;
   isCut: boolean;
+  /** From the server, for a cut command: the list does not have the rest to look for variables. */
+  hasVariables: boolean;
   className?: string;
 }
 
 /**
  * Copies a command from the list. Uses the text the page already has, so the copy
  * happens in the click itself (Safari refuses a clipboard write after an await);
- * only a command too long to send with the page is fetched first.
+ * only a command too long to send with the page is fetched, through a pending
+ * clipboard write. A command with variables opens the variables form first.
  */
-export function CommandCopyButton({ itemId, title, text, isCut, className }: CommandCopyButtonProps) {
+export function CommandCopyButton({ itemId, title, text, isCut, hasVariables, className }: CommandCopyButtonProps) {
   const tc = useTranslations("common");
   const t = useTranslations("items");
-  const { copyToClipboard } = useClipboard();
+  const { copyItemText, copyItemContent, dialog } = useTemplateCopy();
 
-  async function copy() {
-    // A successful copy records a use of the item (A5).
+  // Variables open the form; a successful copy records a use of the item (A5).
+  function copy() {
     if (!isCut) {
-      if (await copyToClipboard(text)) markUsed(itemId);
+      copyItemText(text, { itemId, type: "command" });
       return;
     }
 
-    try {
-      const response = await fetch(`/api/items/${encodeURIComponent(itemId)}`);
-      if (!response.ok) throw new Error(String(response.status));
-      const detail = (await response.json()) as ItemDetailJson;
-      if (await copyToClipboard(detail.content ?? "")) markUsed(itemId);
-    } catch {
-      toast.error(t("commandCopyFailed"));
-    }
+    copyItemContent(
+      // A failed fetch shows this message instead of the clipboard's own.
+      async () => {
+        const response = await fetch(`/api/items/${encodeURIComponent(itemId)}`).catch(() => null);
+        if (!response?.ok) throw new CopyRefusedError(t("commandCopyFailed"));
+        const detail = (await response.json()) as ItemDetailJson;
+        return detail.content ?? "";
+      },
+      { itemId, type: "command", hasVariables },
+    );
   }
 
   return (
-    <button
-      type="button"
-      aria-label={tc("copyItem", { name: title })}
-      onClick={copy}
-      className={cn(
-        "relative z-20 inline-flex size-7 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-        className,
-      )}
-    >
-      <Copy className="size-3.5" aria-hidden />
-    </button>
+    <>
+      <button
+        type="button"
+        aria-label={tc("copyItem", { name: title })}
+        onClick={copy}
+        className={cn(
+          "relative z-20 inline-flex size-7 shrink-0 items-center justify-center rounded-md border border-border text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+          className,
+        )}
+      >
+        <Copy className="size-3.5" aria-hidden />
+      </button>
+      {dialog}
+    </>
   );
 }

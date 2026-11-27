@@ -528,6 +528,17 @@
       "envAssignment": "Secret in a variable"
     }
   },
+  "variables": {
+    "title": "Fill in the variables",
+    "description": "The text is copied with these values. They are remembered on this device.",
+    "preview": "Preview",
+    "copy": "Copy",
+    "copyRaw": "Copy raw",
+    "loading": "Loading the item…",
+    "loadFailed": "Could not load the item.",
+    "noFields": "Nothing to fill in: built-in variables are filled automatically.",
+    "count": "{count, plural, one {# variable} other {# variables}}"
+  },
   "newItem": {
     "title": "New item",
     "description": "Choose a type, then fill in its fields.",

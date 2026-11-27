@@ -2,8 +2,8 @@
 
 import { Copy } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Suspense, useEffect, useRef, useState, useTransition } from "react";
-import ReactMarkdown, { type Components } from "react-markdown";
+import { Suspense, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import ReactMarkdown, { type Components, type Options as MarkdownOptions } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 
@@ -14,10 +14,14 @@ import type { SavedItem } from "@/components/items/ItemEditForm";
 import { Button } from "@/components/ui/button";
 import { useClipboard } from "@/i18n/labels";
 import { parseOptimizedPrompt } from "@/lib/ai-output";
+import { remarkTemplateVars } from "@/lib/remark-template-vars";
+import { parseVariables } from "@/lib/template-vars";
 import { AiStreamError, streamAi } from "@/lib/ai-stream-client";
 import { cn } from "@/lib/utils";
 
 type Tab = "write" | "preview" | "original" | "optimized";
+
+const PLUGINS = [remarkGfm];
 
 
 /** Links leave the app, so they open in a new tab. Shared with the AI explanation in `CodeEditor`. */
@@ -48,6 +52,14 @@ interface MarkdownEditorProps {
   optimize?: { itemId: string; aiAllowed: Promise<boolean>; onApplied: (saved: SavedItem) => void };
   /** Called after a successful copy. The drawer's read view records a use of the item (A5). */
   onCopied?: () => void;
+  /**
+   * Copies the saved text through the caller instead of straight to the clipboard. The drawer's
+   * read view passes it, to fill a prompt's variables (B). The Optimized tab's rewrite is not the
+   * saved prompt, so it is still copied as it is, with `onCopied`.
+   */
+  onCopy?: (text: string) => void;
+  /** Highlights template variables in the preview: a prompt's read view. */
+  highlightVariables?: boolean;
 }
 
 /** Markdown with Write/Preview tabs and a copy button, in the same dark window as `CodeEditor`. */
@@ -61,6 +73,8 @@ export function MarkdownEditor({
   className,
   optimize,
   onCopied,
+  onCopy,
+  highlightVariables = false,
 }: MarkdownEditorProps) {
   const t = useTranslations("editor");
   const ta = useTranslations("ai");
@@ -82,6 +96,15 @@ export function MarkdownEditor({
   const shown: Tab = tabs.includes(tab) ? tab : tabs[0]!;
 
   const secretCheck = useSecretCheck();
+
+  // A prompt's read view also highlights its template variables (B), by the names the raw text has.
+  const remarkPlugins = useMemo<MarkdownOptions["remarkPlugins"]>(
+    () =>
+      highlightVariables
+        ? [remarkGfm, [remarkTemplateVars, { names: new Set(parseVariables(value).map(({ name }) => name)) }]]
+        : PLUGINS,
+    [highlightVariables, value],
+  );
 
   // A drawer that closes or moves to another item stops the call.
   useEffect(() => () => request.current?.abort(), []);
@@ -201,11 +224,15 @@ export function MarkdownEditor({
           // Nothing to copy on the Optimized tab until the rewrite has come and passed the checks.
           disabled={!value || (shown === "optimized" && suggestion === null)}
           // Copies what is shown: the suggestion on the Optimized tab, the saved text otherwise.
-          onClick={() =>
-            void copyToClipboard(shown === "optimized" && suggestion !== null ? suggestion : value).then(
-              (copied) => copied && onCopied?.(),
-            )
-          }
+          onClick={() => {
+            if (shown === "optimized" && suggestion !== null) {
+              void copyToClipboard(suggestion).then((copied) => copied && onCopied?.());
+            } else if (onCopy) {
+              onCopy(value);
+            } else {
+              void copyToClipboard(value).then((copied) => copied && onCopied?.());
+            }
+          }}
         >
           <Copy aria-hidden />
         </Button>
@@ -256,7 +283,10 @@ export function MarkdownEditor({
         >
           {value.trim() ? (
             <div className="markdown-preview">
-              <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+              <ReactMarkdown
+                remarkPlugins={remarkPlugins}
+                components={markdownComponents}
+              >
                 {value}
               </ReactMarkdown>
             </div>

@@ -528,6 +528,17 @@
       "envAssignment": "Un secret dans une variable"
     }
   },
+  "variables": {
+    "title": "Remplissez les variables",
+    "description": "Le texte est copié avec ces valeurs. Celles-ci sont enregistrées sur cet appareil.",
+    "preview": "Aperçu",
+    "copy": "Copier",
+    "copyRaw": "Copier le texte brut",
+    "loading": "Chargement de l’élément…",
+    "loadFailed": "Impossible de charger l’élément.",
+    "noFields": "Rien à saisir : les variables intégrées sont renseignées automatiquement.",
+    "count": "{count, plural, one {# variable} other {# variables}}"
+  },
   "newItem": {
     "title": "Nouvel élément",
     "description": "Choisissez un type, puis remplissez ses champs.",

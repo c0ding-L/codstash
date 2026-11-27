@@ -3,10 +3,9 @@
 import { Copy } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { useTemplateCopy } from "@/components/items/FillVariablesDialog";
 import { buttonVariants } from "@/components/ui/button";
-import { useClipboard } from "@/i18n/labels";
 import type { ItemDetailJson } from "@/lib/db/items";
-import { markUsed } from "@/lib/item-usage";
 import { cn } from "@/lib/utils";
 
 /** The item's full content, which the lists never have: content has no length cap. */
@@ -22,22 +21,29 @@ interface ItemCopyButtonProps {
   title: string;
   /** The visible text, e.g. "Copy prompt". */
   label: string;
+  /** The type's slug. A prompt with variables opens the variables form instead of copying at once. */
+  type?: string | null;
+  /** From the server: the list never has the full content to look for variables itself. */
+  hasVariables?: boolean;
   className?: string;
 }
 
 /** Copies an item's content from a list, fetching it in the click so Safari still allows the write. */
-export function ItemCopyButton({ itemId, title, label, className }: ItemCopyButtonProps) {
+export function ItemCopyButton({ itemId, title, label, type = null, hasVariables = false, className }: ItemCopyButtonProps) {
   const tc = useTranslations("common");
-  const { copyFromPromise } = useClipboard();
+  const { copyItemContent, dialog } = useTemplateCopy();
   return (
-    <button
-      type="button"
-      aria-label={tc("copyItem", { name: title })}
-      onClick={() => void copyFromPromise(fetchItemContent(itemId)).then((copied) => copied && markUsed(itemId))}
-      className={cn(buttonVariants({ variant: "outline", size: "sm" }), "relative z-20", className)}
-    >
-      <Copy data-icon="inline-start" aria-hidden />
-      {label}
-    </button>
+    <>
+      <button
+        type="button"
+        aria-label={tc("copyItem", { name: title })}
+        onClick={() => copyItemContent(() => fetchItemContent(itemId), { itemId, type, hasVariables })}
+        className={cn(buttonVariants({ variant: "outline", size: "sm" }), "relative z-20", className)}
+      >
+        <Copy data-icon="inline-start" aria-hidden />
+        {label}
+      </button>
+      {dialog}
+    </>
   );
 }

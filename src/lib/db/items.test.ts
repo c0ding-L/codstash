@@ -784,9 +784,21 @@ describe("getCommandTexts", () => {
     ]);
 
     expect(await getCommandTexts(USER, ["a", "b"])).toEqual({
-      a: { text: "ls -la", isCut: false },
-      b: { text: "", isCut: false },
+      a: { text: "ls -la", isCut: false, hasVariables: false },
+      b: { text: "", isCut: false, hasVariables: false },
     });
+  });
+
+  it("looks for variables in the whole command, past the cut", async () => {
+    findMany.mockResolvedValue([
+      { id: "a", content: `${"x".repeat(MAX_COMMAND_CHARS)} {{target}}` },
+      { id: "b", content: "echo ${{ secrets.TOKEN }}" },
+    ]);
+
+    const { a, b } = await getCommandTexts(USER, ["a", "b"]);
+
+    expect(a).toMatchObject({ isCut: true, hasVariables: true });
+    expect(b!.hasVariables).toBe(false);
   });
 
   it("cuts a command over the cap", async () => {
@@ -830,9 +842,17 @@ describe("getPromptPreviews", () => {
     ]);
 
     expect(await getPromptPreviews(USER, ["a", "b"])).toEqual({
-      a: { excerpt: "Review Rank every finding.", words: 4, tokens: 9, tags: ["ai", "review"] },
-      b: { excerpt: "", words: 0, tokens: 0, tags: [] },
+      a: { excerpt: "Review Rank every finding.", words: 4, tokens: 9, tags: ["ai", "review"], variables: 0 },
+      b: { excerpt: "", words: 0, tokens: 0, tags: [], variables: 0 },
     });
+  });
+
+  it("counts each distinct variable once", async () => {
+    findMany.mockResolvedValue([{ id: "a", content: "Review {{file}} for {{lang:TS}}, then {{file}} again on {{date}}." }]);
+
+    const { a } = await getPromptPreviews(USER, ["a"]);
+
+    expect(a!.variables).toBe(3);
   });
 });
 
