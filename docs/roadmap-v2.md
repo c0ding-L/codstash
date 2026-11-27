@@ -99,7 +99,7 @@ nor custom types exist. A1 and A2 come first, and the rest of A follows in small
 
 ## C. API, MCP server and CLI (read for Free, write for Pro)
 
-### C1. Personal API tokens
+### C1. Personal API tokens — done 2026-11-27 (`031e964`)
 - New model `ApiToken`: `name`, `prefix` (shown), `hash` (SHA-256, the token is shown once),
   `scopes` (`read` / `write`), `lastUsedAt`, `expiresAt?` and `revokedAt?`.
 - Managed in Settings › API tokens (create, list and revoke).
