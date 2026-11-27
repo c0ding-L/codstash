@@ -3,6 +3,7 @@ import { constants } from "node:os";
 
 import { findItem, shortId, type ApiClient, type ApiItem } from "./api";
 import { BIN } from "./constants";
+import { hasControlChars, normalizeNewlines, showControlChars } from "./controls";
 import { CliError } from "./errors";
 import { fillInteractive } from "./fill";
 
@@ -27,7 +28,10 @@ async function pickCommand(target: string, { client, ask, say, interactive }: Ru
     const item = await findItem(client, target);
     if (item) {
       if (item.type.slug !== "command") {
-        throw new CliError(`"${item.title}" is a ${item.type.name.toLowerCase()}, not a command.`, `\`${BIN} run\` only runs commands.`);
+        throw new CliError(
+          `"${showControlChars(item.title)}" is a ${showControlChars(item.type.name.toLowerCase())}, not a command.`,
+          `\`${BIN} run\` only runs commands.`,
+        );
       }
       return item;
     }
@@ -38,7 +42,9 @@ async function pickCommand(target: string, { client, ask, say, interactive }: Ru
   if (matches.length === 1) return client.getItem(matches[0]!.id);
   if (!interactive) throw new CliError(`${matches.length} commands match "${target}".`, "Use an id to pick one.");
 
-  matches.forEach((item, index) => say(`  ${String(index + 1).padStart(2)}) ${shortId(item.id)}  ${item.title}`));
+  matches.forEach((item, index) =>
+    say(`  ${String(index + 1).padStart(2)}) ${shortId(item.id)}  ${showControlChars(item.title)}`),
+  );
   const answer = await ask(`Pick a command [1-${matches.length}]: `);
   const choice = Number(answer);
   if (!Number.isInteger(choice) || choice < 1 || choice > matches.length) throw new CliError("No command picked.");
@@ -57,13 +63,21 @@ export async function runCommand(target: string, { yes }: { yes: boolean }, deps
   }
 
   const item = await pickCommand(target, deps);
-  const content = item.content?.trim();
-  if (!content) throw new CliError(`"${item.title}" has no content to run.`);
+  const content = normalizeNewlines(item.content ?? "").trim();
+  if (!content) throw new CliError(`"${showControlChars(item.title)}" has no content to run.`);
 
-  const command = await fillInteractive(content, ask, interactive);
+  const command = normalizeNewlines(await fillInteractive(content, ask, interactive));
   say("");
-  say(`  ${command.split("\n").join("\n  ")}`);
+  say(`  ${showControlChars(command).split("\n").join("\n  ")}`);
   say("");
+
+  // Checked after filling: a typed value could hold one too. Never run, even with --yes.
+  if (hasControlChars(command)) {
+    throw new CliError(
+      "This command contains control characters (shown escaped above), so what the terminal shows may not be what runs.",
+      "Remove them in the app, then run it again.",
+    );
+  }
 
   if (!yes) {
     const answer = await ask("Run? [y/N] ");

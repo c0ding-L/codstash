@@ -92,6 +92,10 @@ cortex run "restart deploy"
 runs exactly as stored, unseen, so keep it for commands you trust, e.g. in scripts. Without a
 terminal, `run` refuses unless `--yes` is given, and variables take their defaults.
 
+A command holding control characters (terminal escapes, a lone carriage return, bidi overrides)
+could show one thing and run another: `run` prints them escaped (`\x1b`, `\x0d`) and never runs
+it, `--yes` or not.
+
 ### `cortex save --title <t> [--type note] [--tags a,b] [--language l] [file]`
 
 Saves a new item from a file, or from stdin when no file is given, and prints its id. The type
