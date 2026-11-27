@@ -119,7 +119,7 @@ nor custom types exist. A1 and A2 come first, and the rest of A follows in small
 - Library choice (official `@modelcontextprotocol/sdk` or a Next adapter) to check against
   Next 16 before the spec.
 
-### C4. CLI `cortex`
+### C4. CLI `cortex` — done 2026-11-27 (`bd739c1`)
 - Lives in `cli/` in this repo and is published to npm.
 - `cortex login` (pastes a token), `cortex search`, `cortex get <id>` (prints or copies it),
   `cortex run <command>` (fills variables, shows the command and asks before it runs), and

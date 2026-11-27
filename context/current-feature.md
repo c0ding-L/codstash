@@ -14,6 +14,12 @@ Not Started
 
 ---
 
+Previous feature (completed) — C4 CLI `cortex`: a zero-dependency Node CLI in `cli/` on the
+REST API (C2), to search, print, copy, run and save items from the terminal. Last step of
+`docs/roadmap-v2.md` § C. Outcome in the History below.
+
+---
+
 Previous feature (completed) — C3 MCP server: a Model Context Protocol endpoint at `/api/mcp`
 so Claude Code, Cursor and other MCP clients search, read and save items with C1's tokens.
 Third step of `docs/roadmap-v2.md` § C. Outcome in the History below.
@@ -2971,3 +2977,37 @@ Environment notes that outlive any one feature:
   - The running dev server (Windows) missed WSL edits to `api-auth.ts` until the file was
     touched: restart it after editing from WSL.
   - 1,519 tests, build and lint green. Merged into `main` (fast-forward); branch deleted.
+- 2026-11-27 — C4 CLI `cortex` (`bd739c1`).
+  - Spec: `context/features/cli-spec.md`. The binary was renamed from `cod` to `cortex` by the
+    author on load (roadmap decision #8), for the Cortex rename.
+  - **Package** `cli/` (`@author-scope/cortex-cli`, MIT, placeholder scope until publishing):
+    ESM, Node ≥ 20, `tsup` into `dist/cortex.js` with a shebang, no runtime dependencies
+    (`parseArgs`, `readline/promises`, `fetch`, ANSI colours off with `NO_COLOR` or no TTY).
+    `BIN` in `constants.ts` is the only place the name lives. `src/lib/template-vars.ts` is
+    imported relatively and bundled.
+  - **Commands:** `login` (hidden token, or piped), `logout`, `whoami`, `search` (table or
+    `--json`), `get` (`--copy`, `--raw`; a link prints its URL), `run` (pick, variables,
+    `Run? [y/N]`, `$SHELL -c` / `cmd /c`, exit code propagated; `--yes`), `save` (file or
+    stdin, prints the id), `context` (`-o`).
+  - **Decisions after load:** collection short ids matched client-side (the collections route
+    returns them all, no API change); `docs/api.md` moved to `$CORTEX_URL` and
+    `$CORTEX_TOKEN`; the default URL is `PRODUCTION_URL` in `cli/tsup.config.ts`
+    (`https://codstash.vercel.app`, overridable with `CORTEX_DEFAULT_URL`), because `APP_URL`
+    is empty in `.env.production` and `.env*` is gitignored. Change it when the domain is
+    bought (planned `devcortex.dev`), then rebuild before `npm publish`.
+  - **Beyond the spec:** a 422's `details` are printed under the message; both 403s on `save`
+    get a hint (`insufficient_scope`, `pro_required`); `login` / `whoami` fall back to the
+    email when the name is null.
+  - **Found while building:**
+    - `clip.exe` reads UTF-8 in the console code page and garbles accents: the CLI sends
+      UTF-16LE with no BOM (a BOM is pasted too). Checked with `Get-Clipboard`.
+    - `run` closes its readline before spawning, so the command owns stdin.
+    - Readline with no `SIGINT` listener only pauses on Ctrl+C: a prompt now exits 130.
+  - **Tests:** `cli/src/{args,config,api,run,clipboard,prompt}.test.ts`, run by the root
+    Vitest. The `0600` check is skipped on Windows, where the tests run.
+  - **Not done:** the manual run against `next dev` (login, prompts, pick, `get --copy`,
+    `save` from a pipe, `context -o`, on WSL and cmd.exe), postponed by the author. Known
+    limits: `cmd /c` runs only the first line of a multi-line command; `search --json` drops
+    `nextCursor`.
+  - 1,594 tests, build and lint green; CLI typecheck and build green. Merged into `main`
+    (fast-forward); branch deleted.
