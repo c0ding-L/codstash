@@ -14,6 +14,11 @@ Not Started
 
 ---
 
+Previous feature (completed) — Animated hero background: the landing hero's blurred glow drifts
+and breathes slowly, with a second fainter glow, in CSS only. Outcome in the History below.
+
+---
+
 Previous feature (completed) — Landing page update for roadmap v2: the landing page and plan
 cards describe what shipped in roadmap v2 § A–C (variables, custom types, import/export, API,
 MCP, CLI) and drop the "versioned prompts" claim. Outcome in the History below.
@@ -3084,4 +3089,21 @@ Environment notes that outlive any one feature:
     lines, no horizontal scroll, no console errors; `/upgrade` signed in as demo. `next dev`
     crashed with a Turbopack worker out of memory compiling Settings (unrelated).
   - Ships after `prisma migrate deploy` in production (`api_tokens`).
+  - 1,657 tests, build and lint green. Fast-forward merged into `main`; branch deleted.
+- 2026-11-27 — Animated hero background (`7766161`).
+  - Asked by the author as a test after the landing page update, to give the page more life.
+    Advice given first: the hero already moves (`ChaosBox`, `arrow-pulse`, `Reveal`), so hero
+    only, CSS only, nothing behind text elsewhere.
+  - `page.tsx`: the old glow became a wrapper that keeps `-translate-x-1/2`, with two glows
+    inside (`hero-glow`, `hero-glow-alt`), so the keyframes never override the centring.
+  - `globals.css`, next to `arrow-pulse`: `transform` and `opacity` only, `will-change`; cycles
+    24 s and 32 s, unequal so the glows never line up the same way.
+  - **Intensity tuned with the author:** 4 % white (the original glow) was invisible in
+    motion; 8 % with a wide drift was too strong; kept halfway, 6 % and 5 %, drift −10 % / +6.5 %,
+    scale 1.12; the second glow −48 % / +18 %.
+  - Reduced motion: no animation, and the second glow holds its first frame (`opacity: 0.35`),
+    found in review and checked in the browser.
+  - Browser (Playwright): desktop and 390 px with mobile emulation, no horizontal scroll; frames
+    frozen with `getAnimations()` at three points of the cycle; `recordVideo` clips for the
+    author.
   - 1,657 tests, build and lint green. Fast-forward merged into `main`; branch deleted.
