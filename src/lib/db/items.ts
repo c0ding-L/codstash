@@ -403,7 +403,7 @@ export async function getItemDetail(userId: string, id: string): Promise<ItemDet
   return { ...item, tags: tags.map(({ name }) => name) };
 }
 
-/** What `explainCode` and `optimizePrompt` read: the item's content and its type, or null when it is not this user's. */
+/** What the Explain and Optimize routes read: the item's content and its type, or null when it is not this user's. */
 export interface ItemForExplain {
   content: string | null;
   language: string | null;

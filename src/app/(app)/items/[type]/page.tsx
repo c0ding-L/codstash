@@ -26,6 +26,9 @@ import { loadUploadsAllowed } from "@/lib/load-uploads-allowed";
 import { ITEMS_PER_PAGE, pageCount, pageOffset, parsePageParam } from "@/lib/pagination";
 import { canUploadFiles } from "@/lib/usage-limits";
 
+/** Server actions take the page's limit: Suggest Tags and Description wait on a slow free model. */
+export const maxDuration = 60;
+
 interface ItemsPageProps {
   params: Promise<{ type: string }>;
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;

@@ -23,6 +23,9 @@ import { getProfile } from "@/lib/db/profile";
 import { FREE_LIMITS, canUseCustomTypes } from "@/lib/usage-limits";
 import { pageMetadata } from "@/i18n/labels-server";
 
+/** Server actions take the page's limit: Suggest Tags and Description wait on a slow free model. */
+export const maxDuration = 60;
+
 export function generateMetadata(): Promise<Metadata> {
   return pageMetadata("settings.title");
 }

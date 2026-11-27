@@ -10,6 +10,9 @@ import { getFavoriteCollectionCards } from "@/lib/db/collections";
 import { getFavoriteItems } from "@/lib/db/items";
 import { pageMetadata } from "@/i18n/labels-server";
 
+/** Server actions take the page's limit: Suggest Tags and Description wait on a slow free model. */
+export const maxDuration = 60;
+
 export function generateMetadata(): Promise<Metadata> {
   return pageMetadata("favorites.title");
 }

@@ -2,18 +2,19 @@
 
 import { Copy } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Suspense, useState, useTransition } from "react";
+import { Suspense, useEffect, useRef, useState, useTransition } from "react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 
-import { optimizePrompt } from "@/actions/ai";
 import { applyOptimizedPrompt } from "@/actions/items";
 import { AiHeaderButton } from "@/components/items/AiHeaderButton";
 import { useSecretCheck } from "@/components/items/SecretWarningDialog";
 import type { SavedItem } from "@/components/items/ItemEditForm";
 import { Button } from "@/components/ui/button";
 import { useClipboard } from "@/i18n/labels";
+import { parseOptimizedPrompt } from "@/lib/ai-output";
+import { AiStreamError, streamAi } from "@/lib/ai-stream-client";
 import { cn } from "@/lib/utils";
 
 type Tab = "write" | "preview" | "original" | "optimized";
@@ -63,42 +64,66 @@ export function MarkdownEditor({
 }: MarkdownEditorProps) {
   const t = useTranslations("editor");
   const ta = useTranslations("ai");
+  const te = useTranslations("errors.ai");
   const { copyToClipboard } = useClipboard();
   const ariaLabel = ariaLabelProp ?? t("markdown");
   const readOnly = !onChange;
   const [tab, setTab] = useState<Tab>(readOnly ? "preview" : "write");
   // The AI's rewrite, offered until the user uses or discards it.
   const [suggestion, setSuggestion] = useState<string | null>(null);
-  // Disable the buttons while a request runs, so a double click does not send two.
-  const [optimizing, startOptimizing] = useTransition();
+  // The rewrite as it streams in; null when no request runs. Disables the button, so a double
+  // click does not send two.
+  const [streamed, setStreamed] = useState<string | null>(null);
+  const optimizing = streamed !== null;
+  const request = useRef<AbortController | null>(null);
   const [applying, startApplying] = useTransition();
-  const comparing = readOnly && suggestion !== null;
+  const comparing = readOnly && (suggestion !== null || optimizing);
   const tabs: Tab[] = comparing ? ["original", "optimized"] : readOnly ? ["preview"] : ["write", "preview"];
   const shown: Tab = tabs.includes(tab) ? tab : tabs[0]!;
 
   const secretCheck = useSecretCheck();
 
+  // A drawer that closes or moves to another item stops the call.
+  useEffect(() => () => request.current?.abort(), []);
+
   // The server sends the saved prompt, which is what this read-only view shows.
   function runOptimize() {
     if (!optimize) return;
-    secretCheck.check({ content: value }, "ai", requestOptimize);
+    secretCheck.check({ content: value }, "ai", () => void requestOptimize());
   }
 
-  function requestOptimize() {
-    if (!optimize) return;
-    startOptimizing(async () => {
-      const result = await optimizePrompt({ itemId: optimize.itemId });
-      if (!result.success) {
-        toast.error(result.error);
+  // A route, not a server action: the drawer's other actions (Favorite, Pin, Save) stay usable.
+  // Use / Discard appear only once the whole rewrite has come and passed the checks.
+  async function requestOptimize() {
+    if (!optimize || request.current) return;
+    const controller = new AbortController();
+    request.current = controller;
+    setSuggestion(null);
+    setStreamed("");
+    setTab("optimized");
+    try {
+      const { text, cutOff } = await streamAi(
+        "/api/ai/optimize",
+        { itemId: optimize.itemId },
+        { signal: controller.signal, failedMessage: te("optimizeFailed"), onText: setStreamed },
+      );
+      // Half a rewrite would replace the whole prompt: never offered.
+      if (cutOff) {
+        toast.error(te("cutOff"));
         return;
       }
-      if (result.data === null) {
-        toast.info(ta("alreadyClear"));
-        return;
+      const result = parseOptimizedPrompt(text, value);
+      if (!result) toast.error(te("noOptimized"));
+      else if (!result.changed) toast.info(ta("alreadyClear"));
+      else setSuggestion(result.prompt);
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        toast.error(error instanceof AiStreamError ? error.message : te("optimizeFailed"));
       }
-      setSuggestion(result.data);
-      setTab("optimized");
-    });
+    } finally {
+      request.current = null;
+      setStreamed(null);
+    }
   }
 
   function applySuggestion() {
@@ -173,7 +198,8 @@ export function MarkdownEditor({
           size="icon-sm"
           className={optimize ? undefined : "ml-auto"}
           aria-label={shown === "optimized" ? t("copyOptimized") : t("copyMarkdown")}
-          disabled={!value}
+          // Nothing to copy on the Optimized tab until the rewrite has come and passed the checks.
+          disabled={!value || (shown === "optimized" && suggestion === null)}
           // Copies what is shown: the suggestion on the Optimized tab, the saved text otherwise.
           onClick={() =>
             void copyToClipboard(shown === "optimized" && suggestion !== null ? suggestion : value).then(
@@ -189,18 +215,26 @@ export function MarkdownEditor({
         // Plain text, not Markdown: the preview drops raw tags such as `<context>`, and the user
         // must be able to check that every placeholder survived.
         <div role="tabpanel" aria-label={shown === "original" ? t("originalPrompt") : t("optimizedPrompt")}>
-          <pre className="markdown-scroll max-h-[400px] overflow-y-auto px-4 py-3 font-mono text-xs leading-relaxed whitespace-pre-wrap break-words text-foreground">
-            {shown === "original" ? value : suggestion}
+          <pre
+            aria-busy={(shown === "optimized" && optimizing) || undefined}
+            className="markdown-scroll max-h-[400px] overflow-y-auto px-4 py-3 font-mono text-xs leading-relaxed whitespace-pre-wrap break-words text-foreground"
+          >
+            {shown === "original" ? value : (suggestion ?? streamed)}
+            {shown === "optimized" && optimizing ? (
+              <span className="ml-0.5 inline-block h-3.5 w-1.5 animate-pulse rounded-sm bg-violet-400 align-middle" aria-hidden />
+            ) : null}
           </pre>
-          <div className="flex flex-wrap items-center gap-2 border-t border-border bg-[#2d2d2d] px-3 py-2">
-            <p className="mr-auto text-xs text-muted-foreground">{t("useOptimized")}</p>
-            <Button type="button" variant="ghost" size="xs" disabled={applying} onClick={discardSuggestion}>
-              {t("discard")}
-            </Button>
-            <Button type="button" size="xs" disabled={applying} onClick={applySuggestion}>
-              {applying ? t("saving") : t("useThis")}
-            </Button>
-          </div>
+          {suggestion !== null ? (
+            <div className="flex flex-wrap items-center gap-2 border-t border-border bg-[#2d2d2d] px-3 py-2">
+              <p className="mr-auto text-xs text-muted-foreground">{t("useOptimized")}</p>
+              <Button type="button" variant="ghost" size="xs" disabled={applying} onClick={discardSuggestion}>
+                {t("discard")}
+              </Button>
+              <Button type="button" size="xs" disabled={applying} onClick={applySuggestion}>
+                {applying ? t("saving") : t("useThis")}
+              </Button>
+            </div>
+          ) : null}
         </div>
       ) : shown === "write" ? (
         <textarea

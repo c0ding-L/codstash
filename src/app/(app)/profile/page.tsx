@@ -12,6 +12,9 @@ import { getProfile, getProfileStats } from "@/lib/db/profile";
 import { getTypeView } from "@/i18n/labels-server";
 import { pageMetadata } from "@/i18n/labels-server";
 
+/** Server actions take the page's limit: Suggest Tags and Description wait on a slow free model. */
+export const maxDuration = 60;
+
 export function generateMetadata(): Promise<Metadata> {
   return pageMetadata("profile.title");
 }

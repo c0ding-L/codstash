@@ -114,11 +114,6 @@ export const EXPLAIN_CONTENT_LIMIT = 12_000;
  * free model a 12,000-character input used up to 939 tokens, 371 of them reasoning.
  */
 export const EXPLAIN_MAX_TOKENS = 1_500;
-/**
- * Longer than the client's 15 s default: on the free model an explanation took 27-35 s
- * (~30 tokens/s), so the cap above needs ~50 s.
- */
-export const EXPLAIN_TIMEOUT_MS = 60_000;
 export const TRUNCATED_MARKER = "[truncated]";
 
 export interface ExplainPromptInput {
@@ -158,11 +153,9 @@ export function explainMessages({ content, language, locale = DEFAULT_LOCALE }: 
 export const OPTIMIZE_CONTENT_LIMIT = 8_000;
 /**
  * Room to rewrite a prompt at the limit (~2,000 tokens) a little longer, plus reasoning headroom.
- * A rewrite that still hits the cap is refused (`rejectCutOff`), never offered half-written.
+ * A rewrite that still hits the cap ends with the cut-off marker and is never offered half-written.
  */
 export const OPTIMIZE_MAX_TOKENS = 3_000;
-/** Like Explain's: the free model writes ~30 tokens/s, so a long rewrite needs most of a minute. */
-export const OPTIMIZE_TIMEOUT_MS = 90_000;
 /** What the model answers when the prompt is already good. */
 export const NO_CHANGES_SENTINEL = "NO_CHANGES";
 

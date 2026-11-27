@@ -1,6 +1,6 @@
 "use client";
 
-import { Crown, Loader2, Sparkles } from "lucide-react";
+import { Crown, Loader2, Sparkles, Square } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { use } from "react";
@@ -20,21 +20,40 @@ interface AiHeaderButtonProps {
   pending: boolean;
   disabled: boolean;
   onClick: () => void;
+  /** While pending, turns the button into Stop (Explain), with `stopHint` as its tooltip. */
+  onStop?: () => void;
+  stopHint?: string;
 }
 
 /**
  * An AI button for an editor's header (Explain, Optimize) for Pro users; for Free users, a crown
  * linking to `/upgrade` (the drawer closes on the new page). The tooltip hangs on a wrapper because
- * a disabled button takes no pointer events. The action checks the plan again. Suspends on
- * `aiAllowed`, so it goes inside a `Suspense`.
+ * a disabled button takes no pointer events. The server (route or action) checks the plan again.
+ * Suspends on `aiAllowed`, so it goes inside a `Suspense`.
  */
-export function AiHeaderButton({ aiAllowed, label, pendingLabel, hint, pending, disabled, onClick }: AiHeaderButtonProps) {
+export function AiHeaderButton({
+  aiAllowed,
+  label,
+  pendingLabel,
+  hint,
+  pending,
+  disabled,
+  onClick,
+  onStop,
+  stopHint,
+}: AiHeaderButtonProps) {
   const t = useTranslations("ai");
   const allowed = use(aiAllowed);
+  const stoppable = pending && onStop !== undefined;
   return (
     <Tooltip>
       <TooltipTrigger render={<span className="inline-flex" />}>
-        {allowed ? (
+        {allowed && stoppable ? (
+          <Button type="button" variant="ghost" size="xs" onClick={onStop}>
+            <Square className="fill-current text-violet-400" aria-hidden />
+            {t("stop")}
+          </Button>
+        ) : allowed ? (
           <Button type="button" variant="ghost" size="xs" disabled={pending || disabled} onClick={onClick}>
             {pending ? (
               <Loader2 className="animate-spin text-violet-400" aria-hidden />
@@ -54,7 +73,7 @@ export function AiHeaderButton({ aiAllowed, label, pendingLabel, hint, pending, 
           </Link>
         )}
       </TooltipTrigger>
-      <TooltipContent side="bottom">{allowed ? hint : t("proOnly")}</TooltipContent>
+      <TooltipContent side="bottom">{!allowed ? t("proOnly") : stoppable ? (stopHint ?? hint) : hint}</TooltipContent>
     </Tooltip>
   );
 }

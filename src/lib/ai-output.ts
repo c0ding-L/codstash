@@ -81,6 +81,21 @@ export function parseExplanation(answer: string): string {
   return `${kept.trimEnd()}…`;
 }
 
+const OPENING_MARKDOWN_FENCE = /^(`{3,})(?:markdown|md)[ \t]*\r?\n/i;
+
+/**
+ * `parseExplanation` for an answer still streaming: a `markdown` fence that opens the answer and
+ * has not closed yet is dropped too, so the text does not show as one code block until the end.
+ */
+export function parseStreamingExplanation(partial: string): string {
+  const text = partial.trimStart();
+  const opening = OPENING_MARKDOWN_FENCE.exec(text);
+  if (opening && !new RegExp(`^${opening[1]}[ \\t]*$`, "m").test(text.slice(opening[0].length))) {
+    return parseExplanation(text.slice(opening[0].length));
+  }
+  return parseExplanation(text);
+}
+
 /** What the model made of a prompt: a rewrite, or nothing worth changing. Null when unusable. */
 export type OptimizedPrompt = { changed: true; prompt: string } | { changed: false };
 

@@ -1,7 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { setTestLocale } from "@/lib/__fixtures__/i18n-setup";
-import { AiProviderError, aiErrorMessage, complete, parseRetryAfter, type AiMessage } from "@/lib/ai-client";
+import {
+  AiProviderError,
+  aiErrorMessage,
+  complete,
+  completeStream,
+  parseRetryAfter,
+  parseSseChunk,
+  type AiMessage,
+} from "@/lib/ai-client";
 
 const fetchMock = vi.fn();
 
@@ -264,5 +272,237 @@ describe("aiErrorMessage", async () => {
   it("reads an empty answer, a network failure or any other error as unavailable", async () => {
     expect(await aiErrorMessage(error(null, "length"))).toBe("AI is unavailable right now. Try again.");
     expect(await aiErrorMessage(new Error("OPENROUTER_API_KEY is not set"))).toBe("AI is unavailable right now.");
+  });
+});
+
+describe("parseSseChunk", () => {
+  const delta = (content: string, finish: string | null = null) =>
+    `data: ${JSON.stringify({ choices: [{ delta: { content }, finish_reason: finish }] })}`;
+
+  it("reads text deltas and keeps an incomplete last line for the next chunk", () => {
+    const line = delta("Hello");
+    const { events, rest } = parseSseChunk(`${delta("Hi")}\n\n${line.slice(0, 10)}`);
+    expect(events).toEqual([{ type: "text", text: "Hi" }]);
+    expect(rest).toBe(line.slice(0, 10));
+
+    expect(parseSseChunk(`${rest}${line.slice(10)}\n`).events).toEqual([{ type: "text", text: "Hello" }]);
+  });
+
+  it("skips comments, blank lines, other fields and broken JSON", () => {
+    const { events } = parseSseChunk(": OPENROUTER PROCESSING\n\nevent: ping\nid: 3\ndata: {oops\r\n");
+    expect(events).toEqual([]);
+  });
+
+  it("reads the finish reason, [DONE] and CRLF line ends", () => {
+    const { events } = parseSseChunk(`${delta("end.", "length")}\r\ndata: [DONE]\r\n`);
+    expect(events).toEqual([
+      { type: "text", text: "end." },
+      { type: "finish", reason: "length" },
+      { type: "done" },
+    ]);
+  });
+
+  it("reads an error event on both providers", () => {
+    const openRouter = 'data: {"error":{"code":502,"message":"x","metadata":{"error_type":"provider_error"}}}\n';
+    const openAi = 'data: {"error":{"code":"server_error","type":"api_error"}}\n';
+    expect(parseSseChunk(openRouter + openAi).events).toEqual([
+      { type: "error", status: 502, code: "provider_error" },
+      { type: "error", status: null, code: "server_error" },
+    ]);
+  });
+});
+
+describe("completeStream", () => {
+  const encoder = new TextEncoder();
+  const delta = (content: string, finish: string | null = null) =>
+    `data: ${JSON.stringify({ choices: [{ delta: { content }, finish_reason: finish }] })}\n\n`;
+
+  /** A body the test pushes chunks into; it errors when the request is aborted, like a real fetch. */
+  function sseBody(signal?: AbortSignal) {
+    let push!: (chunk: string) => void;
+    let end!: () => void;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        push = (chunk) => controller.enqueue(encoder.encode(chunk));
+        end = () => controller.close();
+        signal?.addEventListener("abort", () => controller.error(new DOMException("aborted", "AbortError")));
+      },
+    });
+    return { body, push: (chunk: string) => push(chunk), end: () => end() };
+  }
+
+  /** Answers the next fetch with a body to push into. */
+  function streaming() {
+    let feed!: ReturnType<typeof sseBody>;
+    fetchMock.mockImplementation(async (_url: string, init: RequestInit) => {
+      feed = sseBody(init.signal ?? undefined);
+      return new Response(feed.body, { status: 200, headers: { "Content-Type": "text/event-stream" } });
+    });
+    return () => feed;
+  }
+
+  async function readAll(stream: ReadableStream<string>) {
+    const reader = stream.getReader();
+    let text = "";
+    for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) text += chunk.value;
+    return text;
+  }
+
+  afterEach(() => vi.useRealTimers());
+
+  it("posts with stream: true and joins the deltas", async () => {
+    const feed = streaming();
+    const started = completeStream(MESSAGES, { maxTokens: 300 });
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    feed().push(": OPENROUTER PROCESSING\n\n");
+    feed().push(delta("Hel"));
+    const ai = await started;
+    feed().push(delta("lo"));
+    feed().push(delta("!", "stop") + "data: [DONE]\n\n");
+    feed().end();
+
+    expect(await readAll(ai.stream)).toBe("Hello!");
+    expect(ai.finishReason()).toBe("stop");
+    expect(JSON.parse(fetchMock.mock.calls[0]![1].body)).toMatchObject({ stream: true, max_tokens: 300 });
+  });
+
+  it("sends stream: true to OpenAI too", async () => {
+    vi.stubEnv("AI_PROVIDER", "openai");
+    const feed = streaming();
+    const started = completeStream(MESSAGES, { maxTokens: 300 });
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    feed().push(delta("ok", "stop"));
+    feed().end();
+    await readAll((await started).stream);
+
+    expect(JSON.parse(fetchMock.mock.calls[0]![1].body)).toMatchObject({ stream: true, max_completion_tokens: 300 });
+  });
+
+  it("reports a cut-off answer through finishReason", async () => {
+    const feed = streaming();
+    const started = completeStream(MESSAGES, { maxTokens: 300 });
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    feed().push(delta("Half a ", null) + delta("rew", "length") + "data: [DONE]\n\n");
+    const ai = await started;
+    feed().end();
+
+    expect(await readAll(ai.stream)).toBe("Half a rew");
+    expect(ai.finishReason()).toBe("length");
+  });
+
+  it("maps an error status as complete does", async () => {
+    fetchMock.mockResolvedValue(json(429, { error: { code: 429, message: "slow down" } }, { "Retry-After": "20" }));
+
+    const error = await completeStream(MESSAGES, { maxTokens: 300 }).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(AiProviderError);
+    expect(error).toMatchObject({ status: 429, retryAfter: 20 });
+    expect(await aiErrorMessage(error)).toBe("AI is busy. Try again in 20 seconds.");
+  });
+
+  it("throws on an error event before any text", async () => {
+    const feed = streaming();
+    const started = completeStream(MESSAGES, { maxTokens: 300 }).catch((caught: unknown) => caught);
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    feed().push('data: {"error":{"code":503,"metadata":{"error_type":"provider_unavailable"}}}\n\n');
+
+    expect(await started).toMatchObject({ status: 503, code: "provider_unavailable" });
+  });
+
+  it("throws when the answer ends with no text, as complete does", async () => {
+    const feed = streaming();
+    const started = completeStream(MESSAGES, { maxTokens: 300 }).catch((caught: unknown) => caught);
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    feed().push(delta("", "length") + "data: [DONE]\n\n");
+
+    expect(await started).toMatchObject({ status: null, code: "length" });
+  });
+
+  it("errors the stream on an error event after text", async () => {
+    const feed = streaming();
+    const started = completeStream(MESSAGES, { maxTokens: 300 });
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    feed().push(delta("Part"));
+    const ai = await started;
+    feed().push('data: {"error":{"code":502,"message":"upstream"}}\n\n');
+
+    const error = await readAll(ai.stream).catch((caught: unknown) => caught);
+    expect(error).toBeInstanceOf(AiProviderError);
+    expect(error).toMatchObject({ status: 502 });
+  });
+
+  it("times out when the first token takes too long, keep-alives notwithstanding", async () => {
+    vi.useFakeTimers();
+    const feed = streaming();
+    const started = completeStream(MESSAGES, { maxTokens: 300 }).catch((caught: unknown) => caught);
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+
+    for (let second = 0; second < 50; second += 10) {
+      feed().push(": OPENROUTER PROCESSING\n\n");
+      await vi.advanceTimersByTimeAsync(10_000);
+    }
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    expect(await started).toMatchObject({ status: 408, code: "timeout" });
+  });
+
+  it("lets the caller allow a shorter first-token wait", async () => {
+    vi.useFakeTimers();
+    streaming();
+    const started = completeStream(MESSAGES, { maxTokens: 300, timeoutMs: 5_000 }).catch((caught: unknown) => caught);
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    await vi.advanceTimersByTimeAsync(5_000);
+
+    expect(await started).toMatchObject({ status: 408, code: "timeout" });
+  });
+
+  it("never cuts an answer that keeps coming, but gives up after 30 s of silence", async () => {
+    vi.useFakeTimers();
+    const feed = streaming();
+    const started = completeStream(MESSAGES, { maxTokens: 300 });
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    feed().push(delta("a"));
+    const ai = await started;
+    const read = readAll(ai.stream).catch((caught: unknown) => caught);
+
+    // Three minutes of text, a chunk every 20 s: well past the first-token timeout.
+    for (let chunk = 0; chunk < 9; chunk++) {
+      await vi.advanceTimersByTimeAsync(20_000);
+      feed().push(delta("a"));
+    }
+    await vi.advanceTimersByTimeAsync(30_000);
+
+    expect(await read).toMatchObject({ status: 408, code: "timeout" });
+  });
+
+  it("stops the upstream call when the stream is cancelled", async () => {
+    const feed = streaming();
+    const started = completeStream(MESSAGES, { maxTokens: 300 });
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    feed().push(delta("a"));
+    const ai = await started;
+
+    await ai.stream.cancel();
+
+    expect((fetchMock.mock.calls[0]![1].signal as AbortSignal).aborted).toBe(true);
+  });
+
+  it("stops the upstream call when the caller aborts", async () => {
+    const caller = new AbortController();
+    streaming();
+    const started = completeStream(MESSAGES, { maxTokens: 300, signal: caller.signal }).catch((caught: unknown) => caught);
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    caller.abort();
+
+    expect(await started).toMatchObject({ status: null, code: "aborted" });
+    expect((fetchMock.mock.calls[0]![1].signal as AbortSignal).aborted).toBe(true);
+  });
+
+  it("maps a network failure as complete does", async () => {
+    fetchMock.mockRejectedValue(new TypeError("fetch failed"));
+
+    expect(await completeStream(MESSAGES, { maxTokens: 300 }).catch((caught: unknown) => caught)).toMatchObject({
+      status: null,
+      code: "network",
+    });
   });
 });

@@ -5,6 +5,7 @@ import {
   parseDescription,
   parseExplanation,
   parseOptimizedPrompt,
+  parseStreamingExplanation,
   parseTagSuggestions,
 } from "@/lib/ai-output";
 
@@ -201,5 +202,24 @@ describe("parseOptimizedPrompt", () => {
 
   it("is null rather than cut when the rewrite is over the content limit", () => {
     expect(parseOptimizedPrompt("a".repeat(100_001), ORIGINAL)).toBeNull();
+  });
+});
+
+describe("parseStreamingExplanation", () => {
+  it("drops a markdown fence that opened the answer and has not closed yet", () => {
+    expect(parseStreamingExplanation("```markdown\nIt **lists** files")).toBe("It **lists** files");
+    expect(parseStreamingExplanation("  ```md\nIt lists")).toBe("It lists");
+  });
+
+  it("reads a closed fence as parseExplanation does", () => {
+    expect(parseStreamingExplanation("```markdown\nIt lists files.\n```")).toBe("It lists files.");
+  });
+
+  it("keeps a code block that opens the answer", () => {
+    expect(parseStreamingExplanation("```bash\nls -la")).toBe("```bash\nls -la");
+  });
+
+  it("caps the text like parseExplanation", () => {
+    expect(parseStreamingExplanation("word ".repeat(2_000)).length).toBeLessThanOrEqual(EXPLANATION_MAX_LENGTH);
   });
 });
