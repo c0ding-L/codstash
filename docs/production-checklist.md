@@ -43,7 +43,7 @@ runs there.
 | `EMAIL_FROM` | empty | Every email; must be `Cortex <…@your-domain>` on a domain verified in Resend |
 | `EMAIL_VERIFICATION_ENABLED` | empty (= on) | Leave unset or `true` in production; `false` only for local testing |
 | `UPSTASH_REDIS_REST_URL` / `_TOKEN` | set | Rate limiting fails open silently; `next start` got `WRONGPASS` with the local token |
-| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME` | absent | File and image uploads |
+| `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME` | set (same bucket as development) | File and image uploads |
 | `BICTORYS_API_URL` | `test.bictorys.com` | Payments stay in test mode |
 | `BICTORYS_API_KEY`, `BICTORYS_WEBHOOK_SECRET` | set (test keys) | Checkout and the payment webhook |
 | `OPENROUTER_API_KEY` | set | Every AI feature (auto-tagging, descriptions, explain, optimize) |
