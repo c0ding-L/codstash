@@ -555,7 +555,17 @@
     "addTitleFirst": "Commencez par ajouter un titre.",
     "suggestedTags": "Tags suggérés",
     "addTag": "Ajouter le tag {tag}",
-    "dismissTag": "Ignorer le tag {tag}"
+    "dismissTag": "Ignorer le tag {tag}",
+    "summarize": "Résumer",
+    "summarizing": "Résumé en cours…",
+    "summarizeHint": "Résumer ce texte avec l’IA. Le texte est envoyé à un fournisseur d’IA tiers.",
+    "summary": "Résumé généré par l’IA",
+    "stopSummaryHint": "Arrêtez le résumé et conservez le texte jusqu’ici.",
+    "copySummary": "Copier le résumé",
+    "closeSummary": "Fermer le résumé",
+    "summaryStopped": "Le résumé a été interrompu avant la fin.",
+    "summaryCutOff": "Le résumé a été tronqué.",
+    "fileSecretsWarning": "Ce fichier semble contenir un secret, tel qu’une clé ou un mot de passe. Son contenu a été transmis au fournisseur d’IA."
   },
   "secrets": {
     "title": "On dirait un secret",
@@ -864,7 +874,12 @@
       "noPrompt": "Il n’y a pas de prompt à optimiser.",
       "promptTooLong": "Ce prompt est trop long pour être optimisé ({max, number} caractères au maximum).",
       "noOptimized": "Impossible d’optimiser ce prompt.",
-      "optimizeFailed": "Impossible d’optimiser ce prompt. Réessayez."
+      "optimizeFailed": "Impossible d’optimiser ce prompt. Réessayez.",
+      "cannotSummarize": "Seules les notes longues, les prompts et les fichiers texte peuvent faire l’objet d’un résumé.",
+      "fileMissing": "Le fichier est introuvable.",
+      "fileUnreadable": "Ce fichier n’est pas un texte lisible.",
+      "noSummary": "Impossible de résumer cet élément.",
+      "summarizeFailed": "Impossible de résumer cet élément. Réessayez."
     },
     "upload": {
       "noName": "Le fichier n’a pas de nom.",

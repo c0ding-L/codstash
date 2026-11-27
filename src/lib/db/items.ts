@@ -438,6 +438,35 @@ export async function getItemForExplain(userId: string, id: string): Promise<Ite
   return { content: item.content, language: item.language, slug: item.type.slug };
 }
 
+export interface ItemForSummary {
+  title: string;
+  slug: string;
+  content: string | null;
+  /** The R2 key of a file item. */
+  fileUrl: string | null;
+  fileName: string | null;
+  fileSize: number | null;
+}
+
+/** One of the user's items, with what a summary needs; null when missing or someone else's. */
+export async function getItemForSummary(userId: string, id: string): Promise<ItemForSummary | null> {
+  const item = await prisma.item.findFirst({
+    where: { id, userId },
+    select: {
+      title: true,
+      content: true,
+      fileUrl: true,
+      fileName: true,
+      fileSize: true,
+      type: { select: { slug: true, isSystem: true } },
+    },
+  });
+  if (!item) return null;
+  const { type, ...rest } = item;
+  // A custom type's slug could read "note"; only the system types are summarised.
+  return { ...rest, slug: type.isSystem ? type.slug : "custom" };
+}
+
 /**
  * The fields the drawer edits. An absent field is left as it is, while null
  * clears it, so a caller sends only the fields the item's type uses.

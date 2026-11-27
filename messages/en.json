@@ -555,7 +555,17 @@
     "addTitleFirst": "Add a title first.",
     "suggestedTags": "Suggested tags",
     "addTag": "Add tag {tag}",
-    "dismissTag": "Dismiss tag {tag}"
+    "dismissTag": "Dismiss tag {tag}",
+    "summarize": "Summarize",
+    "summarizing": "Summarizing…",
+    "summarizeHint": "Summarize this text with AI. The text is sent to a third-party AI provider.",
+    "summary": "AI summary",
+    "stopSummaryHint": "Stop the summary and keep the text so far.",
+    "copySummary": "Copy summary",
+    "closeSummary": "Close summary",
+    "summaryStopped": "The summary was stopped before the end.",
+    "summaryCutOff": "The summary was cut off.",
+    "fileSecretsWarning": "This file seems to contain a secret, such as a key or a password. Its text was sent to the AI provider."
   },
   "secrets": {
     "title": "This looks like a secret",
@@ -864,7 +874,12 @@
       "noPrompt": "There is no prompt to optimize.",
       "promptTooLong": "This prompt is too long to optimize (at most {max, number} characters).",
       "noOptimized": "Could not optimize this prompt.",
-      "optimizeFailed": "Could not optimize this prompt. Try again."
+      "optimizeFailed": "Could not optimize this prompt. Try again.",
+      "cannotSummarize": "Only long notes, prompts and text files can be summarized.",
+      "fileMissing": "The file could not be found.",
+      "fileUnreadable": "This file is not readable text.",
+      "noSummary": "Could not summarize this item.",
+      "summarizeFailed": "Could not summarize this item. Try again."
     },
     "upload": {
       "noName": "The file has no name.",

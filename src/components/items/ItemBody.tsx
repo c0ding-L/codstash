@@ -8,9 +8,11 @@ import type { SavedItem } from "@/components/items/ItemEditForm";
 import { ItemFileCard } from "@/components/items/ItemFileCard";
 import { useTemplateCopy } from "@/components/items/FillVariablesDialog";
 import { MarkdownEditor } from "@/components/items/MarkdownEditor";
+import { SummaryPanel } from "@/components/items/SummaryPanel";
 import { Skeleton } from "@/components/ui/skeleton";
 import { isCodeType } from "@/lib/code-language";
 import { markUsed } from "@/lib/item-usage";
+import { canSummarize } from "@/lib/summarize";
 import { isWebUrl } from "@/lib/utils";
 import type { ItemTypeSlug } from "@/types/item-type";
 
@@ -27,7 +29,7 @@ export function ItemBody({
   fileSize: number | null;
   state: ItemDetailState;
   slug: ItemTypeSlug | null;
-  /** For the code editor's Explain button and the prompt's Optimize button. */
+  /** For the code editor's Explain button, the prompt's Optimize button and Summarize. */
   aiAllowed: Promise<boolean>;
   /** Gets the prompt once the user accepts its optimized version. */
   onSaved: (saved: SavedItem) => void;
@@ -98,6 +100,17 @@ export function ItemBody({
           onCopied={() => markUsed(itemId)}
           onCopy={copy}
           highlightVariables={slug === "prompt"}
+        />
+      ) : null}
+
+      {canSummarize({ slug, content, fileName, fileSize }) ? (
+        // Keyed by item, so a summary never carries over to another item. A file's text is not
+        // here, so the server checks it for secrets instead.
+        <SummaryPanel
+          key={`${itemId}-summary`}
+          itemId={itemId}
+          aiAllowed={aiAllowed}
+          text={slug === "file" ? undefined : (content ?? "")}
         />
       ) : null}
 

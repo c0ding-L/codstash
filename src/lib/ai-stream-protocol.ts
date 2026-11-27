@@ -3,6 +3,13 @@
 // last line says why it ended when it did not end normally. Pure: safe on both sides.
 
 const MARKER_START = "\n\n[[cortex:";
+
+/**
+ * Set by the summary route when a file's text holds what looks like a secret: the browser checks a
+ * note's or a prompt's text itself before calling, but never has a file's. The call still goes
+ * ahead and the drawer warns, as for the other AI actions (A6).
+ */
+export const SECRET_WARNING_HEADER = "X-Cortex-Secret-Warning";
 const MARKER_END = "]]";
 
 /** Appended when the answer stopped early: the token cap, Explain's length cap or the route's deadline. */

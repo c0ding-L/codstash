@@ -1,4 +1,4 @@
-// The browser side of the streamed AI routes (`/api/ai/explain`, `/api/ai/optimize`).
+// The browser side of the streamed AI routes (`/api/ai/explain`, `/api/ai/optimize`, `/api/ai/summarize`).
 
 import { readStreamedAnswer, visibleStreamedText } from "@/lib/ai-stream-protocol";
 
@@ -17,6 +17,8 @@ export interface StreamAiOptions {
   signal?: AbortSignal;
   /** The message for a failure the server did not word: a network error, or an answer that is not JSON. */
   failedMessage: string;
+  /** Called with the response's headers once the answer has started (a 200). */
+  onHeaders?: (headers: Headers) => void;
 }
 
 /** One frame in the browser; a short timeout elsewhere. */
@@ -32,7 +34,7 @@ const nextFrame: (callback: () => void) => void =
 export async function streamAi(
   url: string,
   body: unknown,
-  { onText, signal, failedMessage }: StreamAiOptions,
+  { onText, signal, failedMessage, onHeaders }: StreamAiOptions,
 ): Promise<{ text: string; cutOff: boolean }> {
   let response: Response;
   try {
@@ -52,6 +54,7 @@ export async function streamAi(
     throw new AiStreamError(typeof answer.error === "string" && answer.error ? answer.error : failedMessage);
   }
 
+  onHeaders?.(response.headers);
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let received = "";

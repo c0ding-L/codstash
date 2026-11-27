@@ -57,6 +57,8 @@ export function parseDescription(answer: string): string {
 }
 
 export const EXPLANATION_MAX_LENGTH = 4_000;
+/** The longest summary forwarded to the drawer: a lead sentence and five bullets, with room. */
+export const SUMMARY_MAX_LENGTH = 3_000;
 /** A fence around the whole answer: ```` ```markdown ````, ```` ```md ```` or a bare ```` ``` ````, closed on the last line. */
 const WRAPPING_FENCE = /^(`{3,})(markdown|md)?[ \t]*(?:\r?\n([\s\S]*?))?\r?\n\1[ \t]*$/i;
 
