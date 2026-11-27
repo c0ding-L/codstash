@@ -108,12 +108,6 @@ async function AppSidebarBody() {
                   <span>{t("dashboard.title")}</span>
                 </SidebarNavButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarNavButton href="/favorites" exact tooltip={t("favorites.title")}>
-                  <Star aria-hidden />
-                  <span>{t("favorites.title")}</span>
-                </SidebarNavButton>
-              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
