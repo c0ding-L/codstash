@@ -14,6 +14,12 @@ Not Started
 
 ---
 
+Previous feature (completed) — AI summaries of long notes and files: a Summarize action in the
+item drawer for long notes, prompts and text files, so the landing page's "AI summaries" claim is
+true. Outcome in the History below.
+
+---
+
 Previous feature (completed) — C4 CLI `cortex`: a zero-dependency Node CLI in `cli/` on the
 REST API (C2), to search, print, copy, run and save items from the terminal. Last step of
 `docs/roadmap-v2.md` § C. Outcome in the History below.
@@ -3011,3 +3017,38 @@ Environment notes that outlive any one feature:
     `nextCursor`.
   - 1,594 tests, build and lint green; CLI typecheck and build green. Merged into `main`
     (fast-forward); branch deleted.
+- 2026-11-27 — AI summaries of long notes and files (`0e2f0e1`).
+  - Spec: `context/features/ai-summaries-spec.md`. Done before the landing page update
+    (`context/features/landing-update-spec.md`, not started), whose AI section promised
+    summaries nothing implemented.
+  - **Rule** `src/lib/summarize.ts`: `canSummarize` takes notes and prompts from 1,500 trimmed
+    characters and system `file` items with a text extension (`.txt .md .json .yaml .yml .xml
+    .csv .toml .ini`) from 1,500 bytes; never snippets, commands, links, images, PDFs or custom
+    types (`getItemForSummary` maps a custom type to `custom`). `readTextStart` reads a stream
+    with a fatal UTF-8 decoder up to a character limit, cancels the rest, refuses NUL bytes.
+  - **Route** `POST /api/ai/summarize` (`maxDuration = 120`): item and `canSummarize` before the
+    gate; `aiGate` **before** the R2 read (review fix: a Free user could otherwise trigger paid R2
+    reads unthrottled), so a missing (404) or unreadable (400) file spends a slot. First 12,000
+    characters, `[truncated]` when cut, answer capped at 3,000 (`SUMMARY_MAX_LENGTH`).
+  - **Prompt** `summaryMessages`: a lead sentence then at most 5 bullets, Markdown, UI language,
+    `<content>` delimiters; `SUMMARY_MAX_TOKENS = 1_000`.
+  - **Drawer** `SummaryPanel` (in `ItemBody`, keyed `${itemId}-summary`: the same key as the
+    editor sibling gave a duplicate-key warning, found in the browser): Summarize/Stop through
+    `AiHeaderButton`, streamed Markdown, Copy, Close; a crown link to `/upgrade` on Free.
+  - **Secrets (deviation from the spec):** a note's or prompt's text goes through the client
+    check; for a file the server runs `detectSecrets` on what it sends and sets
+    `X-Cortex-Secret-Warning` (constant in `ai-stream-protocol.ts`, read through the new
+    `onHeaders` of `streamAi`), and the drawer shows a warning toast. Header tested; the toast was
+    not seen in a browser.
+  - **Copy:** 15 keys (`ai.*`, `errors.ai.*`). French from DeepL (glossary, `prefer_more`), then
+    aligned with the existing AI strings: « Résumer » (DeepL: « Résumez »), « Résumé en cours… »
+    (« En résumé… »), the hint's « fournisseur d’IA tiers », « Réessayez », « Impossible de… »;
+    curly apostrophes.
+  - **Browser check** (Playwright script, `next dev`, develop): demo account set Pro, a long note
+    and a 3.3 KB `.md` uploaded through `/api/upload` summarized in 7–13 s in English and French;
+    no button on a short note, a PDF or a snippet; a crown link on Free. Afterwards: demo back to
+    `isPro = false, proUntil = null`, the 4 test items deleted, the R2 object deleted and checked
+    gone.
+  - `next build` ran out of heap twice on Windows and passed on a retry each time.
+  - 1,657 tests, build and lint green. Rebased onto `main` (after `9be90f4`), fast-forward
+    merged; branch deleted.
