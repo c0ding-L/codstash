@@ -261,3 +261,33 @@
     .arrow-pulse { animation: none; }
   }
 }
+
+/*
+ * Homepage hero: the two blurred glows behind the title drift and breathe on long, unequal
+ * cycles, so they never line up the same way. `transform` and `opacity` only: the blur is
+ * rasterized once and the browser moves the layer without repainting it.
+ */
+@keyframes hero-glow {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
+  50% { transform: translate3d(-10%, 6.5%, 0) scale(1.12); opacity: 0.55; }
+}
+@keyframes hero-glow-alt {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.35; }
+  50% { transform: translate3d(-48%, 18%, 0) scale(0.88); opacity: 1; }
+}
+@layer components {
+  .hero-glow {
+    animation: hero-glow 24s ease-in-out infinite;
+    will-change: transform, opacity;
+  }
+  .hero-glow-alt {
+    animation: hero-glow-alt 32s ease-in-out infinite;
+    will-change: transform, opacity;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-glow,
+    .hero-glow-alt { animation: none; }
+    /* Hold the first frame, where the second glow starts faint. */
+    .hero-glow-alt { opacity: 0.35; }
+  }
+}

@@ -39,7 +39,11 @@ export default async function Home() {
 
       <main className="flex-1">
         <section className="relative overflow-hidden px-4 pt-36 pb-24 sm:px-6">
-          <div className="pointer-events-none absolute top-0 left-1/2 h-[480px] w-[900px] -translate-x-1/2 rounded-full bg-white/[0.04] blur-3xl" />
+          {/* The centring stays on the wrapper; the glows inside drift with `transform` alone. */}
+          <div className="pointer-events-none absolute top-0 left-1/2 h-[480px] w-[900px] -translate-x-1/2" aria-hidden>
+            <div className="hero-glow absolute inset-0 rounded-full bg-white/[0.06] blur-3xl" />
+            <div className="hero-glow-alt absolute top-24 right-0 h-[300px] w-[480px] rounded-full bg-white/[0.05] blur-3xl" />
+          </div>
           <div className="relative mx-auto max-w-6xl">
             <div className="mx-auto max-w-3xl text-center">
               <h1 className="text-5xl font-semibold tracking-tight md:text-7xl">
