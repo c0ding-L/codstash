@@ -14,6 +14,12 @@ Not Started
 
 ---
 
+Previous feature (completed) — Landing page update for roadmap v2: the landing page and plan
+cards describe what shipped in roadmap v2 § A–C (variables, custom types, import/export, API,
+MCP, CLI) and drop the "versioned prompts" claim. Outcome in the History below.
+
+---
+
 Previous feature (completed) — AI summaries of long notes and files: a Summarize action in the
 item drawer for long notes, prompts and text files, so the landing page's "AI summaries" claim is
 true. Outcome in the History below.
@@ -3052,3 +3058,30 @@ Environment notes that outlive any one feature:
   - `next build` ran out of heap twice on Windows and passed on a retry each time.
   - 1,657 tests, build and lint green. Rebased onto `main` (after `9be90f4`), fast-forward
     merged; branch deleted.
+- 2026-11-27 — Landing page update for roadmap v2 (`41d5562`).
+  - Spec: `context/features/landing-update-spec.md`. Decisions: CLI shown "Coming soon" with no
+    install command; new cards Variables, Custom Types, Import & Export; Integrations as its own
+    section; hero title kept; no prompt versioning, the claim reworded instead.
+  - **Feature grid** 6 → 9 cards. `features` in `home-content.ts` is now
+    `{ key } & ({ type } | { icon })`, so a neutral card names its icon (was: every `null` card
+    got `Search`). The prompts and Variables cards use a `{variables}` placeholder filled with
+    the literal `{{variables}}`, since ICU messages cannot hold braces as text.
+  - **`IntegrationsSection`** (server component, between AI and pricing): REST API, MCP server,
+    CLI with a "Coming soon" badge; "reading on Free, saving on Pro" once. The sample is
+    `cursorConfig(appOrigin(...))`, the same `mcp.json` as Settings › API tokens, for this
+    deployment, plus the 5 MCP tool names copied by hand from `mcp-server.ts`.
+  - **Plan cards:** Free + `variables`, `contextExport`, `apiRead`; Pro + `apiWrite`. The spec
+    said they are shared with Settings › Plan: they are not, they are shared with `/upgrade`.
+  - **Copy:** the API line was first "save your items and collections"; the API cannot write
+    collections (only items have POST/PATCH), so it now says "save or update items".
+    `metadata.home` mentions the terminal (true through the API; the author kept it).
+  - **French:** DeepL with the glossary, `prefer_more`. Three ambiguous English sentences were
+    reworded and re-sent rather than fixed by hand. Changes to DeepL's output: curly
+    apostrophes, no-break space before « ; », « invite »/« instructions » → « prompt(s) »,
+    « meilleures » → « meilleurs », « leur » → « leurs », « Cortex » → « cortex ».
+  - **Browser check** (Playwright script, `next start` with `DATABASE_URL` from `.env`): English
+    and French, 1280 px and 390 px with mobile emulation; 9 cards, the new section, the plan
+    lines, no horizontal scroll, no console errors; `/upgrade` signed in as demo. `next dev`
+    crashed with a Turbopack worker out of memory compiling Settings (unrelated).
+  - Ships after `prisma migrate deploy` in production (`api_tokens`).
+  - 1,657 tests, build and lint green. Fast-forward merged into `main`; branch deleted.
