@@ -1,102 +1,22 @@
 # Current Feature
 
-# Refactor — duplicated code (refactor-scanner findings)
-
 ## Status
 
-Implemented — tests, lint, build and browser checks pass; awaiting merge to main.
+Not Started
 
 ## Goals
 
-Remove the duplication the `refactor-scanner` agent found in `src/actions`, `src/app/api`,
-`src/components` and `src/lib`, fixing first the copies that have already drifted. Done in
-phases on one branch (`refactor/duplicated-code`), one commit per phase, with `npm test`,
-`npm run build` and `npm run lint` passing after each.
-
-### Phase 1 — Drift fixes (behaviour changes)
-
-- **Tag order:** new `src/lib/db/tags.ts` with `tagNameSelect` and `tagNames()` (map and sort
-  with `localeCompare`), used by the 7 sites in `db/items.ts`, `db/api-items.ts`,
-  `db/share.ts` and `db/export.ts`. One order everywhere, so tags no longer reorder after a
-  save.
-- **Session check in app routes:** new `src/lib/session-route.ts` with
-  `requireSessionUser(): Promise<{ userId } | Response>` (translated `notSignedIn`, 401), used by
-  the 11 app routes. The 4 English-only routes (`collections`, `items/[id]`, `download`,
-  `search`) also switch their not-found messages to the catalog (`errors.items.notFound`, a
-  new key for files if needed).
-- **Zod → action result:** new `src/lib/action-result.ts` with `invalidInput()` (one field
-  check, string paths only), `ActionResult<T, F>`, `SimpleActionResult` and `fail()`. The
-  action files keep their named type aliases, so component imports do not change.
-- **Item forms:** `useItemFields()` hook in `src/components/items/item-form-fields.tsx`, used
-  by `ItemEditForm` and `NewItemDialog`. `canSubmit` (with the link URL rule) and the submit
-  guard apply to both.
-- **Smaller drifts:** the XOF payment note in `UpgradeButtons` (via a shared
-  `PaymentMethodsNote`); `ItemCopyButton` errors through a shared `fetchItemDetail()` in
-  `src/lib/item-client.ts`; `ResendVerificationButton` shows the route's own message;
-  `promptExcerpt` stays within its limit (shared `truncate()` in `src/lib/utils.ts`); one
-  `attachmentDisposition()` with full escaping; `getCollectionsWithTypes` spreads
-  `{ ...where, userId }`; `ai-stream-client` reuses `responseError`.
-
-### Phase 2 — Shared server modules
-
-- `src/lib/auth-rules.ts` (client-safe): `EMAIL_PATTERN`, `MIN_PASSWORD_LENGTH`,
-  `MAX_NAME_LENGTH`, `isValidEmail()`, `normalizeEmail()` — used by the auth routes,
-  `actions/profile.ts` and the auth forms.
-- `src/lib/password-hash.ts` (server-only): `BCRYPT_ROUNDS`, `hashPassword()`.
-- `src/lib/prisma-errors.ts`: `prismaErrorCode()`, `isPrismaNotFound()`, `isUniqueViolation()`
-  (duck-typed on `code`, as the tests throw plain objects).
-- `src/lib/email-token.ts`: `issueEmailToken()`, `consumeEmailToken()`, `hashToken`,
-  `appBaseUrl()`; `verification.ts` and `password-reset.ts` call it; `resetIdentifier()` /
-  `verificationIdentifier()` exported and used by `actions/profile.ts`. The 4 `APP_URL` reads
-  go through `appBaseUrl()`.
-- `Errors` type exported from `src/i18n/errors-server.ts`.
-- Auth routes: `readJson` moved to `src/lib/request-body.ts`, shared `authFail()`.
-
-### Phase 3 — Server-side de-duplication
-
-- AI: `streamAiAnswer()` in `src/lib/ai-stream-response.ts` for the 3 AI routes
-  (`maxDuration` stays literal in each); private `runCompletion()` in `actions/ai.ts`;
-  private `httpError()` in `ai-client.ts`.
-- `setFlagAction()` for the 3 favorite/pin actions.
-- `tagLinks()` / `collectionLinks()` exported and reused by `patchApiItem`.
-- `loadForUser()` for the 5 `load-*` loaders (`auth()` stays outside the `try`).
-- `lockUser()` / `assertBelowCap()` in `db/billing.ts` for the 4 cap checks.
-- Private `getItemsPage()` and `withCollectionTypes()`.
-- `fieldsForType` built from the `item-type-ui.ts` helpers.
-- `readBytesWithin()` shared by `readJsonWithin` and the gists reader.
-- `importLimits()` and `readImportBody()` for the 2 import routes; 429 body shape aligned
-  with `{ error }` on app routes.
-- `reauthUserId()` private helper in `actions/profile.ts`.
-
-### Phase 4 — Components
-
-- `DestructiveConfirmDialog` for the 4 delete/revoke dialogs.
-- `useAiAnswerStream()` hook + `StreamedMarkdown` for `CodeEditor` and `SummaryPanel`.
-- `useFileDrop()` for `FileUpload` and `ImportFilesTab`.
-- `postAuthJson()` for the 4 auth forms.
-- `ItemStatusMarkers` (server-safe, no `"use client"`) for the 8 item lists.
-- `useCheckout()`, `ItemRowSection`, `downloadBlob()`, `ProOnlyUpgrade`, `AiFieldButton`,
-  `isCodeType` in `SharedItemView`.
-
-### Phase 5 — Test fixtures
-
-- `src/lib/__fixtures__/`: `plan()`, `fakeAiStream()`, `prismaError()`; the 3 `load-*` plan
-  tests collapsed into a `describe.each`. `vi.mocked()` instead of `asMock` only in files
-  already touched.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- Source: four `refactor-scanner` runs (2026-11-27) over `src/actions`, `src/app/api`,
-  `src/components`, `src/lib`.
-- Visible changes: the 4 English-only routes become translated; any new message key needs a
-  French string from DeepL (never hand-written).
-- Server/client boundary: bcrypt and Prisma never go in a client-safe module; helpers shared
-  by `"use server"` files live in `src/lib/`.
-- `vi.mock(...)` calls stay in each test file (hoisted); fixtures expose functions called in
-  `beforeEach` (`mockReset` is on).
-- Components are not unit-tested: phases 1 and 4 are checked in the browser (item create/edit,
-  delete dialogs, AI explain/summarize, uploads, auth forms).
-- Out of scope: anything the scanner listed as "considered and dropped".
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — Refactor of duplicated code: the `refactor-scanner` agent's
+findings across actions, API routes, components and lib, moved into shared modules, with the
+copies that had drifted fixed first. Outcome in the History below.
 
 ---
 
@@ -3283,3 +3203,22 @@ Environment notes that outlive any one feature:
     `/favicon.ico` answers 404, no `/favorites` link in the sidebar, top-bar star kept; icon
     rendered at 128, 32 and 16px.
   - 1,704 tests, build and lint green. Fast-forward merged into `main`; branch deleted.
+- 2026-11-28 — Refactor of duplicated code (`05e4303`).
+  - New `refactor-scanner` agent (`.claude/agents/`), run on `src/actions`, `src/app/api`,
+    `src/components` and `src/lib`; every finding implemented, at the author's request.
+  - Drift fixes: one tag order (`localeCompare`, `db/item-links.ts`); the 11 app routes share
+    `requireSessionUser` and the 4 English-only ones are translated; one `invalidInput()`;
+    `useItemFields()` gives the edit form the link URL check and double-submit guard; XOF note in
+    `UpgradeButtons`; resend-verification shows the route's message; `truncate()` keeps the
+    ellipsis within the limit; one `attachmentDisposition()`; `{ ...where, userId }` everywhere.
+  - Shared modules: `action-result`, `prisma-errors`, `auth-rules` (client-safe),
+    `password-hash` (server-only), `email-token`, `app-url`, `session-route`, `auth-route`,
+    `set-flag-action`, `load-for-user`, `db/user-lock`, `withAiItemRoute` / `streamAiAnswer`.
+    Components: `DestructiveConfirmDialog`, `useAiAnswerStream` + `StreamedMarkdown`,
+    `useFileDrop`, `postAuthJson`, `ItemStatusMarkers`, `useCheckout`, `PaymentMethodsNote`,
+    `ItemRowSection`, `ProOnlyUpgrade`, `AiFieldButton`, `downloadBlob`, `fetchItemDetail`.
+  - No new message keys: the download 404 reuses `ai.fileMissing`.
+  - 1,738 tests, build and lint green. Playwright: dashboard sections and markers, link create
+    and edit need a URL, tags keep their order after a save, delete confirm, settings, upgrade,
+    translated 401. Not driven: AI Explain/Summarize, drag-and-drop, register/reset forms.
+    Fast-forward merged into `main`; branch deleted.
