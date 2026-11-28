@@ -1,66 +1,22 @@
 # Current Feature
 
-Admin account: the author's account gets every Pro feature without paying, plus an `/admin`
-panel with stats, a user list, and actions to grant or revoke Pro and delete users.
-
 ## Status
 
-In progress: implemented on `feature/admin-account`; tests, build, lint and the browser check pass. Waiting for the go-ahead to commit
+Not Started
 
 ## Goals
 
-- **Role in the schema.** `enum Role { USER ADMIN }` and `role Role @default(USER)` on `User`,
-  through `prisma migrate dev`. The migration promotes nobody.
-- **One Pro gate.** A pure helper `hasProAccess({ role, proUntil }, now)` in
-  `src/lib/billing-plans.ts`, true for `ADMIN` or while `proUntil` is in the future. It replaces
-  `isProActive` at the three places that feed every gate:
-  - `src/lib/db/billing.ts` (`getPlanStatus`): web gates, settings, upgrade, usage limits, AI,
-    import/export, upload, sharing, custom types.
-  - `src/lib/api-auth.ts`: REST API, CLI, MCP (write scope).
-  - `src/auth.ts` jwt callback: `session.user.isPro` for the UI. `role` goes on the token and
-    session too (`next-auth.d.ts`). The callback re-reads the user on each request, so a
-    demotion applies at once. The `isPro` mirror-column reset must not flip for an admin with
-    a null `proUntil`.
-- **Settings.** An admin sees an "Admin" badge in the plan card instead of a Pro end date, and
-  no upgrade buttons. `/upgrade` already redirects anyone with `isPro`.
-- **`/admin` panel** (a server page, `await connection()`), linked from the sidebar for admins
-  only. The page itself calls `notFound()` for a signed-in non-admin, so the route is not
-  revealed to them. Anonymous visitors are sent to sign-in by the proxy, like every app page.
-  - **Stats:** users, verified users, active Pro, sign-ups in the last 30 days, item and
-    collection counts, payment totals per currency (`Payment`).
-  - **Users:** email, name, created date, verified, plan (`Admin` / Pro until … / Free), item
-    count. Search by email or name, paginated.
-  - **Actions:** grant Pro (N days, stacked like a payment with `extendProUntil`), revoke Pro
-    (`proUntil` → null), delete a user (with a confirmation). The user list links each row to
-    these actions.
-- **Tests:** `hasProAccess`, `getPlanStatus` and `api-auth` for an admin, and the admin
-  actions (non-admin rejected, guards below). `role` added to the `plan.ts` and `api-v1.ts`
-  fixtures.
-- **i18n:** every new string in `en.json` and `fr.json`, French through DeepL and the glossary.
+<!-- Bullet points of what success looks like -->
 
 ## Notes
 
-- **Security.**
-  - Every admin server action and query re-checks `role === "ADMIN"` from the database on the
-    server. The layout gate alone is not enough, because server actions can be called directly.
-  - Admin features are session-only. API tokens and MCP never reach them. An admin token gets
-    Pro access, nothing more.
-  - `role` is never written from registration, the profile, OAuth sign-in or any user input.
-    Only a database `UPDATE` sets it.
-  - The panel never deletes an admin (the caller included) or the demo account, and has no
-    demote action, so it cannot remove the last admin. Delete Account on `/profile` still works
-    for an admin, behind their email and password.
-- **Out of scope** (the author's decision): reading other users' items or content, and
-  impersonating a user. The panel shows stats and account data only.
-- **Rate limits apply to the admin like any Pro user** (the author's decision): AI
-  hourly/daily/global and export. No bypass.
-- **Bootstrap.**
-  - `develop`: after the migration, `UPDATE "User" SET role = 'ADMIN' WHERE email = '…'` through
-    the Neon MCP (`project_id` and `branch_id` explicit), only after asking.
-  - **Production:** the author runs the same `UPDATE` after deploying. Claude never touches
-    production.
-- Read the Next docs (`node_modules/next/dist/docs/`) before writing the `/admin` routes.
-  Restart the dev server after `prisma generate`.
+<!-- Additional context, constraints, or details from spec -->
+
+---
+
+Previous feature (completed) — Admin account: the author's account has every Pro feature
+through an `ADMIN` role, plus an `/admin` panel with stats, the user list and grant / revoke
+Pro / delete actions. Outcome in the History below.
 
 ---
 
@@ -3307,3 +3263,26 @@ Environment notes that outlive any one feature:
     verification on): sign-in, register, forgot/reset password and verify-email clean.
   - Production checklist: Resend, sign-up email and forgot password checked off by the author.
   - 1,739 tests, build and lint green.
+- 2026-11-28 — Admin account (`7c2328c`).
+  - Schema: `enum Role { USER ADMIN }`, `User.role @default(USER)`, migration
+    `20261128031521_user_role`. Only a database `UPDATE` sets it; the author promoted their
+    account in production after running `prisma migrate deploy` there.
+  - `hasProAccess({ role, proUntil })` in `billing-plans.ts` replaces `isProActive` in
+    `getPlanStatus`, `api-auth` and the jwt callback: an admin is Pro on the web, API, CLI and
+    MCP. The `isPro` mirror column still follows `proUntil` only. `PlanStatus.isAdmin`;
+    `role` on the session for the sidebar link only.
+  - `/admin` (one server page, `notFound()` for a signed-in non-admin, proxy sign-in for
+    anonymous): stats (users, verified, paid Pro, sign-ups in 30 days, items, collections,
+    revenue per currency), user list with search (`?q=`) and pagination (`Pagination` keeps a
+    query in `basePath`), row menu to grant N days of Pro (stacked under the user lock), remove
+    Pro, delete. Actions in `src/actions/admin.ts` re-read the role from the database; never
+    delete an admin, the caller or the demo account. No access to users' content, no
+    impersonation, rate limits unchanged (author's decisions).
+  - Account deletion moved to `src/lib/db/delete-user.ts`, shared with `/profile`.
+  - Settings plan card shows "Admin" with no upgrade buttons. French from DeepL (glossary,
+    `prefer_more`); fixed by hand: apostrophes, no-break spaces, « formule Pro » / « formule
+    Gratuite », Plan → Formule, the two ICU plurals built from DeepL's single words.
+  - 1,767 tests, build and lint green. Playwright on `develop` with two throwaway accounts
+    (deleted afterwards): anonymous → sign-in, non-admin → 404 and no link, admin settings and
+    `/upgrade` redirect, search, grant / invalid days / revoke / delete, fr and 390 px. Fast-forward
+    merged into `main`; branch deleted.
