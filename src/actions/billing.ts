@@ -15,6 +15,7 @@ import {
 } from "@/lib/db/billing";
 import { getProfile } from "@/lib/db/profile";
 import { chargeFor } from "@/lib/exchange-rates";
+import { appBaseUrl } from "@/lib/app-url";
 import { checkRateLimit, tooManyAttemptsMessage } from "@/lib/rate-limit";
 
 export type CheckoutResult =
@@ -54,11 +55,8 @@ export async function startCheckout(input: unknown): Promise<CheckoutResult> {
     const limit = await checkRateLimit("checkout", session.user.id);
     if (!limit.success) return failure(await tooManyAttemptsMessage(limit.reset));
 
-    const appUrl = process.env.APP_URL?.replace(/\/+$/, "");
-    if (!appUrl) {
-      console.error("[billing] APP_URL is not set.");
-      return failure(e.message("billing.checkoutFailed"));
-    }
+    const appUrl = appBaseUrl("billing");
+    if (!appUrl) return failure(e.message("billing.checkoutFailed"));
 
     const user = await getProfile(session.user.id);
     if (!user) return failure(e.message("billing.accountGone"));

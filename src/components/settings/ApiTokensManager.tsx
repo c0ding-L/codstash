@@ -1,23 +1,13 @@
 "use client";
 
-import { KeyRound, Plus, TriangleAlert } from "lucide-react";
+import { KeyRound, Plus } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { toast } from "sonner";
+import { useState } from "react";
 
 import { revokeApiToken } from "@/actions/api-tokens";
 import { ApiTokenDialog } from "@/components/settings/ApiTokenDialog";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogMedia,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { DestructiveConfirmDialog, emphasizeName } from "@/components/DestructiveConfirmDialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { ApiTokenSummary } from "@/lib/db/api-tokens";
@@ -106,51 +96,19 @@ function RevokeApiTokenDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations("settings.api");
-  const tc = useTranslations("common");
   const router = useRouter();
-  const [pending, startRevoking] = useTransition();
-
-  function handleRevoke() {
-    startRevoking(async () => {
-      const result = await revokeApiToken(token.id);
-      if (!result.success) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success(t("revoked"));
-      onOpenChange(false);
-      router.refresh();
-    });
-  }
 
   return (
-    // Escape and Cancel do nothing while the revoke runs: its outcome must still show.
-    <AlertDialog open onOpenChange={(next) => !pending && onOpenChange(next)}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20">
-            <TriangleAlert aria-hidden />
-          </AlertDialogMedia>
-          <AlertDialogTitle>{t("revokeTitle")}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {t.rich("revokeBody", {
-              token: token.name,
-              name: (chunks) => <span className="font-medium break-words text-foreground">{chunks}</span>,
-            })}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>{tc("cancel")}</AlertDialogCancel>
-          <Button
-            variant="destructive"
-            className="bg-destructive text-white hover:bg-destructive/90 dark:bg-destructive dark:hover:bg-destructive/90"
-            disabled={pending}
-            onClick={handleRevoke}
-          >
-            {pending ? t("revoking") : t("revoke")}
-          </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <DestructiveConfirmDialog
+      open
+      onOpenChange={onOpenChange}
+      title={t("revokeTitle")}
+      body={t.rich("revokeBody", { token: token.name, name: emphasizeName })}
+      confirmLabel={t("revoke")}
+      pendingLabel={t("revoking")}
+      action={() => revokeApiToken(token.id)}
+      successMessage={t("revoked")}
+      onSuccess={() => router.refresh()}
+    />
   );
 }

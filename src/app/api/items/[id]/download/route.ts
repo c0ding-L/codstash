@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { auth } from "@/auth";
+import { getErrors } from "@/i18n/errors-server";
 import { getItemFile } from "@/lib/db/items";
 import { attachmentDisposition, contentTypeFor } from "@/lib/files";
 import { getObject } from "@/lib/r2";
+import { requireSessionUser } from "@/lib/session-route";
 
 /**
  * Streams an item's file from the private bucket, for its owner only. Served
@@ -12,19 +13,19 @@ import { getObject } from "@/lib/r2";
  * carry scripts). An `<img>` still shows images, which the drawer uses.
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
-  }
+  const caller = await requireSessionUser();
+  if (caller instanceof Response) return caller;
+  const { userId } = caller;
 
-  const file = await getItemFile(session.user.id, (await params).id);
+  const e = await getErrors();
+  const file = await getItemFile(userId, (await params).id);
   if (!file) {
-    return NextResponse.json({ error: "File not found." }, { status: 404 });
+    return NextResponse.json({ error: e.message("ai.fileMissing") }, { status: 404 });
   }
 
   const object = await getObject(file.fileUrl);
   if (!object) {
-    return NextResponse.json({ error: "File not found." }, { status: 404 });
+    return NextResponse.json({ error: e.message("ai.fileMissing") }, { status: 404 });
   }
 
   const headers = new Headers({

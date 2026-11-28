@@ -40,7 +40,7 @@ describe("promptExcerpt", () => {
   it("cuts a long text on a word boundary and marks the cut", () => {
     const excerpt = promptExcerpt("word ".repeat(200));
 
-    expect(excerpt.length).toBeLessThanOrEqual(MAX_EXCERPT_CHARS + 1);
+    expect(excerpt.length).toBeLessThanOrEqual(MAX_EXCERPT_CHARS);
     expect(excerpt.endsWith("word…")).toBe(true);
   });
 
@@ -53,7 +53,7 @@ describe("promptExcerpt", () => {
   });
 
   it("cuts a single overlong word where it must", () => {
-    expect(promptExcerpt("x".repeat(MAX_EXCERPT_CHARS + 50))).toBe(`${"x".repeat(MAX_EXCERPT_CHARS)}…`);
+    expect(promptExcerpt("x".repeat(MAX_EXCERPT_CHARS + 50))).toBe(`${"x".repeat(MAX_EXCERPT_CHARS - 1)}…`);
   });
 
   it("returns an empty string for empty content", () => {

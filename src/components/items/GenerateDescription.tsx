@@ -1,14 +1,12 @@
 "use client";
 
-import { Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Suspense, useTransition } from "react";
+import { useTransition } from "react";
 import { toast } from "sonner";
 
 import { generateDescription, type DescriptionInput } from "@/actions/ai";
 import { useSecretCheck } from "@/components/items/SecretWarningDialog";
-import { ShownIf } from "@/components/items/SuggestTags";
-import { Button } from "@/components/ui/button";
+import { AiFieldButton } from "@/components/items/SuggestTags";
 
 interface GenerateDescriptionProps {
   /** From the server's plan check; nothing shows while it is false. */
@@ -49,22 +47,15 @@ export function GenerateDescriptionButton({ aiAllowed, input, onGenerated, disab
   }
 
   return (
-    <Suspense fallback={null}>
-      <ShownIf allowed={aiAllowed}>
-        <Button
-          type="button"
-          variant="ghost"
-          size="xs"
-          className="text-muted-foreground"
-          disabled={pending || disabled || !canGenerate}
-          title={canGenerate ? undefined : t("addTitleFirst")}
-          onClick={generate}
-        >
-          <Sparkles aria-hidden />
-          {pending ? t("generating") : t("generateDescription")}
-        </Button>
-        {secretCheck.dialog}
-      </ShownIf>
-    </Suspense>
+    <AiFieldButton
+      aiAllowed={aiAllowed}
+      label={t("generateDescription")}
+      pendingLabel={t("generating")}
+      pending={pending}
+      disabled={disabled}
+      canRun={canGenerate}
+      onClick={generate}
+      dialog={secretCheck.dialog}
+    />
   );
 }

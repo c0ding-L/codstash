@@ -20,6 +20,7 @@ import { useClipboard } from "@/i18n/labels";
 import { CopyRefusedError } from "@/lib/clipboard";
 import { CONTEXT_COPY_MAX_CHARS, contextFileName } from "@/lib/context-export";
 import type { CollectionSummary } from "@/lib/db/collections";
+import { downloadBlob } from "@/lib/download";
 import { responseError } from "@/lib/response-error";
 
 /** Favorite, share, edit and delete buttons in a collection page's header, and the context export menu. */
@@ -50,15 +51,9 @@ export function CollectionHeaderActions({ collection }: { collection: Collection
     setDownloading(true);
     try {
       const text = await fetchContext();
-      const url = URL.createObjectURL(new Blob([text], { type: "text/markdown;charset=utf-8" }));
-      const link = document.createElement("a");
-      link.href = url;
       const fileName = contextFileName(collection.name);
-      link.download = fileName;
-      link.click();
+      downloadBlob(new Blob([text], { type: "text/markdown;charset=utf-8" }), fileName);
       toast.success(t("context.done", { file: fileName }));
-      // After the click has handed the URL to the download.
-      setTimeout(() => URL.revokeObjectURL(url), 10_000);
     } catch (error) {
       toast.error(error instanceof CopyRefusedError ? error.message : t("context.failed"));
     } finally {

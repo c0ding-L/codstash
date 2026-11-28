@@ -56,11 +56,6 @@ export async function readJsonBody(request: Request): Promise<{ body: unknown } 
   }
 }
 
-/** Prisma's "record not found", thrown by an update filtered on the owner. */
-export function isPrismaNotFound(error: unknown) {
-  return typeof error === "object" && error !== null && "code" in error && error.code === "P2025";
-}
-
 export function apiServerError(context: string, error: unknown) {
   console.error(`[api v1] ${context} failed:`, error);
   return apiError(500, "internal_error", "Something went wrong. Try again.");

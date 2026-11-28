@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { auth } from "@/auth";
-import { getErrors } from "@/i18n/errors-server";
+import { getErrors, type Errors } from "@/i18n/errors-server";
+import { invalidInput, type ActionResult } from "@/lib/action-result";
 import { getPlanStatus } from "@/lib/db/billing";
 import {
   MAX_CUSTOM_TYPES,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/db/item-types";
 import { isReservedTypeSlug, slugify } from "@/lib/item-type-ui";
 import { itemTypeSchema } from "@/lib/item-type-schema";
+import { prismaErrorCode } from "@/lib/prisma-errors";
 import { LimitReachedError, canUseCustomTypes } from "@/lib/usage-limits";
 
 /** What the type dialog sends. */
@@ -27,35 +29,17 @@ export interface ItemTypeInput {
 
 export type ItemTypeField = keyof ItemTypeInput;
 
-export type ItemTypeResult =
-  | { success: true; data: { id: string; slug: string }; error: null }
-  /** `field` names the input at fault, so the form can mark it. */
-  | { success: false; data: null; error: string; field?: ItemTypeField };
+export type ItemTypeResult = ActionResult<{ id: string; slug: string }, ItemTypeField>;
 
-export type DeleteItemTypeResult = { success: true; data: null; error: null } | { success: false; data: null; error: string };
+export type DeleteItemTypeResult = ActionResult;
 
-function prismaCode(error: unknown) {
-  return typeof error === "object" && error !== null && "code" in error ? error.code : undefined;
-}
-
-type Errors = Awaited<ReturnType<typeof getErrors>>;
+const ITEM_TYPE_FIELDS: ReadonlySet<string> = new Set(Object.keys(itemTypeSchema.shape));
 type Parsed = z.infer<typeof itemTypeSchema>;
 
 /** Validates the input and derives the slug; a failure names the field at fault. */
 function parseInput(e: Errors, input: ItemTypeInput): { data: Parsed & { slug: string } } | { failure: ItemTypeResult } {
   const parsed = itemTypeSchema.safeParse(input);
-  if (!parsed.success) {
-    const issue = parsed.error.issues[0];
-    const field = issue?.path[0];
-    return {
-      failure: {
-        success: false,
-        data: null,
-        error: e.issue(issue),
-        ...(typeof field === "string" && field in itemTypeSchema.shape && { field: field as ItemTypeField }),
-      },
-    };
-  }
+  if (!parsed.success) return { failure: invalidInput<ItemTypeField>(e, parsed.error, ITEM_TYPE_FIELDS) };
   const slug = slugify(parsed.data.name);
   if (!slug) return { failure: { success: false, data: null, error: e.message("itemTypes.nameNoSlug"), field: "name" } };
   if (isReservedTypeSlug(slug)) {
@@ -100,10 +84,10 @@ async function save(input: ItemTypeInput, id: string | null): Promise<ItemTypeRe
     if (error instanceof LimitReachedError) {
       return { success: false, data: null, error: e.message("itemTypes.tooMany", { max: MAX_CUSTOM_TYPES }) };
     }
-    if (prismaCode(error) === "P2002") {
+    if (prismaErrorCode(error) === "P2002") {
       return { success: false, data: null, error: e.message("itemTypes.nameTaken"), field: "name" };
     }
-    if (prismaCode(error) === "P2025") return { success: false, data: null, error: e.message("itemTypes.notFound") };
+    if (prismaErrorCode(error) === "P2025") return { success: false, data: null, error: e.message("itemTypes.notFound") };
     console.error(`[item-types] ${id === null ? "create" : "update"} failed:`, error);
     return { success: false, data: null, error: e.message("itemTypes.saveFailed") };
   }
@@ -142,8 +126,8 @@ export async function deleteItemType(id: string): Promise<DeleteItemTypeResult> 
     }
   } catch (error) {
     // An item was added meanwhile: `onDelete: Restrict` refused the delete.
-    if (prismaCode(error) === "P2003") return { success: false, data: null, error: e.message("itemTypes.inUseNow") };
-    if (prismaCode(error) === "P2025") return { success: false, data: null, error: e.message("itemTypes.notFound") };
+    if (prismaErrorCode(error) === "P2003") return { success: false, data: null, error: e.message("itemTypes.inUseNow") };
+    if (prismaErrorCode(error) === "P2025") return { success: false, data: null, error: e.message("itemTypes.notFound") };
     console.error("[item-types] delete failed:", error);
     return { success: false, data: null, error: e.message("itemTypes.deleteFailed") };
   }

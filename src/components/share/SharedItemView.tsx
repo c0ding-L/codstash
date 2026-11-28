@@ -8,7 +8,9 @@ import { TypeIconTile } from "@/components/items/TypeIconTile";
 import { PublicCopyButton } from "@/components/share/PublicCopyButton";
 import { getTypeView } from "@/i18n/labels-server";
 import type { SharedItem } from "@/lib/db/share";
+import { isCodeType } from "@/lib/code-language";
 import { highlightCode } from "@/lib/highlight";
+import { toItemTypeSlug } from "@/lib/item-type-ui";
 import { cn, isWebUrl } from "@/lib/utils";
 
 const PLUGINS = [remarkGfm];
@@ -24,9 +26,6 @@ const markdownComponents: Components = {
     </a>
   ),
 };
-
-/** Code types render highlighted; everything else that has content is Markdown. */
-const CODE_TYPES = new Set(["snippet", "command"]);
 
 async function ItemBody({ item, systemSlug }: { item: SharedItem; systemSlug: string | null }) {
   const t = await getTranslations("publicShare");
@@ -52,7 +51,8 @@ async function ItemBody({ item, systemSlug }: { item: SharedItem; systemSlug: st
 
   if (!item.content) return null;
 
-  if (systemSlug && CODE_TYPES.has(systemSlug)) {
+  // Code types render highlighted; everything else that has content is Markdown.
+  if (isCodeType(systemSlug ? toItemTypeSlug(systemSlug) : null)) {
     const html = await highlightCode(item.content, item.language ?? (systemSlug === "command" ? "bash" : null));
     // Shiki's HTML: the code is escaped by Shiki.
     return (

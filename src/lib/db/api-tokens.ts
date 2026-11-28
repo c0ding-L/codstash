@@ -1,5 +1,5 @@
+import { assertBelowCap } from "@/lib/db/user-lock";
 import { prisma } from "@/lib/prisma";
-import { LimitReachedError } from "@/lib/usage-limits";
 
 export const MAX_API_TOKENS = 10;
 
@@ -80,9 +80,9 @@ export async function listApiTokens(userId: string): Promise<ApiTokenSummary[]> 
  */
 export async function createApiTokenRow(userId: string, data: NewApiTokenData): Promise<ApiTokenSummary> {
   return prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT 1 FROM "User" WHERE "id" = ${userId} FOR UPDATE`;
-    const count = await tx.apiToken.count({ where: activeWhere(userId, new Date()) });
-    if (count >= MAX_API_TOKENS) throw new LimitReachedError("apiTokens");
+    await assertBelowCap(tx, userId, "apiTokens", MAX_API_TOKENS, () =>
+      tx.apiToken.count({ where: activeWhere(userId, new Date()) }),
+    );
     const token = await tx.apiToken.create({
       data: { ...data, user: { connect: { id: userId } } },
       select: SUMMARY_SELECT,

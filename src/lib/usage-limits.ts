@@ -44,6 +44,18 @@ export function canUseCustomTypes(plan: Pick<PlanUsage, "isPro">) {
   return plan.isPro;
 }
 
+/**
+ * The caps an import writes under: Free counts against its item and collection limits, and only
+ * Pro may create items of a custom type.
+ */
+export function importLimits(plan: Pick<PlanUsage, "isPro">): { maxItems?: number; maxCollections?: number; customTypes: boolean } {
+  return {
+    maxItems: plan.isPro ? undefined : FREE_LIMITS.items,
+    maxCollections: plan.isPro ? undefined : FREE_LIMITS.collections,
+    customTypes: canUseCustomTypes(plan),
+  };
+}
+
 /** Turning on one more public link (D1): Free has `FREE_LIMITS.shared`, collections and items together. */
 export function canShare(plan: Pick<PlanUsage, "isPro">, sharedCount: number) {
   return plan.isPro || sharedCount < FREE_LIMITS.shared;

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 
-import { auth } from "@/auth";
 import { getCollections, type SearchCollection } from "@/lib/db/collections";
 import { getSearchItems } from "@/lib/db/items";
+import { requireSessionUser } from "@/lib/session-route";
 
 /**
  * Everything the command palette searches, in one response. The palette sits in
@@ -11,14 +11,13 @@ import { getSearchItems } from "@/lib/db/items";
  * session is checked here, and a caller gets a 401 rather than a redirect.
  */
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
-  }
+  const caller = await requireSessionUser();
+  if (caller instanceof Response) return caller;
+  const { userId } = caller;
 
   const [items, collections] = await Promise.all([
-    getSearchItems(session.user.id),
-    getCollections(session.user.id),
+    getSearchItems(userId),
+    getCollections(userId),
   ]);
 
   return NextResponse.json({

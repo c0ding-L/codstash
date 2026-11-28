@@ -114,7 +114,7 @@ describe("GET /api/export", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toBe("application/json; charset=utf-8");
-    expect(response.headers.get("Content-Disposition")).toMatch(/^attachment; filename="cortex-export-\d{4}-\d{2}-\d{2}\.json"$/);
+    expect(response.headers.get("Content-Disposition")).toMatch(/^attachment; filename="cortex-export-\d{4}-\d{2}-\d{2}\.json"; filename\*=UTF-8''cortex-export-/);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
     const document = await response.json();
     expect(document).toMatchObject({ format: "cortex-export", version: 1 });

@@ -1,12 +1,13 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 
-import { startCheckout } from "@/actions/billing";
 import { CurrencySwitch } from "@/components/billing/CurrencySwitch";
+import { PaymentMethodsNote } from "@/components/billing/PaymentMethodsNote";
 import { Button } from "@/components/ui/button";
-import { BILLING_PLANS, PAYMENT_METHODS, PLANS, formatPrice, type Currency, type Plan } from "@/lib/billing-plans";
+import { useCheckout } from "@/hooks/use-checkout";
+import { BILLING_PLANS, PLANS, formatPrice, type Currency, type Plan } from "@/lib/billing-plans";
 
 interface UpgradeButtonsProps {
   /** From `?currency=`, or the default. */
@@ -21,29 +22,18 @@ export function UpgradeButtons({ initialCurrency, isPro }: UpgradeButtonsProps) 
   const locale = useLocale();
   const [currency, setCurrency] = useState<Currency>(initialCurrency);
   const [pendingPlan, setPendingPlan] = useState<Plan | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const { checkout: startCheckout, error, isPending } = useCheckout({ onFailure: () => setPendingPlan(null) });
 
   function checkout(plan: Plan) {
-    setError(null);
     setPendingPlan(plan);
-    startTransition(async () => {
-      const result = await startCheckout({ plan, currency });
-      if (result.success) {
-        // External URL: a full navigation, and the button stays pending until it happens.
-        window.location.assign(result.redirectUrl);
-        return;
-      }
-      setError(result.error);
-      setPendingPlan(null);
-    });
+    startCheckout(plan, currency);
   }
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-3">
         <CurrencySwitch value={currency} onChange={setCurrency} />
-        <span className="text-sm text-muted-foreground">{t(`paymentMethods.${PAYMENT_METHODS[currency]}`)}</span>
+        <PaymentMethodsNote currency={currency} className="text-sm text-muted-foreground" />
       </div>
 
       <div className="flex flex-col gap-2 sm:flex-row">

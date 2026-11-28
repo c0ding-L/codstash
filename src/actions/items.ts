@@ -1,16 +1,18 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { auth } from "@/auth";
 import { errKey } from "@/i18n/error-keys";
 import { getErrors } from "@/i18n/errors-server";
+import { invalidInput, type ActionResult } from "@/lib/action-result";
 import { getPlanStatus } from "@/lib/db/billing";
 import { ownsCollections } from "@/lib/db/collections";
 import { ownsCustomType } from "@/lib/db/item-types";
 import { fromObjectMetadata, isOwnKey } from "@/lib/files";
 import { ITEM_LIMITS } from "@/lib/item-limits";
+import { isPrismaNotFound } from "@/lib/prisma-errors";
+import { setFlagAction } from "@/lib/set-flag-action";
 import { createItemSchema, updateItemSchema } from "@/lib/item-schemas";
 import { deleteObjectsQuietly, headObject } from "@/lib/r2";
 import { FREE_LIMITS, LimitReachedError, canCreateItem, canUploadFiles, canUseCustomTypes } from "@/lib/usage-limits";
@@ -40,28 +42,14 @@ export interface UpdateItemInput {
 
 export type UpdateItemField = keyof UpdateItemInput;
 
-export type UpdateItemResult =
-  | { success: true; data: { card: DashboardItem; detail: ItemDetailJson }; error: null }
-  /** `field` names the input at fault when validation failed, so the form can mark it. */
-  | { success: false; data: null; error: string; field?: UpdateItemField };
+export type UpdateItemResult = ActionResult<{ card: DashboardItem; detail: ItemDetailJson }, UpdateItemField>;
 
-function isNotFound(error: unknown) {
-  return typeof error === "object" && error !== null && "code" in error && error.code === "P2025";
-}
+const UPDATE_ITEM_FIELDS: ReadonlySet<string> = new Set(Object.keys(updateItemSchema.shape));
 
 export async function updateItem(itemId: string, input: UpdateItemInput): Promise<UpdateItemResult> {
   const e = await getErrors();
   const parsed = updateItemSchema.safeParse(input);
-  if (!parsed.success) {
-    const issue = parsed.error.issues[0];
-    const field = issue?.path[0];
-    return {
-      success: false,
-      data: null,
-      error: e.issue(issue),
-      ...(typeof field === "string" && field in updateItemSchema.shape && { field: field as UpdateItemField }),
-    };
-  }
+  if (!parsed.success) return invalidInput<UpdateItemField>(e, parsed.error, UPDATE_ITEM_FIELDS);
 
   try {
     const session = await auth();
@@ -80,7 +68,7 @@ export async function updateItem(itemId: string, input: UpdateItemInput): Promis
       error: null,
     };
   } catch (error) {
-    if (isNotFound(error)) return { success: false, data: null, error: e.message("items.notFound") };
+    if (isPrismaNotFound(error)) return { success: false, data: null, error: e.message("items.notFound") };
     console.error("[items] updateItem failed:", error);
     return { success: false, data: null, error: e.message("items.saveFailed") };
   }
@@ -116,7 +104,7 @@ export async function applyOptimizedPrompt(input: { itemId: string; content: str
       error: null,
     };
   } catch (error) {
-    if (isNotFound(error)) return { success: false, data: null, error: e.message("items.notFound") };
+    if (isPrismaNotFound(error)) return { success: false, data: null, error: e.message("items.notFound") };
     console.error("[items] applyOptimizedPrompt failed:", error);
     return { success: false, data: null, error: e.message("items.promptSaveFailed") };
   }
@@ -158,24 +146,13 @@ const CREATE_ITEM_FIELDS: ReadonlySet<string> = new Set<CreateItemField>([
   "collectionIds",
 ]);
 
-export type CreateItemResult =
-  | { success: true; data: DashboardItem; error: null }
-  /** `field` names the input at fault when validation failed, so the form can mark it. */
-  | { success: false; data: null; error: string; field?: CreateItemField };
+export type CreateItemResult = ActionResult<DashboardItem, CreateItemField>;
 
 export async function createItem(input: CreateItemInput): Promise<CreateItemResult> {
   const e = await getErrors();
+  // A discriminated union has no `.shape`, so its fields are listed above.
   const parsed = createItemSchema.safeParse(input);
-  if (!parsed.success) {
-    const issue = parsed.error.issues[0];
-    const field = issue?.path[0];
-    return {
-      success: false,
-      data: null,
-      error: e.issue(issue),
-      ...(typeof field === "string" && CREATE_ITEM_FIELDS.has(field) && { field: field as CreateItemField }),
-    };
-  }
+  if (!parsed.success) return invalidInput<CreateItemField>(e, parsed.error, CREATE_ITEM_FIELDS);
 
   try {
     const session = await auth();
@@ -263,7 +240,7 @@ export async function createItem(input: CreateItemInput): Promise<CreateItemResu
   }
 }
 
-export type DeleteItemResult = { success: true; data: null; error: null } | { success: false; data: null; error: string };
+export type DeleteItemResult = ActionResult;
 
 export async function deleteItem(itemId: string): Promise<DeleteItemResult> {
   const e = await getErrors();
@@ -277,60 +254,39 @@ export async function deleteItem(itemId: string): Promise<DeleteItemResult> {
     if (fileUrl) await deleteObjectsQuietly([fileUrl]);
     return { success: true, data: null, error: null };
   } catch (error) {
-    if (isNotFound(error)) return { success: false, data: null, error: e.message("items.notFound") };
+    if (isPrismaNotFound(error)) return { success: false, data: null, error: e.message("items.notFound") };
     console.error("[items] deleteItem failed:", error);
     return { success: false, data: null, error: e.message("items.deleteFailed") };
   }
 }
 
-export type SetFavoriteResult =
-  | { success: true; data: { isFavorite: boolean }; error: null }
-  | { success: false; data: null; error: string };
+export type SetFavoriteResult = ActionResult<{ isFavorite: boolean }>;
 
 /** Takes the state to set, not a flip, so a repeated click cannot leave the row out of step. */
 export async function setItemFavorite(itemId: string, isFavorite: boolean): Promise<SetFavoriteResult> {
-  const e = await getErrors();
-  if (typeof isFavorite !== "boolean") return { success: false, data: null, error: e.message("items.invalidFavorite") };
-
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return { success: false, data: null, error: e.message("notSignedIn") };
-
-    // The query filters on the owner, so another user's item is not found either.
-    const found = await setItemFavoriteQuery(session.user.id, itemId, isFavorite);
-    if (!found) return { success: false, data: null, error: e.message("items.notFound") };
-  } catch (error) {
-    console.error("[items] setItemFavorite failed:", error);
-    return { success: false, data: null, error: e.message("items.favoriteFailed") };
-  }
-
-  // The layout too: the sidebar, stats and top bar count favorites.
-  revalidatePath("/", "layout");
-  return { success: true, data: { isFavorite }, error: null };
+  // The query filters on the owner, so another user's item is not found either.
+  return setFlagAction({
+    key: "isFavorite",
+    value: isFavorite,
+    invalid: "items.invalidFavorite",
+    notFound: "items.notFound",
+    failed: "items.favoriteFailed",
+    log: "[items] setItemFavorite",
+    write: (userId, value) => setItemFavoriteQuery(userId, itemId, value),
+  });
 }
 
-export type SetPinnedResult =
-  | { success: true; data: { isPinned: boolean }; error: null }
-  | { success: false; data: null; error: string };
+export type SetPinnedResult = ActionResult<{ isPinned: boolean }>;
 
 /** Like `setItemFavorite`: takes the state to set, not a flip. */
 export async function setItemPinned(itemId: string, isPinned: boolean): Promise<SetPinnedResult> {
-  const e = await getErrors();
-  if (typeof isPinned !== "boolean") return { success: false, data: null, error: e.message("items.invalidPin") };
-
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return { success: false, data: null, error: e.message("notSignedIn") };
-
-    // The query filters on the owner, so another user's item is not found either.
-    const found = await setItemPinnedQuery(session.user.id, itemId, isPinned);
-    if (!found) return { success: false, data: null, error: e.message("items.notFound") };
-  } catch (error) {
-    console.error("[items] setItemPinned failed:", error);
-    return { success: false, data: null, error: e.message("items.pinFailed") };
-  }
-
-  // The layout too: the dashboard's Pinned section and every list's order change.
-  revalidatePath("/", "layout");
-  return { success: true, data: { isPinned }, error: null };
+  return setFlagAction({
+    key: "isPinned",
+    value: isPinned,
+    invalid: "items.invalidPin",
+    notFound: "items.notFound",
+    failed: "items.pinFailed",
+    log: "[items] setItemPinned",
+    write: (userId, value) => setItemPinnedQuery(userId, itemId, value),
+  });
 }

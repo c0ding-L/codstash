@@ -102,6 +102,26 @@ export interface SidebarCollection {
   types: CollectionType[];
 }
 
+/**
+ * Each collection the query returns, with the types of its items. The type lookup is read
+ * alongside the query, then the counts for the collections it returned.
+ */
+async function withCollectionTypes<T extends { id: string }>(
+  userId: string,
+  query: Promise<T[]>,
+): Promise<{ collection: T; types: CollectionType[] }[]> {
+  const [collections, typeById] = await Promise.all([query, loadTypeLookup(userId)]);
+  const typeCounts = await loadTypeCounts(
+    userId,
+    collections.map((collection) => collection.id),
+  );
+  return collections.map((collection) => ({
+    collection,
+    types: aggregateCollectionTypes(typeCounts.get(collection.id) ?? [], typeById),
+  }));
+}
+
+/** `where` narrows the collections; `userId` is set after it, so it cannot be overridden. */
 async function getCollectionsWithTypes(
   userId: string,
   where: Prisma.CollectionWhereInput,
@@ -109,24 +129,15 @@ async function getCollectionsWithTypes(
   // Always bounded: with no limit passed, the ceiling applies.
   limit: number = MAX_COLLECTION_LIMIT,
 ): Promise<SidebarCollection[]> {
-  const [collections, typeById] = await Promise.all([
+  const rows = await withCollectionTypes(
+    userId,
     prisma.collection.findMany({
-      where: { userId, ...where },
+      where: { ...where, userId },
       orderBy,
       take: clampLimit(limit, MAX_COLLECTION_LIMIT),
     }),
-    loadTypeLookup(userId),
-  ]);
-  const typeCounts = await loadTypeCounts(
-    userId,
-    collections.map((collection) => collection.id),
   );
-
-  return collections.map((collection) => ({
-    id: collection.id,
-    name: collection.name,
-    types: aggregateCollectionTypes(typeCounts.get(collection.id) ?? [], typeById),
-  }));
+  return rows.map(({ collection, types }) => ({ id: collection.id, name: collection.name, types }));
 }
 
 /** Matches the mock's favourite slice — one today (Design Resources). */
@@ -170,7 +181,8 @@ async function loadCollectionCards(
   take: number,
   where: Prisma.CollectionWhereInput = {},
 ): Promise<RecentCollection[]> {
-  const [collections, typeById] = await Promise.all([
+  const rows = await withCollectionTypes(
+    userId,
     prisma.collection.findMany({
       where: { ...where, userId },
       orderBy: [{ updatedAt: "desc" }, { id: "asc" }],
@@ -178,14 +190,9 @@ async function loadCollectionCards(
       take,
       include: { _count: { select: { items: true } } },
     }),
-    loadTypeLookup(userId),
-  ]);
-  const typeCounts = await loadTypeCounts(
-    userId,
-    collections.map((collection) => collection.id),
   );
 
-  return collections.map((collection) => ({
+  return rows.map(({ collection, types }) => ({
     id: collection.id,
     name: collection.name,
     description: collection.description,
@@ -193,7 +200,7 @@ async function loadCollectionCards(
     isShared: collection.shareId !== null,
     itemCount: collection._count.items,
     updatedAt: collection.updatedAt,
-    types: aggregateCollectionTypes(typeCounts.get(collection.id) ?? [], typeById),
+    types,
   }));
 }
 

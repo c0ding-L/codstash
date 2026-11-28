@@ -3,7 +3,7 @@
 
 import { getLocale } from "next-intl/server";
 
-import type { getErrors } from "@/i18n/errors-server";
+import type { Errors } from "@/i18n/errors-server";
 import { getPlanStatus } from "@/lib/db/billing";
 import { DEFAULT_LOCALE, isLocale, type Locale } from "@/lib/locale";
 import { checkRateLimit, tooManyAttemptsMessage } from "@/lib/rate-limit";
@@ -20,7 +20,7 @@ export interface AiGateRefusal {
  * no limiter slots, then the per-user, daily and app-wide limits. The refusal,
  * or null to go ahead.
  */
-export async function aiGate(userId: string, e: Awaited<ReturnType<typeof getErrors>>): Promise<AiGateRefusal | null> {
+export async function aiGate(userId: string, e: Errors): Promise<AiGateRefusal | null> {
   if (!canUseAi(await getPlanStatus(userId))) return { status: 403, error: e.message("limits.ai") };
 
   const hourly = await checkRateLimit("ai", userId);

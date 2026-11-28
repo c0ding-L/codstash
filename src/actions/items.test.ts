@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import { revalidatePath } from "next/cache";
 
+import { plan, pro } from "@/lib/__fixtures__/plan";
+import { prismaError } from "@/lib/__fixtures__/prisma";
 import { applyOptimizedPrompt, createItem, deleteItem, setItemFavorite, setItemPinned, updateItem } from "@/actions/items";
 import { auth } from "@/auth";
 import { getPlanStatus } from "@/lib/db/billing";
@@ -51,7 +53,6 @@ const revalidate = revalidatePath as unknown as Mock;
 const planStatus = getPlanStatus as unknown as Mock;
 const promptQuery = updatePromptContent as unknown as Mock;
 
-const plan = (isPro: boolean, items: number) => ({ proUntil: null, isPro, items, collections: 0 });
 
 const USER_ID = "user_1";
 
@@ -81,7 +82,7 @@ beforeEach(() => {
   owns.mockResolvedValue(true);
   ownsType.mockResolvedValue(true);
   // Pro by default, so the plan gate only shows up in its own tests.
-  planStatus.mockResolvedValue(plan(true, 0));
+  planStatus.mockResolvedValue(pro({ items: 0 }));
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -177,7 +178,7 @@ describe("updateItem", () => {
   });
 
   it("reports an item that does not exist or is not the user's", async () => {
-    query.mockRejectedValue(Object.assign(new Error("not found"), { code: "P2025" }));
+    query.mockRejectedValue(prismaError("P2025"));
 
     const result = await updateItem("someone_elses", { title: "Title", tags: [], collectionIds: [] });
 
@@ -281,7 +282,7 @@ describe("createItem", () => {
     });
 
     it("refuses a Free account, even one that kept its types after Pro", async () => {
-      planStatus.mockResolvedValue(plan(false, 0));
+      planStatus.mockResolvedValue(plan({ items: 0 }));
 
       const result = await createItem(input);
 
@@ -569,7 +570,7 @@ describe("deleteItem", () => {
   });
 
   it("reports an item that is missing or another user's as gone", async () => {
-    deleteQuery.mockRejectedValue(Object.assign(new Error("not found"), { code: "P2025" }));
+    deleteQuery.mockRejectedValue(prismaError("P2025"));
 
     const result = await deleteItem("item_1");
 
@@ -703,7 +704,7 @@ describe("createItem on the Free plan", () => {
   const UPLOADS = "File and image uploads are a Pro feature.";
 
   it("creates the 50th item", async () => {
-    planStatus.mockResolvedValue(plan(false, 49));
+    planStatus.mockResolvedValue(plan({ items: 49 }));
 
     const result = await createItem({ type: "snippet", title: "Title", content: "x", tags: [], collectionIds: [] });
 
@@ -712,7 +713,7 @@ describe("createItem on the Free plan", () => {
   });
 
   it("refuses the 51st", async () => {
-    planStatus.mockResolvedValue(plan(false, 50));
+    planStatus.mockResolvedValue(plan({ items: 50 }));
 
     const result = await createItem({ type: "snippet", title: "Title", content: "x", tags: [], collectionIds: [] });
 
@@ -721,7 +722,7 @@ describe("createItem on the Free plan", () => {
   });
 
   it("has no item limit for Pro", async () => {
-    planStatus.mockResolvedValue(plan(true, 50));
+    planStatus.mockResolvedValue(pro({ items: 50 }));
 
     const result = await createItem({ type: "snippet", title: "Title", content: "x", tags: [], collectionIds: [] });
 
@@ -729,7 +730,7 @@ describe("createItem on the Free plan", () => {
   });
 
   it.each(["file", "image"] as const)("refuses a %s item and removes the unused upload", async (type) => {
-    planStatus.mockResolvedValue(plan(false, 0));
+    planStatus.mockResolvedValue(plan({ items: 0 }));
 
     const result = await createItem({ type, title: "Report", fileKey: KEY, tags: [], collectionIds: [] });
 
@@ -740,7 +741,7 @@ describe("createItem on the Free plan", () => {
   });
 
   it("keeps an upload another item already uses", async () => {
-    planStatus.mockResolvedValue(plan(false, 0));
+    planStatus.mockResolvedValue(plan({ items: 0 }));
     keyInUse.mockResolvedValue(true);
 
     await createItem({ type: "file", title: "Report", fileKey: KEY, tags: [], collectionIds: [] });
@@ -751,7 +752,7 @@ describe("createItem on the Free plan", () => {
 
 describe("createItem when the last Free slot is raced", () => {
   it("answers with the limit message when the locked re-count refuses", async () => {
-    planStatus.mockResolvedValue(plan(false, 49));
+    planStatus.mockResolvedValue(plan({ items: 49 }));
     createQuery.mockRejectedValue(new LimitReachedError("items"));
 
     const result = await createItem({ type: "snippet", title: "Title", content: "x", tags: [], collectionIds: [] });
@@ -805,7 +806,7 @@ describe("applyOptimizedPrompt", () => {
   });
 
   it("reports another user's item, a non-prompt or a missing one as gone", async () => {
-    promptQuery.mockRejectedValue(Object.assign(new Error("not found"), { code: "P2025" }));
+    promptQuery.mockRejectedValue(prismaError("P2025"));
 
     expect(await applyOptimizedPrompt({ itemId: "item_1", content: "x" })).toEqual({
       success: false,
@@ -845,7 +846,7 @@ describe("errors in French", () => {
   });
 
   it("words the Free plan limit", async () => {
-    planStatus.mockResolvedValue(plan(false, 50));
+    planStatus.mockResolvedValue(plan({ items: 50 }));
 
     const result = await createItem({ type: "snippet", title: "Title", content: "x", tags: [], collectionIds: [] });
 
@@ -857,7 +858,7 @@ describe("errors in French", () => {
   });
 
   it("words a missing item", async () => {
-    deleteQuery.mockRejectedValue(Object.assign(new Error("not found"), { code: "P2025" }));
+    deleteQuery.mockRejectedValue(prismaError("P2025"));
 
     expect(await deleteItem("gone")).toEqual({ success: false, data: null, error: "Cet élément n’existe plus." });
   });

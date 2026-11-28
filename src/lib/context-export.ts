@@ -5,6 +5,7 @@
 // the user's own text (the description, every item) goes out exactly as written.
 
 import { linkLine, renderItemText, safeFileName } from "@/lib/export";
+import { attachmentDisposition } from "@/lib/files";
 import { formatFileSize } from "@/lib/format";
 
 /** The whole file stays under this many characters; past it, it stops at an item boundary. */
@@ -231,13 +232,7 @@ export function contextFileName(collectionName: string) {
   return `${safeFileName(collectionName)}-context.md`;
 }
 
-/**
- * The `Content-Disposition` of the download. A collection name can hold any character, and a
- * header value cannot, so `filename` gets an ASCII copy and `filename*` the real name.
- */
+/** The `Content-Disposition` of the download: a collection name can hold any character. */
 export function contextDisposition(collectionName: string) {
-  const fileName = contextFileName(collectionName);
-  const ascii = fileName.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^\x20-\x7e]/gu, "_");
-  const encoded = encodeURIComponent(fileName).replace(/['()*!]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
-  return `attachment; filename="${ascii}"; filename*=UTF-8''${encoded}`;
+  return attachmentDisposition(contextFileName(collectionName));
 }

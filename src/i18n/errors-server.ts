@@ -32,3 +32,6 @@ export async function getErrors({ locale }: { locale?: Locale } = {}) {
 
   return { message, issue, isKey };
 }
+
+/** What `getErrors` resolves to, for helpers that take it as an argument. */
+export type Errors = Awaited<ReturnType<typeof getErrors>>;

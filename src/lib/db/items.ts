@@ -9,6 +9,7 @@ import {
   pageOffset,
 } from "@/lib/pagination";
 import { assertBelowLimit } from "@/lib/db/billing";
+import { collectionLinks, sortTagNames, tagLinks, tagNames, tagNameSelect } from "@/lib/db/item-links";
 import { prisma } from "@/lib/prisma";
 import { countWords, estimateTokens, markdownToPlainText, promptExcerpt } from "@/lib/prompt-text";
 import { searchPreview } from "@/lib/search-text";
@@ -73,14 +74,6 @@ type SelectedItem = Omit<DashboardItem, "collections" | "isShared"> & {
 function toDashboardItem(item: SelectedItem): DashboardItem {
   const { collections, shareId, ...rest } = item;
   return { ...rest, isShared: shareId !== null, collections: collections.map(({ collection }) => collection) };
-}
-
-/**
- * The links of an item to these collections, one per distinct id. The caller
- * checks the ids are the user's first: `connect` does not filter on the owner.
- */
-function collectionLinks(collectionIds: string[]) {
-  return [...new Set(collectionIds)].map((id) => ({ collection: { connect: { id } } }));
 }
 
 /** Pinned items for the dashboard, newest first, 5 at most. Empty when nothing is pinned. */
@@ -168,20 +161,7 @@ export async function getItemsByType(
   type: { slug: ItemTypeSlug } | { customTypeId: string },
   page: number = 1,
 ): Promise<{ items: DashboardItem[]; totalCount: number }> {
-  const where = "slug" in type ? { userId, type: { slug: type.slug } } : { userId, typeId: type.customTypeId };
-
-  const [items, totalCount] = await Promise.all([
-    prisma.item.findMany({
-      where,
-      orderBy: pinnedFirstOrder,
-      skip: pageOffset(page, ITEMS_PER_PAGE),
-      take: ITEMS_PER_PAGE,
-      select: dashboardItemSelect,
-    }),
-    prisma.item.count({ where }),
-  ]);
-
-  return { items: items.map(toDashboardItem), totalCount };
+  return getItemsPage(userId, "slug" in type ? { type: { slug: type.slug } } : { typeId: type.customTypeId }, page);
 }
 
 /**
@@ -194,8 +174,16 @@ export async function getItemsByCollection(
   collectionId: string,
   page: number = 1,
 ): Promise<{ items: DashboardItem[]; totalCount: number }> {
-  const where = { userId, collections: { some: { collectionId } } };
+  return getItemsPage(userId, { collections: { some: { collectionId } } }, page);
+}
 
+/** One page of the user's items matching `where`, plus their total. `userId` is set after `where`, so it cannot be overridden. */
+async function getItemsPage(
+  userId: string,
+  filter: Prisma.ItemWhereInput,
+  page: number,
+): Promise<{ items: DashboardItem[]; totalCount: number }> {
+  const where = { ...filter, userId };
   const [items, totalCount] = await Promise.all([
     prisma.item.findMany({
       where,
@@ -238,7 +226,7 @@ export async function getSearchItems(userId: string): Promise<SearchItem[]> {
       content: true,
       language: true,
       lastUsedAt: true,
-      tags: { select: { tag: { select: { name: true } } }, orderBy: { tag: { name: "asc" } } },
+      tags: tagNameSelect,
     },
   });
 
@@ -249,7 +237,7 @@ export async function getSearchItems(userId: string): Promise<SearchItem[]> {
     lastUsedAt,
     content,
     language,
-    tags: tags.map(({ tag }) => tag.name),
+    tags: tagNames(tags),
   }));
 }
 
@@ -382,7 +370,7 @@ async function getTagsByItem(userId: string, ids: string[]): Promise<Map<string,
   for (const { itemId, tag } of links) {
     tagsByItem.set(itemId, [...(tagsByItem.get(itemId) ?? []), tag.name]);
   }
-  for (const names of tagsByItem.values()) names.sort((a, b) => a.localeCompare(b));
+  for (const names of tagsByItem.values()) sortTagNames(names);
   return tagsByItem;
 }
 
@@ -419,12 +407,11 @@ export async function getItemDetail(userId: string, id: string): Promise<ItemDet
     prisma.tag.findMany({
       where: { userId, items: { some: { itemId: id } } },
       select: { name: true },
-      orderBy: { name: "asc" },
     }),
   ]);
   if (!item) return null;
 
-  return { ...item, tags: tags.map(({ name }) => name) };
+  return { ...item, tags: sortTagNames(tags.map(({ name }) => name)) };
 }
 
 /** What the Explain and Optimize routes read: the item's content and its type, or null when it is not this user's. */
@@ -491,22 +478,6 @@ export interface ItemUpdate {
 }
 
 /**
- * The tag links of an item, one per distinct name, each to this user's tag of
- * that name, created if they have none. A repeated name would link the same tag
- * twice, which the join's key forbids.
- */
-function tagLinks(userId: string, tags: string[]) {
-  return [...new Set(tags)].map((name) => ({
-    tag: {
-      connectOrCreate: {
-        where: { userId_name: { userId, name } },
-        create: { name, userId },
-      },
-    },
-  }));
-}
-
-/**
  * Updates the item and returns both halves the drawer shows: the card and the
  * detail. One `update` filtered on the owner, so another user's item throws
  * Prisma's P2025 just as a missing one does, and nothing is read beforehand.
@@ -556,7 +527,7 @@ const savedItemSelect = {
   content: true,
   language: true,
   createdAt: true,
-  tags: { select: { tag: { select: { name: true } } } },
+  tags: tagNameSelect,
 } satisfies Prisma.ItemSelect;
 
 function toSavedItem(updated: Prisma.ItemGetPayload<{ select: typeof savedItemSelect }>): {
@@ -572,7 +543,7 @@ function toSavedItem(updated: Prisma.ItemGetPayload<{ select: typeof savedItemSe
       fileName: card.fileName,
       language,
       createdAt,
-      tags: links.map(({ tag }) => tag.name).sort((a, b) => a.localeCompare(b)),
+      tags: tagNames(links),
     },
   };
 }

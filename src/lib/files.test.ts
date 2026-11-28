@@ -166,8 +166,12 @@ describe("buildFileKey and isOwnKey", () => {
 describe("attachmentDisposition", () => {
   it("always downloads, with an ASCII fallback and the real name encoded", () => {
     expect(attachmentDisposition('été "v2".pdf')).toBe(
-      `attachment; filename="_t_ _v2_.pdf"; filename*=UTF-8''%C3%A9t%C3%A9%20%22v2%22.pdf`,
+      `attachment; filename="ete _v2_.pdf"; filename*=UTF-8''%C3%A9t%C3%A9%20%22v2%22.pdf`,
     );
+  });
+
+  it("percent-encodes the characters RFC 5987 reserves in filename*", () => {
+    expect(attachmentDisposition("it's (final)!.txt")).toContain("filename*=UTF-8''it%27s%20%28final%29%21.txt");
   });
 });
 

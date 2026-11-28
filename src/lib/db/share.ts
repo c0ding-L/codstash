@@ -1,11 +1,12 @@
 import { cache } from "react";
 
 import type { Prisma } from "@/generated/prisma/client";
+import { tagNames, tagNameSelect } from "@/lib/db/item-links";
 import { MAX_ITEM_LIMIT } from "@/lib/db/limits";
+import { assertBelowCap } from "@/lib/db/user-lock";
 import { prisma } from "@/lib/prisma";
 import { containsSecrets } from "@/lib/secrets";
 import { generateShareId, type ShareKind } from "@/lib/share";
-import { LimitReachedError } from "@/lib/usage-limits";
 import type { TypeRef } from "@/types/item-type";
 
 // Public sharing (D1). Every write filters on the owner; every public read selects only what
@@ -116,8 +117,7 @@ export async function saveShare(
   const needsCap = shared && !currentShareId && maxShares !== undefined;
   const found = needsCap
     ? await prisma.$transaction(async (tx) => {
-        await tx.$queryRaw`SELECT 1 FROM "User" WHERE "id" = ${userId} FOR UPDATE`;
-        if ((await countShares(userId, tx)) >= maxShares) throw new LimitReachedError("shared");
+        await assertBelowCap(tx, userId, "shared", maxShares, () => countShares(userId, tx));
         return writeShare(tx, userId, kind, id, update);
       })
     : await writeShare(prisma, userId, kind, id, update);
@@ -154,7 +154,7 @@ const SHARED_ITEM_SELECT = {
   language: true,
   updatedAt: true,
   type: { select: { slug: true, name: true, icon: true, color: true, isSystem: true } },
-  tags: { select: { tag: { select: { name: true } } } },
+  tags: tagNameSelect,
 } as const;
 
 /** The owner's display name only: never the email. */
@@ -163,7 +163,7 @@ const OWNER_SELECT = { user: { select: { name: true } } } as const;
 type SelectedSharedItem = Omit<SharedItem, "tags"> & { tags: { tag: { name: string } }[] };
 
 function toSharedItem({ tags, ...item }: SelectedSharedItem): SharedItem {
-  return { ...item, tags: tags.map(({ tag }) => tag.name).sort((a, b) => a.localeCompare(b)) };
+  return { ...item, tags: tagNames(tags) };
 }
 
 export interface SharedPageMeta {

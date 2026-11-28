@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { auth } from "@/auth";
-import { getErrors } from "@/i18n/errors-server";
+import { getErrors, type Errors } from "@/i18n/errors-server";
+import type { ActionResult } from "@/lib/action-result";
 import { getPlanStatus } from "@/lib/db/billing";
 import { countShares, getShareTarget, saveShare, type ShareTarget } from "@/lib/db/share";
 import { containsSecrets } from "@/lib/secrets";
@@ -25,7 +26,7 @@ export interface ShareStatus {
   hiddenCount: number;
 }
 
-export type ShareResult = { success: true; data: ShareStatus; error: null } | { success: false; data: null; error: string };
+export type ShareResult = ActionResult<ShareStatus>;
 
 const targetSchema = z.object({
   kind: z.enum(["collection", "item"]),
@@ -43,7 +44,6 @@ const setSharingSchema = targetSchema.extend({
 export type ShareTargetInput = z.input<typeof targetSchema>;
 export type SetSharingInput = z.input<typeof setSharingSchema>;
 
-type Errors = Awaited<ReturnType<typeof getErrors>>;
 
 function notFound(e: Errors, kind: ShareKind) {
   return e.message(kind === "item" ? "items.notFound" : "collections.notFound");

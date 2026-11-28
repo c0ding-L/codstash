@@ -1,5 +1,6 @@
 import { authenticateApi } from "@/lib/api-auth";
-import { apiData, apiNotFound, apiServerError, apiValidationError, isPrismaNotFound, readJsonBody } from "@/lib/api-v1";
+import { apiData, apiNotFound, apiServerError, apiValidationError, readJsonBody } from "@/lib/api-v1";
+import { isPrismaNotFound } from "@/lib/prisma-errors";
 import { fieldsForType, getApiItem, getApiItemType, patchApiItem } from "@/lib/db/api-items";
 import { ownsCollections } from "@/lib/db/collections";
 import { updateItemSchema } from "@/lib/item-schemas";

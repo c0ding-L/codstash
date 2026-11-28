@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { dropZoneClassName, useFileDrop } from "@/hooks/use-file-drop";
 import { acceptAttribute, allowedExtensions, UPLOAD_RULES, type UploadKind, validateUpload } from "@/lib/files";
 import { useFileSize } from "@/i18n/labels";
 import { cn } from "@/lib/utils";
@@ -40,7 +41,6 @@ export function FileUpload({
   const t = useTranslations("upload");
   const te = useTranslations("errors.upload");
   const formatFileSize = useFileSize();
-  const [dragging, setDragging] = useState(false);
   const rules = UPLOAD_RULES[kind];
 
   function take(candidate: File | undefined) {
@@ -49,6 +49,8 @@ export function FileUpload({
     if (check.ok) onFileChange(candidate);
     else onReject(te(check.error.key, check.error.values));
   }
+
+  const { dragging, dropProps } = useFileDrop({ disabled: Boolean(disabled), onFiles: (files) => take(files[0]) });
 
   // Mounted in both states, so the field's label and error message always point at it.
   const input = (
@@ -116,29 +118,7 @@ export function FileUpload({
   }
 
   return (
-    <label
-      onDragEnter={(event) => {
-        event.preventDefault();
-        if (!disabled) setDragging(true);
-      }}
-      onDragOver={(event) => event.preventDefault()}
-      onDragLeave={(event) => {
-        // Leaving for one of the zone's own children is not leaving the zone.
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false);
-      }}
-      onDrop={(event) => {
-        event.preventDefault();
-        setDragging(false);
-        if (!disabled) take(event.dataTransfer.files[0]);
-      }}
-      className={cn(
-        "flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed border-input px-4 py-8 text-center transition-colors",
-        "hover:border-ring hover:bg-muted/40 has-focus-visible:border-ring has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
-        dragging && "border-ring bg-muted/60",
-        invalid && "border-destructive/50",
-        disabled && "pointer-events-none opacity-50",
-      )}
-    >
+    <label {...dropProps} className={dropZoneClassName({ dragging, disabled: Boolean(disabled), invalid })}>
       <Upload className="size-5 text-muted-foreground" aria-hidden />
       <span className="text-sm">
         {t.rich(kind === "image" ? "dropImage" : "dropFile", {

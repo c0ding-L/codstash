@@ -24,7 +24,7 @@ describe("searchPreview", () => {
   it("cuts long text at the cap with an ellipsis", () => {
     const preview = searchPreview("a".repeat(MAX_SEARCH_PREVIEW_CHARS + 50), "command");
 
-    expect(preview).toBe(`${"a".repeat(MAX_SEARCH_PREVIEW_CHARS)}…`);
+    expect(preview).toBe(`${"a".repeat(MAX_SEARCH_PREVIEW_CHARS - 1)}…`);
   });
 
   it("leaves text at the cap whole", () => {

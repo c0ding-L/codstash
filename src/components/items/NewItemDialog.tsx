@@ -12,8 +12,16 @@ import { FillFromFileButton } from "@/components/items/FillFromFileButton";
 import { FileUpload } from "@/components/items/FileUpload";
 import { GenerateDescriptionButton } from "@/components/items/GenerateDescription";
 import { useSecretCheck } from "@/components/items/SecretWarningDialog";
-import { SuggestTagsButton, TagSuggestionList, useTagSuggestions } from "@/components/items/SuggestTags";
-import { CollectionsField, ContentField, Field, LanguageField, TagsField, useFieldErrors } from "@/components/items/item-form-fields";
+import { SuggestTagsButton, TagSuggestionList } from "@/components/items/SuggestTags";
+import {
+  CollectionsField,
+  ContentField,
+  Field,
+  LanguageField,
+  TagsField,
+  useFieldErrors,
+  useItemFields,
+} from "@/components/items/item-form-fields";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -54,7 +62,6 @@ import {
   typeSegmentFromPathname,
 } from "@/lib/item-type-ui";
 import type { CustomTypeChoices, CustomTypeOption } from "@/lib/load-custom-types";
-import { addTag, toTags } from "@/lib/tags";
 import { uploadFile } from "@/lib/upload-client";
 import { cn } from "@/lib/utils";
 
@@ -156,13 +163,6 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed
   /** Set when a custom type is picked; `type` is then ignored. */
   const [customTypeId, setCustomTypeId] = useState<string | null>(pageCustomType?.id ?? null);
   const customType = custom.types.find(({ id: typeId }) => typeId === customTypeId) ?? null;
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [tags, setTags] = useState("");
-  const [collectionIds, setCollectionIds] = useState<string[]>([]);
-  const [content, setContent] = useState(pageCustomType?.template ?? "");
-  const [language, setLanguage] = useState("");
-  const [url, setUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   /** A file read while content was already typed, waiting for the user to confirm the replace. */
@@ -173,18 +173,26 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed
   const hasContent = hasContentField(fieldsSlug);
   const hasLanguage = customType !== null || hasLanguageField(fieldsSlug);
   const hasUrl = hasUrlField(fieldsSlug);
-  const tagSuggestions = useTagSuggestions({
-    title,
-    content: hasContent ? content : null,
-    tags,
-    onAccept: (tag) => {
-      setTags((current) => addTag(current, tag));
-      clearFor("tags");
+  const fields = useItemFields({
+    initial: {
+      title: "",
+      description: "",
+      tags: "",
+      collectionIds: [],
+      content: pageCustomType?.template ?? "",
+      language: "",
+      url: "",
     },
+    hasContent,
+    hasLanguage,
+    hasUrl,
+    onTagAccepted: () => clearFor("tags"),
   });
+  const { title, setTitle, description, setDescription, tags, setTags, collectionIds, setCollectionIds } = fields;
+  const { content, setContent, language, setLanguage, url, setUrl, tagSuggestions } = fields;
   const secretCheck = useSecretCheck();
   const uploadKind = !customType && isUploadKind(type) ? type : null;
-  const canSubmit = title.trim() !== "" && (!hasUrl || url.trim() !== "") && (!uploadKind || file !== null);
+  const canSubmit = fields.canSubmit && (!uploadKind || file !== null);
 
   /**
    * Fills the form from a file, keeping the chosen type: the title only when empty, the
@@ -217,20 +225,9 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed
     // Only the fields this type shows: text typed under another type is not sent.
     const input: CreateItemInput = {
       ...(customType ? { type: "custom", typeId: customType.id } : { type }),
-      title,
-      description,
-      tags: toTags(tags),
-      collectionIds,
-      ...(hasContent && { content }),
-      ...(hasLanguage && { language }),
-      ...(hasUrl && { url }),
+      ...fields.input,
     };
-
-    secretCheck.check(
-      { title, description, content: hasContent ? content : null, url: hasUrl ? url : null },
-      "save",
-      () => save(input),
-    );
+    secretCheck.check(fields.secretFields, "save", () => save(input));
   }
 
   function save(input: CreateItemInput) {
@@ -300,16 +297,8 @@ function NewItemForm({ saving, startSaving, onCreated, uploadsAllowed, aiAllowed
           <GenerateDescriptionButton
             aiAllowed={aiAllowed}
             disabled={saving}
-            input={{
-              // A custom type's name tells the model more than "note".
-              type: customType ? customType.name : type,
-              title,
-              content: hasContent ? content : null,
-              language: hasLanguage ? language : null,
-              url: hasUrl ? url : null,
-              fileName: uploadKind ? (file?.name ?? null) : null,
-              tags: toTags(tags),
-            }}
+            // A custom type's name tells the model more than "note".
+            input={fields.descriptionInput(customType ? customType.name : type, uploadKind ? (file?.name ?? null) : null)}
             onGenerated={(text) => {
               setDescription(text);
               clearFor("description");

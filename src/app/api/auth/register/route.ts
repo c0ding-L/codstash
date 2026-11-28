@@ -1,25 +1,18 @@
-import bcrypt from "bcryptjs";
 import { after, NextResponse } from "next/server";
 
 import type { User } from "@/generated/prisma/client";
 import { getErrors } from "@/i18n/errors-server";
 import { getRequestLocale } from "@/i18n/request";
+import { appBaseUrl } from "@/lib/app-url";
+import { authFail as fail, readAuthBody } from "@/lib/auth-route";
+import { EMAIL_PATTERN, MAX_NAME_LENGTH, MIN_PASSWORD_LENGTH, normalizeEmail } from "@/lib/auth-rules";
 import { sendAccountExistsEmail } from "@/lib/email";
 import { isEmailVerificationEnabled } from "@/lib/email-verification-flag";
 import { DEFAULT_LOCALE, isLocale } from "@/lib/locale";
+import { hashPassword } from "@/lib/password-hash";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, getClientIp, tooManyAttemptsResponse } from "@/lib/rate-limit";
 import { issueVerificationEmail } from "@/lib/verification";
-
-const BCRYPT_ROUNDS = 12;
-const MIN_PASSWORD_LENGTH = 8;
-/** The name goes into the verification email, sent to an address the registrant typed. */
-const MAX_NAME_LENGTH = 100;
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function fail(error: string, status: number) {
-  return NextResponse.json({ success: false, error }, { status });
-}
 
 /**
  * Tells the owner of an existing account that someone tried to register with
@@ -34,11 +27,8 @@ async function notifyExistingAccount(user: User, verificationRequired: boolean) 
     return (await issueVerificationEmail(user, { throttle: true, locale })) !== "failed";
   }
 
-  const baseUrl = process.env.APP_URL?.replace(/\/+$/, "");
-  if (!baseUrl) {
-    console.error("[register] APP_URL is not set.");
-    return false;
-  }
+  const baseUrl = appBaseUrl("register");
+  if (!baseUrl) return false;
   return sendAccountExistsEmail({
     to: user.email,
     locale,
@@ -56,12 +46,9 @@ export async function POST(request: Request) {
   const limit = await checkRateLimit("register", getClientIp(request.headers));
   if (!limit.success) return await tooManyAttemptsResponse(limit.reset);
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return fail("Request body must be valid JSON.", 400);
-  }
+  const read = await readAuthBody(request);
+  if (read instanceof Response) return read;
+  const { body } = read;
 
   const { name, email, password, confirmPassword } = (body ?? {}) as Record<string, unknown>;
 
@@ -76,7 +63,7 @@ export async function POST(request: Request) {
 
   const e = await getErrors();
   const trimmedName = name.trim();
-  const normalizedEmail = email.trim().toLowerCase();
+  const normalizedEmail = normalizeEmail(email);
 
   if (!trimmedName) return fail(e.message("auth.nameRequired"), 400);
   if (trimmedName.length > MAX_NAME_LENGTH) {
@@ -90,7 +77,7 @@ export async function POST(request: Request) {
 
   const verificationRequired = isEmailVerificationEnabled();
   // Before the lookup, so a new and an existing email take the same slow path.
-  const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+  const passwordHash = await hashPassword(password);
   // The registrant's language: saved on a new account, so later emails to its owner use it. Not
   // the bare default, which nobody chose: null keeps following the browser on a new device.
   const { locale, source } = await getRequestLocale();

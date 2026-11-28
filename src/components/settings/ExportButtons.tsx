@@ -6,6 +6,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { downloadBlob } from "@/lib/download";
 import { exportFileName, filenameFromDisposition, type ExportFormat } from "@/lib/export";
 import { responseError } from "@/lib/response-error";
 
@@ -27,19 +28,12 @@ export function ExportButtons() {
         toast.error((await responseError(response)) ?? t("failed"));
         return;
       }
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
       const fileName = filenameFromDisposition(
         response.headers.get("Content-Disposition"),
         exportFileName(format, new Date()),
       );
-      link.download = fileName;
-      link.click();
+      downloadBlob(await response.blob(), fileName);
       toast.success(t("done", { file: fileName }));
-      // After the click has handed the URL to the download.
-      setTimeout(() => URL.revokeObjectURL(url), 10_000);
     } catch {
       toast.error(t("failed"));
     } finally {

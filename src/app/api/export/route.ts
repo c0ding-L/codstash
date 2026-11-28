@@ -1,15 +1,16 @@
 import { makeZip } from "client-zip";
 import { NextResponse } from "next/server";
 
-import { auth } from "@/auth";
 import { getErrors } from "@/i18n/errors-server";
 import { getPlanStatus } from "@/lib/db/billing";
 import { exportItemPages, getExportHeaderData } from "@/lib/db/export";
 import { exportFileName, exportHeader, exportJsonChunks, isExportFormat } from "@/lib/export";
 import { zipEntries } from "@/lib/export-zip";
+import { attachmentDisposition } from "@/lib/files";
 import { getObject } from "@/lib/r2";
-import { checkRateLimit, tooManyAttemptsResponse } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { canExport } from "@/lib/usage-limits";
+import { rateLimitedResponse, requireSessionUser } from "@/lib/session-route";
 
 /** A large stash with many stored files takes a while; Fluid compute allows up to 300 s on this project. */
 export const maxDuration = 300;
@@ -54,11 +55,9 @@ function textStream(chunks: AsyncIterator<string>): ReadableStream<Uint8Array> {
  */
 export async function GET(request: Request) {
   const e = await getErrors();
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: e.message("notSignedIn") }, { status: 401 });
-  }
-  const userId = session.user.id;
+  const caller = await requireSessionUser();
+  if (caller instanceof Response) return caller;
+  const { userId } = caller;
 
   const format = new URL(request.url).searchParams.get("format");
   if (!isExportFormat(format)) {
@@ -71,7 +70,7 @@ export async function GET(request: Request) {
   }
 
   const limit = await checkRateLimit("export", userId);
-  if (!limit.success) return await tooManyAttemptsResponse(limit.reset);
+  if (!limit.success) return await rateLimitedResponse(limit.reset);
 
   // A JWT whose user row was deleted.
   const data = await getExportHeaderData(userId);
@@ -91,7 +90,7 @@ export async function GET(request: Request) {
   return new Response(body, {
     headers: {
       "Content-Type": format === "json" ? "application/json; charset=utf-8" : "application/zip",
-      "Content-Disposition": `attachment; filename="${exportFileName(format, now)}"`,
+      "Content-Disposition": attachmentDisposition(exportFileName(format, now)),
       "Cache-Control": "no-store",
       "X-Content-Type-Options": "nosniff",
     },

@@ -18,6 +18,7 @@ import { collectionSchema } from "@/lib/item-schemas";
 import { itemTypeSchema } from "@/lib/item-type-schema";
 import { isReservedTypeSlug, slugify } from "@/lib/item-type-ui";
 import { prisma } from "@/lib/prisma";
+import { isUniqueViolation } from "@/lib/prisma-errors";
 import { LimitReachedError } from "@/lib/usage-limits";
 
 /** Items written per transaction. */
@@ -238,10 +239,6 @@ function validTypeDef(raw: unknown): CustomTypeData | null {
   const derived = slugify(parsed.data.name);
   if (derived !== slug || isReservedTypeSlug(slug)) return null;
   return { slug, name: parsed.data.name, icon: parsed.data.icon, color: parsed.data.color, template: parsed.data.template ?? null };
-}
-
-function isUniqueViolation(error: unknown) {
-  return typeof error === "object" && error !== null && "code" in error && error.code === "P2002";
 }
 
 /**

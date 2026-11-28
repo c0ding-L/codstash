@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import { revalidatePath } from "next/cache";
 
+import { plan, pro } from "@/lib/__fixtures__/plan";
 import { createApiToken, revokeApiToken } from "@/actions/api-tokens";
 import { auth } from "@/auth";
 import { hashToken } from "@/lib/api-token";
@@ -27,12 +28,11 @@ const revalidate = revalidatePath as unknown as Mock;
 
 const USER_ID = "user_1";
 const DAY = 24 * 60 * 60 * 1000;
-const plan = (isPro: boolean) => ({ proUntil: null, isPro, items: 0, collections: 0 });
 const INPUT = { name: "  Laptop CLI ", scope: "read" as const, expiry: "90d" as const };
 
 beforeEach(() => {
   session.mockResolvedValue({ user: { id: USER_ID } });
-  planStatus.mockResolvedValue(plan(false));
+  planStatus.mockResolvedValue(plan());
   createRow.mockImplementation(async (_userId: string, data: NewApiTokenData) => ({
     id: "tok_1",
     name: data.name,
@@ -94,7 +94,7 @@ describe("createApiToken", () => {
   });
 
   it("creates a write token on Pro", async () => {
-    planStatus.mockResolvedValue(plan(true));
+    planStatus.mockResolvedValue(pro());
     const result = await createApiToken({ ...INPUT, scope: "write" });
     expect(result.success).toBe(true);
     expect((createRow.mock.calls[0] as [string, NewApiTokenData])[1].scope).toBe("write");

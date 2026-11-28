@@ -2,8 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vite
 
 import { POST } from "@/app/api/ai/explain/route";
 import { auth } from "@/auth";
+import { allowedLimit, blockedLimit, fakeAiStream } from "@/lib/__fixtures__/ai-stream";
 import { setTestLocale } from "@/lib/__fixtures__/i18n-setup";
-import { AiProviderError, completeStream, type AiStream } from "@/lib/ai-client";
+import { AiProviderError, completeStream } from "@/lib/ai-client";
 import { CUT_OFF_MARKER, errorMarker } from "@/lib/ai-stream-protocol";
 import { getPlanStatus } from "@/lib/db/billing";
 import { getItemForExplain } from "@/lib/db/items";
@@ -31,26 +32,6 @@ const itemForExplain = asMock(getItemForExplain);
 
 const USER_ID = "user_1";
 const SNIPPET = { content: "export const sum = (a, b) => a + b;", language: "typescript", slug: "snippet" };
-const allowed = { success: true, remaining: 1, reset: 0 };
-const blocked = { success: false, remaining: 0, reset: Date.now() + 60_000 };
-
-/** A streamed answer of these chunks, then an optional failure. */
-function answer(chunks: string[], { finishReason = "stop", failWith }: { finishReason?: string; failWith?: unknown } = {}) {
-  const cancel = vi.fn();
-  const queue = [...chunks];
-  const stream = new ReadableStream<string>({
-    // Pulled one chunk at a time, so a failure comes after the text, as from `completeStream`.
-    pull(controller) {
-      const next = queue.shift();
-      if (next !== undefined) controller.enqueue(next);
-      else if (failWith) controller.error(failWith);
-      else controller.close();
-    },
-    cancel,
-  });
-  const result: AiStream = { stream, finishReason: () => finishReason };
-  return Object.assign(result, { cancel });
-}
 
 const explain = (body: unknown = { itemId: "item_1" }) =>
   POST(new Request("http://localhost/api/ai/explain", { method: "POST", body: JSON.stringify(body) }));
@@ -58,9 +39,9 @@ const explain = (body: unknown = { itemId: "item_1" }) =>
 beforeEach(() => {
   session.mockResolvedValue({ user: { id: USER_ID } });
   planStatus.mockResolvedValue({ isPro: true });
-  rateLimit.mockResolvedValue(allowed);
+  rateLimit.mockResolvedValue(allowedLimit());
   itemForExplain.mockResolvedValue(SNIPPET);
-  ai.mockResolvedValue(answer(["Adds ", "two numbers."]));
+  ai.mockResolvedValue(fakeAiStream(["Adds ", "two numbers."]));
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -142,9 +123,9 @@ describe("POST /api/ai/explain", () => {
   });
 
   it.each([
-    ["hourly", [blocked], "Too many attempts. Please try again in 30 minutes."],
-    ["daily", [allowed, blocked], "You've used today's AI requests. Try again tomorrow."],
-    ["app-wide", [allowed, allowed, blocked], "AI is busy, try again in a minute."],
+    ["hourly", [blockedLimit()], "Too many attempts. Please try again in 30 minutes."],
+    ["daily", [allowedLimit(), blockedLimit()], "You've used today's AI requests. Try again tomorrow."],
+    ["app-wide", [allowedLimit(), allowedLimit(), blockedLimit()], "AI is busy, try again in a minute."],
   ])("answers 429 at the %s limit", async (_, results, error) => {
     for (const result of results) rateLimit.mockResolvedValueOnce(result);
 
@@ -164,20 +145,20 @@ describe("POST /api/ai/explain", () => {
 
   it("ends with the error marker when the answer fails midway", async () => {
     ai.mockResolvedValue(
-      answer(["Adds "], { failWith: new AiProviderError({ provider: "openrouter", status: 408, code: "timeout", message: "x" }) }),
+      fakeAiStream(["Adds "], { failWith: new AiProviderError({ provider: "openrouter", status: 408, code: "timeout", message: "x" }) }),
     );
 
     expect(await (await explain()).text()).toBe(`Adds ${errorMarker("AI took too long. Try again.")}`);
   });
 
   it("ends with the cut-off marker on the token cap", async () => {
-    ai.mockResolvedValue(answer(["Adds two"], { finishReason: "length" }));
+    ai.mockResolvedValue(fakeAiStream(["Adds two"], { finishReason: "length" }));
 
     expect(await (await explain()).text()).toBe(`Adds two${CUT_OFF_MARKER}`);
   });
 
   it("stops at 4,000 characters, with the cut-off marker, and stops the AI", async () => {
-    const stream = answer(["a".repeat(3_000), "b".repeat(3_000), "c".repeat(3_000)]);
+    const stream = fakeAiStream(["a".repeat(3_000), "b".repeat(3_000), "c".repeat(3_000)]);
     ai.mockResolvedValue(stream);
 
     const body = await (await explain()).text();

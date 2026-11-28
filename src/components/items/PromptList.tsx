@@ -1,9 +1,8 @@
-import { Pin, Star } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { ItemCopyButton } from "@/components/items/ItemCopyButton";
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
-import { SharedBadge } from "@/components/share/SharedBadge";
+import { ItemStatusMarkers } from "@/components/items/ItemStatusMarkers";
 import type { DashboardItem, PromptPreview } from "@/lib/db/items";
 import { useRelativeTime } from "@/i18n/labels";
 
@@ -28,7 +27,6 @@ export function PromptList({ items, previews, now }: PromptListProps) {
 }
 
 function PromptEntry({ item, preview, now }: { item: DashboardItem; preview: PromptPreview; now: string }) {
-  const tc = useTranslations("common");
   const t = useTranslations("items");
   const tv = useTranslations("variables");
   const relativeTime = useRelativeTime();
@@ -40,13 +38,7 @@ function PromptEntry({ item, preview, now }: { item: DashboardItem; preview: Pro
 
       <div className="flex items-center gap-1.5">
         <h2 className="truncate font-medium">{item.title}</h2>
-        {item.isShared ? <SharedBadge /> : null}
-        {item.isPinned ? (
-          <Pin className="size-3 shrink-0 text-muted-foreground" aria-label={tc("pinned")} />
-        ) : null}
-        {item.isFavorite ? (
-          <Star className="size-3 shrink-0 fill-amber-400 text-amber-400" aria-label={tc("favorite")} />
-        ) : null}
+        <ItemStatusMarkers item={item} />
         {preview.variables > 0 ? (
           <span className="shrink-0 rounded border border-amber-400/30 bg-amber-400/10 px-1 font-mono text-[10px] leading-4 text-amber-500 dark:text-amber-300">
             <span aria-hidden>{`{{ }} ${preview.variables}`}</span>

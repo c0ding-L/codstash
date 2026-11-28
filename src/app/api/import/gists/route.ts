@@ -2,8 +2,7 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { auth } from "@/auth";
-import { getErrors } from "@/i18n/errors-server";
+import { getErrors, type Errors } from "@/i18n/errors-server";
 import { getPlanStatus } from "@/lib/db/billing";
 import { getGithubAccessToken, importCandidates } from "@/lib/db/import";
 import {
@@ -23,9 +22,10 @@ import {
   mergeImportResults,
   type ImportCandidate,
 } from "@/lib/import";
-import { checkRateLimit, tooManyAttemptsResponse } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { readJsonWithin } from "@/lib/request-body";
-import { FREE_LIMITS, canUseCustomTypes } from "@/lib/usage-limits";
+import { importLimits } from "@/lib/usage-limits";
+import { importBodyError, rateLimitedResponse, requireSessionUser } from "@/lib/session-route";
 
 /** Up to 100 gists fetched from GitHub, then written in chunks. */
 export const maxDuration = 120;
@@ -41,8 +41,6 @@ const importGistsSchema = z.object({
   conflict: z.enum(["skip", "duplicate"]).default("skip"),
 });
 
-type Errors = Awaited<ReturnType<typeof getErrors>>;
-
 function githubErrorResponse(e: Errors, error: GithubError) {
   if (error.kind === "rateLimit") return NextResponse.json({ error: e.message("import.githubRateLimit") }, { status: 429 });
   if (error.kind === "notFound") return NextResponse.json({ error: e.message("import.githubNotFound") }, { status: 404 });
@@ -55,11 +53,9 @@ function githubErrorResponse(e: Errors, error: GithubError) {
  */
 export async function GET(request: Request) {
   const e = await getErrors();
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: e.message("notSignedIn") }, { status: 401 });
-  }
-  const userId = session.user.id;
+  const caller = await requireSessionUser();
+  if (caller instanceof Response) return caller;
+  const { userId } = caller;
 
   const typed = new URL(request.url).searchParams.get("username")?.trim() || null;
   if (typed !== null && !isGithubUsername(typed)) {
@@ -67,7 +63,7 @@ export async function GET(request: Request) {
   }
 
   const limit = await checkRateLimit("import", userId);
-  if (!limit.success) return await tooManyAttemptsResponse(limit.reset);
+  if (!limit.success) return await rateLimitedResponse(limit.reset);
 
   const token = await getGithubAccessToken(userId);
   const username = typed ?? (token ? await getGithubLogin(token) : null);
@@ -91,26 +87,19 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   const e = await getErrors();
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: e.message("notSignedIn") }, { status: 401 });
-  }
-  const userId = session.user.id;
+  const caller = await requireSessionUser();
+  if (caller instanceof Response) return caller;
+  const { userId } = caller;
 
   const body = await readJsonWithin(request, MAX_BODY_BYTES);
-  if (!body.ok) {
-    return NextResponse.json(
-      { error: e.message(body.status === 413 ? "import.tooLarge" : "import.badRequest") },
-      { status: body.status },
-    );
-  }
+  if (!body.ok) return importBodyError(e, body.status);
   const parsed = importGistsSchema.safeParse(body.json);
   if (!parsed.success) {
     return NextResponse.json({ error: e.message("import.badRequest") }, { status: 400 });
   }
 
   const limit = await checkRateLimit("import", userId);
-  if (!limit.success) return await tooManyAttemptsResponse(limit.reset);
+  if (!limit.success) return await rateLimitedResponse(limit.reset);
 
   const token = await getGithubAccessToken(userId);
   const ids = [...new Set(parsed.data.gistIds)];
@@ -150,9 +139,7 @@ export async function POST(request: Request) {
     candidates.length > 0
       ? await importCandidates(userId, candidates, {
           conflict: parsed.data.conflict,
-          maxItems: plan.isPro ? undefined : FREE_LIMITS.items,
-          maxCollections: plan.isPro ? undefined : FREE_LIMITS.collections,
-          customTypes: canUseCustomTypes(plan),
+          ...importLimits(plan),
         })
       : emptyImportResult();
   const result = mergeImportResults(pre, written);

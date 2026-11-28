@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { auth } from "@/auth";
 import { getErrors } from "@/i18n/errors-server";
+import { invalidInput, type ActionResult } from "@/lib/action-result";
 import { generateToken } from "@/lib/api-token";
 import { apiTokenSchema, expiryDate, type ApiTokenInput } from "@/lib/api-token-schema";
 import {
@@ -15,27 +16,20 @@ import {
 import { getPlanStatus } from "@/lib/db/billing";
 import { LimitReachedError, canUseApiWrite } from "@/lib/usage-limits";
 
-export type CreateApiTokenResult =
-  /** `token` is shown once and never stored: the only time it leaves the server. */
-  | { success: true; data: { token: string; summary: ApiTokenSummary }; error: null }
-  | { success: false; data: null; error: string; field?: "name" | "scope" | "expiry" };
+type ApiTokenField = "name" | "scope" | "expiry";
 
-export type RevokeApiTokenResult = { success: true; data: null; error: null } | { success: false; data: null; error: string };
+const API_TOKEN_FIELDS: readonly ApiTokenField[] = ["name", "scope", "expiry"];
+
+/** `token` is shown once and never stored: the only time it leaves the server. */
+export type CreateApiTokenResult = ActionResult<{ token: string; summary: ApiTokenSummary }, ApiTokenField>;
+
+export type RevokeApiTokenResult = ActionResult;
 
 /** Creates a personal API token. Read for everyone; the `write` scope is Pro. At most `MAX_API_TOKENS` active. */
 export async function createApiToken(input: ApiTokenInput): Promise<CreateApiTokenResult> {
   const e = await getErrors();
   const parsed = apiTokenSchema.safeParse(input);
-  if (!parsed.success) {
-    const issue = parsed.error.issues[0];
-    const field = issue?.path[0];
-    return {
-      success: false,
-      data: null,
-      error: e.issue(issue),
-      ...((field === "name" || field === "scope" || field === "expiry") && { field }),
-    };
-  }
+  if (!parsed.success) return invalidInput<ApiTokenField>(e, parsed.error, API_TOKEN_FIELDS);
   const { name, scope, expiry } = parsed.data;
 
   try {

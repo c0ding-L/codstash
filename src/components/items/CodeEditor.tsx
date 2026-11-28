@@ -3,19 +3,15 @@
 import Editor, { type BeforeMount, type OnMount } from "@monaco-editor/react";
 import { Copy } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Suspense, useEffect, useRef, useState } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import { toast } from "sonner";
+import { Suspense, useState } from "react";
 
 import { useEditorPreferences } from "@/components/editor/EditorPreferencesContext";
 import { AiHeaderButton } from "@/components/items/AiHeaderButton";
 import { useSecretCheck } from "@/components/items/SecretWarningDialog";
-import { markdownComponents } from "@/components/items/MarkdownEditor";
+import { StreamedMarkdown } from "@/components/items/StreamedMarkdown";
 import { Button } from "@/components/ui/button";
+import { useAiAnswerStream } from "@/hooks/use-ai-answer-stream";
 import { useClipboard } from "@/i18n/labels";
-import { parseStreamingExplanation } from "@/lib/ai-output";
-import { AiStreamError, streamAi } from "@/lib/ai-stream-client";
 import { languageLabel, toMonacoLanguage } from "@/lib/code-language";
 import { DEFAULT_EDITOR_PREFERENCES } from "@/lib/editor-preferences";
 import { CUSTOM_MONACO_THEMES } from "@/lib/monaco-themes";
@@ -80,8 +76,6 @@ interface CodeEditorProps {
 }
 
 type View = "code" | "explain";
-/** Where the explanation is: still arriving, whole, stopped by the user, or cut short. */
-type ExplainStatus = "streaming" | "done" | "stopped" | "cutOff";
 
 /** Monaco in a macOS-style window: traffic-light dots, the language and a copy button on top. */
 export function CodeEditor({ value, language, onChange, ariaLabel: ariaLabelProp, className, explain, onCopy }: CodeEditorProps) {
@@ -95,16 +89,14 @@ export function CodeEditor({ value, language, onChange, ariaLabel: ariaLabelProp
   const tf = useTranslations("itemForm");
   // No language is "Plain text", the one label that is not a language name.
   const label = language?.trim() ? languageLabel(language.trim()) : tf("plainText");
-  const [explanation, setExplanation] = useState<string | null>(null);
-  const [status, setStatus] = useState<ExplainStatus>("done");
+  const answer = useAiAnswerStream({
+    url: "/api/ai/explain",
+    failedMessage: te("explainFailed"),
+    emptyMessage: te("noExplanation"),
+  });
+  const { text: explanation, status, streaming } = answer;
   const [view, setView] = useState<View>("code");
-  // The running request; also keeps a double click from spending two.
-  const request = useRef<AbortController | null>(null);
-  const streaming = status === "streaming";
   const shown: View = explanation === null ? "code" : view;
-
-  // A drawer that closes or moves to another item stops the call.
-  useEffect(() => () => request.current?.abort(), []);
   const secretCheck = useSecretCheck();
 
   // The server sends the saved code, which is what this read-only view shows.
@@ -113,48 +105,10 @@ export function CodeEditor({ value, language, onChange, ariaLabel: ariaLabelProp
     secretCheck.check({ content: value }, "ai", () => void requestExplain());
   }
 
-  // A route, not a server action: the drawer's other actions (Favorite, Pin, Save) stay usable.
-  async function requestExplain() {
-    if (!explain || request.current) return;
-    const controller = new AbortController();
-    request.current = controller;
-    setExplanation("");
-    setStatus("streaming");
+  function requestExplain() {
+    if (!explain || streaming) return;
     setView("explain");
-    // A stopped or failed request keeps what came; with nothing, the Code tab is back.
-    const keepPartial = (next: ExplainStatus) => {
-      setExplanation((text) => (text ? text : null));
-      setStatus(next);
-    };
-    try {
-      const { text, cutOff } = await streamAi(
-        "/api/ai/explain",
-        { itemId: explain.itemId },
-        {
-          signal: controller.signal,
-          failedMessage: te("explainFailed"),
-          onText: (partial) => setExplanation(parseStreamingExplanation(partial)),
-        },
-      );
-      const whole = parseStreamingExplanation(text);
-      if (!whole) {
-        toast.error(te("noExplanation"));
-        setExplanation(null);
-        setStatus("done");
-        return;
-      }
-      setExplanation(whole);
-      setStatus(cutOff ? "cutOff" : "done");
-    } catch (error) {
-      if (controller.signal.aborted) {
-        keepPartial("stopped");
-        return;
-      }
-      toast.error(error instanceof AiStreamError ? error.message : te("explainFailed"));
-      keepPartial("cutOff");
-    } finally {
-      request.current = null;
-    }
+    void answer.start({ itemId: explain.itemId });
   }
 
   return (
@@ -198,7 +152,7 @@ export function CodeEditor({ value, language, onChange, ariaLabel: ariaLabelProp
               pending={streaming}
               disabled={!value.trim()}
               onClick={runExplain}
-              onStop={() => request.current?.abort()}
+              onStop={answer.stop}
               stopHint={ta("stopHint")}
             />
           </Suspense>
@@ -238,19 +192,12 @@ export function CodeEditor({ value, language, onChange, ariaLabel: ariaLabelProp
           aria-busy={streaming || undefined}
           className="markdown-scroll max-h-[400px] overflow-y-auto px-4 py-3"
         >
-          {/* No rehype-raw: raw HTML in the model's answer is shown as text, never rendered. */}
-          <div className="markdown-preview">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-              {explanation}
-            </ReactMarkdown>
-          </div>
-          {streaming ? (
-            <span className="mt-1 inline-block h-4 w-1.5 animate-pulse rounded-sm bg-violet-400 align-middle" aria-hidden />
-          ) : status === "stopped" || status === "cutOff" ? (
-            <p className="mt-3 text-xs text-muted-foreground italic">
-              {status === "stopped" ? t("explanationStopped") : t("explanationCutOff")}
-            </p>
-          ) : null}
+          <StreamedMarkdown
+            text={explanation}
+            status={status}
+            stoppedLabel={t("explanationStopped")}
+            cutOffLabel={t("explanationCutOff")}
+          />
         </div>
       ) : null}
     </div>

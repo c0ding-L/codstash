@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import { revalidatePath } from "next/cache";
 
+import { plan, pro } from "@/lib/__fixtures__/plan";
 import { getSharing, setSharing } from "@/actions/share";
 import { auth } from "@/auth";
 import { setTestLocale } from "@/lib/__fixtures__/i18n-setup";
@@ -27,7 +28,6 @@ const SHARE_ID = "AbCdEfGhIjKlMnOpQrStUv";
 /** Made-up key with the right shape, built from pieces as in `secrets.test.ts`. */
 const FAKE_TOKEN = "ghp_" + "q7Rk2Lm9Vt4Bn8Zc".repeat(3);
 
-const plan = (isPro: boolean) => ({ proUntil: null, isPro, items: 0, collections: 0 });
 
 const textItem = (title: string, content = "Plain text") => ({ title, description: null, content, url: null });
 
@@ -42,7 +42,7 @@ const prompt = (overrides: Partial<ShareTarget> = {}): ShareTarget => ({
 
 beforeEach(() => {
   session.mockResolvedValue({ user: { id: USER } });
-  planStatus.mockResolvedValue(plan(false));
+  planStatus.mockResolvedValue(plan());
   target.mockResolvedValue(prompt());
   count.mockResolvedValue(0);
   save.mockResolvedValue({ found: true, shareId: SHARE_ID });
@@ -124,7 +124,7 @@ describe("setSharing", () => {
   });
 
   it("lets Pro past the cap, with no limit passed down", async () => {
-    planStatus.mockResolvedValue(plan(true));
+    planStatus.mockResolvedValue(pro());
     count.mockResolvedValue(40);
 
     const result = await setSharing({ kind: "item", id: "item_1", shared: true });

@@ -1,14 +1,14 @@
 import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
-import { auth } from "@/auth";
 import { getErrors } from "@/i18n/errors-server";
 import { getPlanStatus } from "@/lib/db/billing";
 import { importCandidates } from "@/lib/db/import";
 import { IMPORT_BODY_MAX_BYTES, importBatchSchema } from "@/lib/import";
-import { checkRateLimit, tooManyAttemptsResponse } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { readJsonWithin } from "@/lib/request-body";
-import { FREE_LIMITS, canUseCustomTypes } from "@/lib/usage-limits";
+import { importLimits } from "@/lib/usage-limits";
+import { importBodyError, rateLimitedResponse, requireSessionUser } from "@/lib/session-route";
 
 /** A batch of 100 items in chunks of 50, on a cold database. */
 export const maxDuration = 120;
@@ -21,34 +21,25 @@ export const maxDuration = 120;
  */
 export async function POST(request: Request) {
   const e = await getErrors();
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: e.message("notSignedIn") }, { status: 401 });
-  }
-  const userId = session.user.id;
+  const caller = await requireSessionUser();
+  if (caller instanceof Response) return caller;
+  const { userId } = caller;
 
   const body = await readJsonWithin(request, IMPORT_BODY_MAX_BYTES);
-  if (!body.ok) {
-    return NextResponse.json(
-      { error: e.message(body.status === 413 ? "import.tooLarge" : "import.badRequest") },
-      { status: body.status },
-    );
-  }
+  if (!body.ok) return importBodyError(e, body.status);
   const batch = importBatchSchema.safeParse(body.json);
   if (!batch.success) {
     return NextResponse.json({ error: e.message("import.badRequest") }, { status: 400 });
   }
 
   const limit = await checkRateLimit("import", userId);
-  if (!limit.success) return await tooManyAttemptsResponse(limit.reset);
+  if (!limit.success) return await rateLimitedResponse(limit.reset);
 
   // Read now, not from the session: the token can be a request old.
   const plan = await getPlanStatus(userId);
   const result = await importCandidates(userId, batch.data.candidates, {
     conflict: batch.data.conflict,
-    maxItems: plan.isPro ? undefined : FREE_LIMITS.items,
-    maxCollections: plan.isPro ? undefined : FREE_LIMITS.collections,
-    customTypes: canUseCustomTypes(plan),
+    ...importLimits(plan),
     types: batch.data.types,
     collections: batch.data.collections,
   });

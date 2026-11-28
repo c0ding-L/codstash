@@ -2,10 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { z } from "zod";
 
 import { auth } from "@/auth";
 import { getErrors } from "@/i18n/errors-server";
+import { invalidInput, type ActionResult } from "@/lib/action-result";
 import { getPlanStatus } from "@/lib/db/billing";
 import {
   createCollection as createCollectionQuery,
@@ -16,6 +16,8 @@ import {
   type RecentCollection,
 } from "@/lib/db/collections";
 import { collectionSchema } from "@/lib/item-schemas";
+import { isPrismaNotFound } from "@/lib/prisma-errors";
+import { setFlagAction } from "@/lib/set-flag-action";
 import { FREE_LIMITS, LimitReachedError, canCreateCollection } from "@/lib/usage-limits";
 
 export interface CreateCollectionInput {
@@ -27,36 +29,12 @@ export type CreateCollectionField = keyof CreateCollectionInput;
 
 const CREATE_COLLECTION_FIELDS: ReadonlySet<string> = new Set<CreateCollectionField>(["name", "description"]);
 
-export type CreateCollectionResult =
-  | { success: true; data: RecentCollection; error: null }
-  /** `field` names the input at fault when validation failed, so the form can mark it. */
-  | { success: false; data: null; error: string; field?: CreateCollectionField };
-
-/** The first validation issue, naming the field at fault when it is one of the form's. */
-function invalidInput(
-  error: z.ZodError,
-  e: Awaited<ReturnType<typeof getErrors>>,
-): { success: false; data: null; error: string; field?: CreateCollectionField } {
-  const issue = error.issues[0];
-  const field = issue?.path[0];
-  return {
-    success: false,
-    data: null,
-    error: e.issue(issue),
-    ...(typeof field === "string" &&
-      CREATE_COLLECTION_FIELDS.has(field) && { field: field as CreateCollectionField }),
-  };
-}
-
-/** Prisma's "record to update/delete not found", also what another user's collection gives. */
-function isNotFound(error: unknown) {
-  return typeof error === "object" && error !== null && "code" in error && error.code === "P2025";
-}
+export type CreateCollectionResult = ActionResult<RecentCollection, CreateCollectionField>;
 
 export async function createCollection(input: CreateCollectionInput): Promise<CreateCollectionResult> {
   const e = await getErrors();
   const parsed = collectionSchema.safeParse(input);
-  if (!parsed.success) return invalidInput(parsed.error, e);
+  if (!parsed.success) return invalidInput<CreateCollectionField>(e, parsed.error, CREATE_COLLECTION_FIELDS);
 
   try {
     const session = await auth();
@@ -83,9 +61,7 @@ export async function createCollection(input: CreateCollectionInput): Promise<Cr
 /** The edit form sends the same fields as the create form. */
 export type UpdateCollectionInput = CreateCollectionInput;
 
-export type UpdateCollectionResult =
-  | { success: true; data: CollectionSummary; error: null }
-  | { success: false; data: null; error: string; field?: CreateCollectionField };
+export type UpdateCollectionResult = ActionResult<CollectionSummary, CreateCollectionField>;
 
 export async function updateCollection(
   collectionId: string,
@@ -93,7 +69,7 @@ export async function updateCollection(
 ): Promise<UpdateCollectionResult> {
   const e = await getErrors();
   const parsed = collectionSchema.safeParse(input);
-  if (!parsed.success) return invalidInput(parsed.error, e);
+  if (!parsed.success) return invalidInput<CreateCollectionField>(e, parsed.error, CREATE_COLLECTION_FIELDS);
 
   try {
     const session = await auth();
@@ -103,15 +79,13 @@ export async function updateCollection(
     const collection = await updateCollectionQuery(session.user.id, collectionId, parsed.data);
     return { success: true, data: collection, error: null };
   } catch (error) {
-    if (isNotFound(error)) return { success: false, data: null, error: e.message("collections.notFound") };
+    if (isPrismaNotFound(error)) return { success: false, data: null, error: e.message("collections.notFound") };
     console.error("[collections] updateCollection failed:", error);
     return { success: false, data: null, error: e.message("collections.saveFailed") };
   }
 }
 
-export type DeleteCollectionResult =
-  | { success: true; data: null; error: null }
-  | { success: false; data: null; error: string };
+export type DeleteCollectionResult = ActionResult;
 
 export interface DeleteCollectionOptions {
   /**
@@ -133,7 +107,7 @@ export async function deleteCollection(
 
     await deleteCollectionQuery(session.user.id, collectionId);
   } catch (error) {
-    if (isNotFound(error)) return { success: false, data: null, error: e.message("collections.notFound") };
+    if (isPrismaNotFound(error)) return { success: false, data: null, error: e.message("collections.notFound") };
     console.error("[collections] deleteCollection failed:", error);
     return { success: false, data: null, error: e.message("collections.deleteFailed") };
   }
@@ -147,29 +121,20 @@ export async function deleteCollection(
   return { success: true, data: null, error: null };
 }
 
-export type SetCollectionFavoriteResult =
-  | { success: true; data: { isFavorite: boolean }; error: null }
-  | { success: false; data: null; error: string };
+export type SetCollectionFavoriteResult = ActionResult<{ isFavorite: boolean }>;
 
 /** Takes the state to set, not a flip, as `setItemFavorite` does. */
 export async function setCollectionFavorite(
   collectionId: string,
   isFavorite: boolean,
 ): Promise<SetCollectionFavoriteResult> {
-  const e = await getErrors();
-  if (typeof isFavorite !== "boolean") return { success: false, data: null, error: e.message("collections.invalidFavorite") };
-
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return { success: false, data: null, error: e.message("notSignedIn") };
-
-    const found = await setCollectionFavoriteQuery(session.user.id, collectionId, isFavorite);
-    if (!found) return { success: false, data: null, error: e.message("collections.notFound") };
-  } catch (error) {
-    console.error("[collections] setCollectionFavorite failed:", error);
-    return { success: false, data: null, error: e.message("collections.favoriteFailed") };
-  }
-
-  revalidatePath("/", "layout");
-  return { success: true, data: { isFavorite }, error: null };
+  return setFlagAction({
+    key: "isFavorite",
+    value: isFavorite,
+    invalid: "collections.invalidFavorite",
+    notFound: "collections.notFound",
+    failed: "collections.favoriteFailed",
+    log: "[collections] setCollectionFavorite",
+    write: (userId, value) => setCollectionFavoriteQuery(userId, collectionId, value),
+  });
 }

@@ -1,8 +1,8 @@
 import { cache } from "react";
 
 import { isReservedTypeSlug, itemTypeFromSegment, slugify } from "@/lib/item-type-ui";
+import { assertBelowCap } from "@/lib/db/user-lock";
 import { prisma } from "@/lib/prisma";
-import { LimitReachedError } from "@/lib/usage-limits";
 import type { ItemTypeSlug } from "@/types/item-type";
 
 /** A Pro user's own item type, as Settings and the sidebar list it. */
@@ -89,9 +89,9 @@ export async function isCustomTypeNameTaken(userId: string, name: string, except
  */
 export async function createCustomType(userId: string, data: CustomTypeData) {
   return prisma.$transaction(async (tx) => {
-    await tx.$queryRaw`SELECT 1 FROM "User" WHERE "id" = ${userId} FOR UPDATE`;
-    const count = await tx.itemType.count({ where: { userId, isSystem: false } });
-    if (count >= MAX_CUSTOM_TYPES) throw new LimitReachedError("customTypes");
+    await assertBelowCap(tx, userId, "customTypes", MAX_CUSTOM_TYPES, () =>
+      tx.itemType.count({ where: { userId, isSystem: false } }),
+    );
     return tx.itemType.create({
       data: { ...data, isSystem: false, user: { connect: { id: userId } } },
       select: { id: true, slug: true },

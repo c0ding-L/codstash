@@ -84,7 +84,7 @@ beforeEach(() => {
 });
 
 describe("search_items", () => {
-  it("lists `id · type · title · tags` with a 200-character one-line preview, for the caller only", async () => {
+  it("lists `id · type · title · tags` with a one-line preview of at most 200 characters, for the caller only", async () => {
     const long = `line one\n${"x".repeat(300)}`;
     asMock(listApiItems).mockResolvedValue({ items: [apiItem({ content: long })], nextCursor: null });
 
@@ -95,7 +95,7 @@ describe("search_items", () => {
     const [header, , first, preview] = textOf(result).split("\n");
     expect(header).toBe("1 item from the user's Cortex:");
     expect(first).toBe("cm0item0000000000abcdefgh · snippet · useDebounce hook · hooks, react");
-    expect(preview).toBe(`  line one ${"x".repeat(191)}…`);
+    expect(preview).toBe(`  line one ${"x".repeat(190)}…`);
   });
 
   it("caps the limit at 20 and says when nothing matches", async () => {

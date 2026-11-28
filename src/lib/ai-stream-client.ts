@@ -1,6 +1,7 @@
 // The browser side of the streamed AI routes (`/api/ai/explain`, `/api/ai/optimize`, `/api/ai/summarize`).
 
 import { readStreamedAnswer, visibleStreamedText } from "@/lib/ai-stream-protocol";
+import { responseError } from "@/lib/response-error";
 
 /** Thrown with the message to show: the server's, or `failedMessage` when it sent none. */
 export class AiStreamError extends Error {
@@ -50,8 +51,8 @@ export async function streamAi(
   }
 
   if (!response.ok || !response.body) {
-    const answer: { error?: unknown } = await response.json().catch(() => ({}));
-    throw new AiStreamError(typeof answer.error === "string" && answer.error ? answer.error : failedMessage);
+    // `||`: an empty message is no message.
+    throw new AiStreamError((await responseError(response)) || failedMessage);
   }
 
   onHeaders?.(response.headers);

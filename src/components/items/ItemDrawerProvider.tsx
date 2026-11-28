@@ -7,7 +7,8 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import { ItemDetails, type ItemDetailState } from "@/components/items/ItemDetails";
 import type { SavedItem } from "@/components/items/ItemEditForm";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import type { DashboardItem, ItemDetailJson } from "@/lib/db/items";
+import type { DashboardItem } from "@/lib/db/items";
+import { fetchItemDetail } from "@/lib/item-client";
 import { markUsed } from "@/lib/item-usage";
 
 type OpenItem = (item: DashboardItem) => void;
@@ -68,12 +69,7 @@ export function ItemDrawerProvider({
     markUsed(item.id);
 
     try {
-      const response = await fetch(`/api/items/${encodeURIComponent(item.id)}`, {
-        signal: controller.signal,
-      });
-      if (!response.ok) throw new Error(`Item request failed with ${response.status}.`);
-
-      const fetched: ItemDetailJson = await response.json();
+      const fetched = await fetchItemDetail(item.id, { signal: controller.signal });
       if (!controller.signal.aborted) setDetail({ status: "ready", detail: fetched });
     } catch {
       if (!controller.signal.aborted) setDetail({ status: "error" });

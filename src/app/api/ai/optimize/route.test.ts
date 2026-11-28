@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
+import { allowedLimit, blockedLimit, fakeAiStream } from "@/lib/__fixtures__/ai-stream";
 import { POST } from "@/app/api/ai/optimize/route";
 import { auth } from "@/auth";
-import { AiProviderError, completeStream, type AiStream } from "@/lib/ai-client";
+import { AiProviderError, completeStream } from "@/lib/ai-client";
 import { CUT_OFF_MARKER, errorMarker } from "@/lib/ai-stream-protocol";
 import { getPlanStatus } from "@/lib/db/billing";
 import { getItemForExplain } from "@/lib/db/items";
@@ -28,22 +29,6 @@ const ai = asMock(completeStream);
 const itemForExplain = asMock(getItemForExplain);
 
 const PROMPT = { content: "review my code", language: null, slug: "prompt" };
-const allowed = { success: true, remaining: 1, reset: 0 };
-const blocked = { success: false, remaining: 0, reset: Date.now() + 60_000 };
-
-function answer(chunks: string[], { finishReason = "stop", failWith }: { finishReason?: string; failWith?: unknown } = {}): AiStream {
-  const queue = [...chunks];
-  const stream = new ReadableStream<string>({
-    // Pulled one chunk at a time, so a failure comes after the text, as from `completeStream`.
-    pull(controller) {
-      const next = queue.shift();
-      if (next !== undefined) controller.enqueue(next);
-      else if (failWith) controller.error(failWith);
-      else controller.close();
-    },
-  });
-  return { stream, finishReason: () => finishReason };
-}
 
 const optimize = (body: unknown = { itemId: "item_1" }) =>
   POST(new Request("http://localhost/api/ai/optimize", { method: "POST", body: JSON.stringify(body) }));
@@ -51,9 +36,9 @@ const optimize = (body: unknown = { itemId: "item_1" }) =>
 beforeEach(() => {
   session.mockResolvedValue({ user: { id: "user_1" } });
   planStatus.mockResolvedValue({ isPro: true });
-  rateLimit.mockResolvedValue(allowed);
+  rateLimit.mockResolvedValue(allowedLimit());
   itemForExplain.mockResolvedValue(PROMPT);
-  ai.mockResolvedValue(answer(["Review the code ", "for bugs."]));
+  ai.mockResolvedValue(fakeAiStream(["Review the code ", "for bugs."]));
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -113,7 +98,7 @@ describe("POST /api/ai/optimize", () => {
     expect((await optimize()).status).toBe(403);
 
     planStatus.mockResolvedValue({ isPro: true });
-    rateLimit.mockResolvedValueOnce(allowed).mockResolvedValueOnce(blocked);
+    rateLimit.mockResolvedValueOnce(allowedLimit()).mockResolvedValueOnce(blockedLimit());
     const limited = await optimize();
     expect(limited.status).toBe(429);
     expect(await limited.json()).toEqual({ error: "You've used today's AI requests. Try again tomorrow." });
@@ -129,19 +114,19 @@ describe("POST /api/ai/optimize", () => {
   });
 
   it("ends with the cut-off marker on the token cap, so the half rewrite is never offered", async () => {
-    ai.mockResolvedValue(answer(["Review the"], { finishReason: "length" }));
+    ai.mockResolvedValue(fakeAiStream(["Review the"], { finishReason: "length" }));
 
     expect(await (await optimize()).text()).toBe(`Review the${CUT_OFF_MARKER}`);
   });
 
   it("ends with the error marker when the answer fails midway", async () => {
-    ai.mockResolvedValue(answer(["Review"], { failWith: new TypeError("socket hang up") }));
+    ai.mockResolvedValue(fakeAiStream(["Review"], { failWith: new TypeError("socket hang up") }));
 
     expect(await (await optimize()).text()).toBe(`Review${errorMarker("AI is unavailable right now.")}`);
   });
 
   it("never caps the length: the rewrite is checked whole by the browser", async () => {
-    ai.mockResolvedValue(answer(["a".repeat(5_000), "b".repeat(5_000)]));
+    ai.mockResolvedValue(fakeAiStream(["a".repeat(5_000), "b".repeat(5_000)]));
 
     expect(await (await optimize()).text()).toBe(`${"a".repeat(5_000)}${"b".repeat(5_000)}`);
   });

@@ -1,11 +1,8 @@
-import { Crown } from "lucide-react";
-import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
+import { ProOnlyUpgrade } from "@/components/billing/ProOnlyUpgrade";
 import { ExportButtons } from "@/components/settings/ExportButtons";
-import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 
 /**
  * Settings › Data: the two export downloads for Pro users, the upgrade link for Free ones.
@@ -26,13 +23,7 @@ export async function ExportDataCard({ isPro }: { isPro: boolean }) {
             <p className="text-sm text-muted-foreground">{t("zipNote")}</p>
           </>
         ) : (
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="text-sm text-muted-foreground">{t("proOnly")}</p>
-            <Link href="/upgrade" className={cn(buttonVariants({ variant: "outline" }), "gap-2")}>
-              <Crown className="text-amber-400" aria-hidden />
-              {t("upgrade")}
-            </Link>
-          </div>
+          <ProOnlyUpgrade message={t("proOnly")} label={t("upgrade")} />
         )}
       </CardContent>
     </Card>

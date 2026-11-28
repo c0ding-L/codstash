@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import { POST } from "@/app/api/ai/summarize/route";
 import { auth } from "@/auth";
+import { allowedLimit, fakeAiStream } from "@/lib/__fixtures__/ai-stream";
 import { setTestLocale } from "@/lib/__fixtures__/i18n-setup";
-import { AiProviderError, completeStream, type AiStream } from "@/lib/ai-client";
+import { AiProviderError, completeStream } from "@/lib/ai-client";
 import { CUT_OFF_MARKER, SECRET_WARNING_HEADER } from "@/lib/ai-stream-protocol";
 import { getPlanStatus } from "@/lib/db/billing";
 import { getItemForSummary } from "@/lib/db/items";
@@ -36,20 +37,6 @@ const USER_ID = "user_1";
 const LONG = "Restart the API, then check the logs. ".repeat(50);
 const NOTE = { title: "Runbook", slug: "note", content: LONG, fileUrl: null, fileName: null, fileSize: null };
 const FILE = { title: "CI", slug: "file", content: null, fileUrl: "u/user_1/ci.yml", fileName: "ci.yml", fileSize: 20_000 };
-const allowed = { success: true, remaining: 1, reset: 0 };
-
-/** A streamed answer of these chunks. */
-function answer(chunks: string[], finishReason = "stop"): AiStream {
-  const queue = [...chunks];
-  const stream = new ReadableStream<string>({
-    pull(controller) {
-      const next = queue.shift();
-      if (next !== undefined) controller.enqueue(next);
-      else controller.close();
-    },
-  });
-  return { stream, finishReason: () => finishReason };
-}
 
 /** An R2 object whose body is these bytes. */
 function object(content: string | Uint8Array) {
@@ -72,9 +59,9 @@ const sentText = () => (ai.mock.calls[0]![0] as { content: string }[])[1]!.conte
 beforeEach(() => {
   session.mockResolvedValue({ user: { id: USER_ID } });
   planStatus.mockResolvedValue({ isPro: true });
-  rateLimit.mockResolvedValue(allowed);
+  rateLimit.mockResolvedValue(allowedLimit());
   itemForSummary.mockResolvedValue(NOTE);
-  ai.mockResolvedValue(answer(["A runbook ", "for the API."]));
+  ai.mockResolvedValue(fakeAiStream(["A runbook ", "for the API."]));
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
@@ -213,7 +200,7 @@ describe("POST /api/ai/summarize", () => {
   });
 
   it("stops at 3,000 characters with the cut-off marker", async () => {
-    ai.mockResolvedValue(answer(["a".repeat(2_000), "b".repeat(2_000)]));
+    ai.mockResolvedValue(fakeAiStream(["a".repeat(2_000), "b".repeat(2_000)]));
     expect(await (await summarize()).text()).toBe(`${"a".repeat(2_000)}${"b".repeat(1_000)}${CUT_OFF_MARKER}`);
   });
 

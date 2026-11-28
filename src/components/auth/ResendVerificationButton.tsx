@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { postAuthJson } from "@/lib/auth-request";
 
 /**
  * Asks for a new verification email. The endpoint answers the same way for any
@@ -34,19 +35,15 @@ export function ResendVerificationButton({
     }
     setPending(true);
     try {
-      const response = await fetch("/api/auth/resend-verification", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: address }),
-      });
-      if (response.status === 429) {
-        const body: { error?: string } = await response.json().catch(() => ({}));
-        toast.error(body.error ?? t("tooManyAttempts"));
-      } else if (response.ok) {
-        toast.success(t("resend.sent"));
-      } else {
-        toast.error(t("resend.failed"));
-      }
+      const answer = await postAuthJson(
+        "/api/auth/resend-verification",
+        { email: address },
+        { tooManyAttempts: t("tooManyAttempts") },
+      );
+      if (!answer) return;
+      // The route's own message when it has one, as the other auth forms show.
+      if (answer.ok) toast.success(t("resend.sent"));
+      else toast.error(answer.body.error ?? t("resend.failed"));
     } catch {
       toast.error(t("unreachable"));
     } finally {

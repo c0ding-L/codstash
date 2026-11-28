@@ -40,18 +40,18 @@ export async function readFormDataWithin(request: Request, maxBytes: number): Pr
   }
 }
 
-export type JsonRead = { ok: true; json: unknown } | { ok: false; status: 400 | 413 };
-
 /**
- * Parses a JSON body, refusing it as soon as more than `maxBytes` have arrived, like
- * `readFormDataWithin`: the declared length first, then the bytes as they are read.
+ * A request's or a response's body as bytes, refusing it as soon as more than `maxBytes` have
+ * arrived: the declared length first, then the bytes as they are read, since it can be left out.
  */
-export async function readJsonWithin(request: Request, maxBytes: number): Promise<JsonRead> {
-  const declared = Number(request.headers.get("content-length"));
-  if (declared > maxBytes) return { ok: false, status: 413 };
-  if (!request.body) return { ok: false, status: 400 };
+export async function readBytesWithin(
+  source: { headers: Headers; body: ReadableStream<Uint8Array> | null },
+  maxBytes: number,
+): Promise<Uint8Array | "tooLarge" | "noBody"> {
+  if (Number(source.headers.get("content-length")) > maxBytes) return "tooLarge";
+  if (!source.body) return "noBody";
 
-  const reader = request.body.getReader();
+  const reader = source.body.getReader();
   const chunks: Uint8Array[] = [];
   let received = 0;
   for (;;) {
@@ -60,7 +60,7 @@ export async function readJsonWithin(request: Request, maxBytes: number): Promis
     received += value.byteLength;
     if (received > maxBytes) {
       await reader.cancel();
-      return { ok: false, status: 413 };
+      return "tooLarge";
     }
     chunks.push(value);
   }
@@ -71,6 +71,16 @@ export async function readJsonWithin(request: Request, maxBytes: number): Promis
     bytes.set(chunk, offset);
     offset += chunk.byteLength;
   }
+  return bytes;
+}
+
+export type JsonRead = { ok: true; json: unknown } | { ok: false; status: 400 | 413 };
+
+/** Parses a JSON body within `maxBytes`, like `readFormDataWithin`. */
+export async function readJsonWithin(request: Request, maxBytes: number): Promise<JsonRead> {
+  const bytes = await readBytesWithin(request, maxBytes);
+  if (bytes === "tooLarge") return { ok: false, status: 413 };
+  if (bytes === "noBody") return { ok: false, status: 400 };
   try {
     return { ok: true, json: JSON.parse(new TextDecoder().decode(bytes)) };
   } catch {

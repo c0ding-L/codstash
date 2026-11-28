@@ -3,7 +3,9 @@
 
 import type { Prisma } from "@/generated/prisma/client";
 import { getPlanStatus } from "@/lib/db/billing";
+import { collectionLinks, tagLinks, tagNames, tagNameSelect } from "@/lib/db/item-links";
 import { clampLimit } from "@/lib/db/limits";
+import { hasContentField, hasLanguageField, hasUrlField, toItemTypeSlug } from "@/lib/item-type-ui";
 import { prisma } from "@/lib/prisma";
 import { FREE_LIMITS } from "@/lib/usage-limits";
 
@@ -94,7 +96,7 @@ const apiItemSelect = {
   createdAt: true,
   updatedAt: true,
   type: { select: { id: true, slug: true, name: true, isSystem: true } },
-  tags: { select: { tag: { select: { name: true } } } },
+  tags: tagNameSelect,
   collections: {
     select: { collection: { select: { id: true, name: true } } },
     orderBy: { collection: { name: "asc" } },
@@ -131,7 +133,7 @@ function toApiItem({ fileName, fileSize, tags, collections, ...item }: SelectedA
   return {
     ...item,
     file: fileName !== null || fileSize !== null ? { name: fileName, size: fileSize } : null,
-    tags: tags.map(({ tag }) => tag.name).sort((a, b) => a.localeCompare(b)),
+    tags: tagNames(tags),
     collections: collections.map(({ collection }) => collection),
   };
 }
@@ -167,21 +169,23 @@ export async function getApiItem(userId: string, id: string): Promise<ApiItem | 
   return item ? toApiItem(item) : null;
 }
 
-/** The fields each type uses beyond title, description, tags and collections. A custom type is a note plus a language. */
-const TYPE_FIELDS: Record<string, readonly ("content" | "url" | "language")[]> = {
-  snippet: ["content", "language"],
-  command: ["content", "language"],
-  prompt: ["content"],
-  note: ["content"],
-  link: ["url"],
-  file: [],
-  image: [],
-};
-const CUSTOM_TYPE_FIELDS = ["content", "language"] as const;
+type TypeField = "content" | "url" | "language";
 
-/** The type-specific fields an item of this type can hold. */
-export function fieldsForType(type: { slug: string; isSystem: boolean }): readonly ("content" | "url" | "language")[] {
-  return type.isSystem ? (TYPE_FIELDS[type.slug] ?? []) : CUSTOM_TYPE_FIELDS;
+/** A custom type is a note plus a language. */
+const CUSTOM_TYPE_FIELDS: readonly TypeField[] = ["content", "language"];
+
+/**
+ * The type-specific fields an item of this type can hold, beyond title, description, tags and
+ * collections. Read from the same rules as the item forms, so the API accepts what they show.
+ */
+export function fieldsForType(type: { slug: string; isSystem: boolean }): readonly TypeField[] {
+  if (!type.isSystem) return CUSTOM_TYPE_FIELDS;
+  const slug = toItemTypeSlug(type.slug);
+  return [
+    ...(hasContentField(slug) ? (["content"] as const) : []),
+    ...(hasUrlField(slug) ? (["url"] as const) : []),
+    ...(hasLanguageField(slug) ? (["language"] as const) : []),
+  ];
 }
 
 /** The type of one of the user's items, or null when it is missing or someone else's. */
@@ -217,20 +221,8 @@ export async function patchApiItem(
     where: { id, userId },
     data: {
       ...fields,
-      ...(tags && {
-        tags: {
-          deleteMany: {},
-          create: [...new Set(tags)].map((name) => ({
-            tag: { connectOrCreate: { where: { userId_name: { userId, name } }, create: { name, userId } } },
-          })),
-        },
-      }),
-      ...(collectionIds && {
-        collections: {
-          deleteMany: {},
-          create: [...new Set(collectionIds)].map((collectionId) => ({ collection: { connect: { id: collectionId } } })),
-        },
-      }),
+      ...(tags && { tags: { deleteMany: {}, create: tagLinks(userId, tags) } }),
+      ...(collectionIds && { collections: { deleteMany: {}, create: collectionLinks(collectionIds) } }),
     },
     select: apiItemSelect,
   });

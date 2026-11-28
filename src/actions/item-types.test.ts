@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import { revalidatePath } from "next/cache";
 
+import { plan, pro } from "@/lib/__fixtures__/plan";
+import { prismaError } from "@/lib/__fixtures__/prisma";
 import { createItemType, deleteItemType, updateItemType } from "@/actions/item-types";
 import { auth } from "@/auth";
 import { getPlanStatus } from "@/lib/db/billing";
@@ -34,19 +36,17 @@ const nameTaken = isCustomTypeNameTaken as unknown as Mock;
 const revalidate = revalidatePath as unknown as Mock;
 
 const USER_ID = "user_1";
-const plan = (isPro: boolean) => ({ proUntil: null, isPro, items: 0, collections: 0 });
 const INPUT = { name: " Problème ", icon: "bug", color: "brown", template: "## Steps\n" };
 
 beforeEach(() => {
   session.mockResolvedValue({ user: { id: USER_ID } });
-  planStatus.mockResolvedValue(plan(true));
+  planStatus.mockResolvedValue(pro());
   nameTaken.mockResolvedValue(false);
   createQuery.mockResolvedValue({ id: "typ_1", slug: "probleme" });
   updateQuery.mockResolvedValue({ id: "typ_1", slug: "probleme" });
   deleteQuery.mockResolvedValue({ deleted: true });
 });
 
-const prismaError = (code: string) => Object.assign(new Error(code), { code });
 
 describe("createItemType", () => {
   it("refuses when not signed in", async () => {
@@ -57,7 +57,7 @@ describe("createItemType", () => {
   });
 
   it("refuses a Free account with the Pro message", async () => {
-    planStatus.mockResolvedValue(plan(false));
+    planStatus.mockResolvedValue(plan());
 
     expect(await createItemType(INPUT)).toEqual({
       success: false,
@@ -139,7 +139,7 @@ describe("createItemType", () => {
 
   it("answers in French", async () => {
     setTestLocale("fr");
-    planStatus.mockResolvedValue(plan(false));
+    planStatus.mockResolvedValue(plan());
 
     expect((await createItemType(INPUT)).error).toBe("Les types d’éléments personnalisés sont réservés à la formule Pro.");
   });
@@ -147,7 +147,7 @@ describe("createItemType", () => {
 
 describe("updateItemType", () => {
   it("refuses a Free account, even one whose Pro lapsed", async () => {
-    planStatus.mockResolvedValue(plan(false));
+    planStatus.mockResolvedValue(plan());
 
     expect((await updateItemType("typ_1", INPUT)).error).toBe("Custom item types are a Pro feature.");
     expect(updateQuery).not.toHaveBeenCalled();
@@ -209,7 +209,7 @@ describe("deleteItemType", () => {
 
   // Not gated on Pro: after a lapse, the user can still remove an empty type.
   it("deletes an empty type, Free or Pro, and refreshes the layout", async () => {
-    planStatus.mockResolvedValue(plan(false));
+    planStatus.mockResolvedValue(plan());
 
     expect(await deleteItemType("typ_1")).toEqual({ success: true, data: null, error: null });
     expect(revalidate).toHaveBeenCalledWith("/", "layout");

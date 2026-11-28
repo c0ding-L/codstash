@@ -1,4 +1,5 @@
 import type { ExportCollectionRow, ExportItemRow, ExportTypeRow, ExportUserRow } from "@/lib/export";
+import { tagNames, tagNameSelect } from "@/lib/db/item-links";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -43,7 +44,7 @@ const exportItemSelect = {
   createdAt: true,
   updatedAt: true,
   type: { select: { slug: true, isSystem: true } },
-  tags: { select: { tag: { select: { name: true } } }, orderBy: { tag: { name: "asc" } } },
+  tags: tagNameSelect,
   collections: { select: { collectionId: true }, orderBy: { collectionId: "asc" } },
 } as const;
 
@@ -64,7 +65,7 @@ export async function* exportItemPages(userId: string, pageSize = EXPORT_PAGE_SI
 
     yield rows.map(({ tags, collections, ...row }) => ({
       ...row,
-      tags: tags.map(({ tag }) => tag.name),
+      tags: tagNames(tags),
       collectionIds: collections.map(({ collectionId }) => collectionId),
     }));
 

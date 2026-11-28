@@ -349,13 +349,13 @@ describe("getItemDetail", () => {
     await expect(getItemDetail(USER, "someone_elses")).resolves.toBeNull();
   });
 
-  it("returns the detail with the tag names, asking for them sorted", async () => {
+  it("returns the detail with the tag names sorted as a save returns them", async () => {
     const row = { content: "body", url: null, fileName: null, language: "bash", createdAt: new Date(0) };
     findFirst.mockResolvedValue(row);
-    findTags.mockResolvedValue([{ name: "bash" }, { name: "ci" }]);
+    // Postgres' order for mixed case; a save sorts with localeCompare, so the drawer must too.
+    findTags.mockResolvedValue([{ name: "Zsh" }, { name: "bash" }, { name: "ci" }]);
 
-    await expect(getItemDetail(USER, "item_1")).resolves.toEqual({ ...row, tags: ["bash", "ci"] });
-    expect(findTags.mock.calls[0]![0].orderBy).toEqual({ name: "asc" });
+    await expect(getItemDetail(USER, "item_1")).resolves.toEqual({ ...row, tags: ["bash", "ci", "Zsh"] });
   });
 
   it("has an empty tag list for an untagged item", async () => {

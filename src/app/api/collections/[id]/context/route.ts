@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 
-import { auth } from "@/auth";
 import { getErrors } from "@/i18n/errors-server";
 import { contextDisposition, renderCollectionContext } from "@/lib/context-export";
 import { getCollectionContextData } from "@/lib/db/context-export";
-import { checkRateLimit, tooManyAttemptsResponse } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { rateLimitedResponse, requireSessionUser } from "@/lib/session-route";
 
 /**
  * One of the signed-in user's collections as a Markdown file for an AI coding assistant.
@@ -13,14 +13,12 @@ import { checkRateLimit, tooManyAttemptsResponse } from "@/lib/rate-limit";
  */
 export async function GET(_request: Request, ctx: RouteContext<"/api/collections/[id]/context">) {
   const e = await getErrors();
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: e.message("notSignedIn") }, { status: 401 });
-  }
-  const userId = session.user.id;
+  const caller = await requireSessionUser();
+  if (caller instanceof Response) return caller;
+  const { userId } = caller;
 
   const limit = await checkRateLimit("contextExport", userId);
-  if (!limit.success) return await tooManyAttemptsResponse(limit.reset);
+  if (!limit.success) return await rateLimitedResponse(limit.reset);
 
   const { id } = await ctx.params;
   const data = await getCollectionContextData(userId, id);

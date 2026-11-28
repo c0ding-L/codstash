@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
+import { plan, pro } from "@/lib/__fixtures__/plan";
 import { generateAutoTags, generateDescription } from "@/actions/ai";
 import { auth } from "@/auth";
 import { setTestLocale } from "@/lib/__fixtures__/i18n-setup";
@@ -35,7 +36,7 @@ const blocked = { success: false, remaining: 0, reset: Date.now() + 60_000 };
 
 beforeEach(() => {
   session.mockResolvedValue({ user: { id: USER_ID } });
-  planStatus.mockResolvedValue({ proUntil: new Date(), isPro: true, items: 0, collections: 0 });
+  planStatus.mockResolvedValue(pro());
   rateLimit.mockResolvedValue(allowed);
   ai.mockResolvedValue("react, hooks, debounce, typescript");
   vi.spyOn(console, "error").mockImplementation(() => {});
@@ -88,7 +89,7 @@ describe("generateAutoTags", () => {
   });
 
   it("refuses Free users before the rate limits", async () => {
-    planStatus.mockResolvedValue({ proUntil: null, isPro: false, items: 0, collections: 0 });
+    planStatus.mockResolvedValue(plan());
 
     expect(await generateAutoTags(INPUT)).toEqual({ success: false, data: null, error: PRO_ONLY });
     expect(planStatus).toHaveBeenCalledWith(USER_ID);
@@ -209,7 +210,7 @@ describe("generateDescription", () => {
   });
 
   it("refuses Free users before the rate limits", async () => {
-    planStatus.mockResolvedValue({ proUntil: null, isPro: false, items: 0, collections: 0 });
+    planStatus.mockResolvedValue(plan());
 
     expect(await generateDescription(LINK)).toMatchObject({ success: false, error: PRO_ONLY });
     expect(rateLimit).not.toHaveBeenCalled();

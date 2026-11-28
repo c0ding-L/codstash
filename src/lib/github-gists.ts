@@ -4,6 +4,7 @@
 
 import type { GistDetail } from "@/lib/import";
 import { ITEM_LIMITS } from "@/lib/item-limits";
+import { readBytesWithin } from "@/lib/request-body";
 
 const API = "https://api.github.com";
 /** The only host a truncated file's `raw_url` may point at: no SSRF through a crafted gist. */
@@ -96,24 +97,9 @@ async function githubGet(path: string, token: string | null): Promise<unknown> {
 
 /** The body as text, failing past `maxBytes` (declared or streamed) instead of reading on. */
 async function readTextWithin(response: Response, maxBytes: number): Promise<string> {
-  if (Number(response.headers.get("content-length")) > maxBytes || !response.body) {
-    throw new GithubError("failed");
-  }
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let text = "";
-  let received = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    received += value.byteLength;
-    if (received > maxBytes) {
-      await reader.cancel();
-      throw new GithubError("failed");
-    }
-    text += decoder.decode(value, { stream: true });
-  }
-  return text + decoder.decode();
+  const bytes = await readBytesWithin(response, maxBytes);
+  if (typeof bytes === "string") throw new GithubError("failed");
+  return new TextDecoder().decode(bytes);
 }
 
 /** The login of the token's GitHub account, or null when GitHub does not answer with one. */

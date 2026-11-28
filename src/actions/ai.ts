@@ -3,15 +3,16 @@
 import { z } from "zod";
 
 import { auth } from "@/auth";
-import { errKey } from "@/i18n/error-keys";
+import { errKey, type ErrorKey } from "@/i18n/error-keys";
 import { getErrors } from "@/i18n/errors-server";
-import { AiProviderError, aiErrorMessage, complete } from "@/lib/ai-client";
+import { fail, type ActionResult } from "@/lib/action-result";
+import { AiProviderError, aiErrorMessage, complete, type AiMessage } from "@/lib/ai-client";
 import { aiGate, answerLocale } from "@/lib/ai-gate";
 import { parseDescription, parseTagSuggestions } from "@/lib/ai-output";
 import { DESCRIPTION_MAX_TOKENS, TAG_MAX_TOKENS, descriptionMessages, tagSuggestionMessages } from "@/lib/ai-prompts";
 import { ITEM_LIMITS } from "@/lib/item-limits";
 
-export type AiResult<T> = { success: true; data: T; error: null } | { success: false; data: null; error: string };
+export type AiResult<T> = ActionResult<T>;
 
 /** What the item forms send: their current text, saved or not. */
 export interface AutoTagsInput {
@@ -44,39 +45,69 @@ const autoTagsSchema = z.object({
     .max(ITEM_LIMITS.tags, errKey("items.tooManyTags")),
 });
 
-const failure = (error: string) => ({ success: false, data: null, error }) as const;
+interface CompletionOptions<S extends z.ZodType, T> {
+  schema: S;
+  /** The action's name, for the logs. */
+  name: string;
+  messages: (data: z.infer<S>) => AiMessage[] | Promise<AiMessage[]>;
+  maxTokens: number;
+  /** The answer as the action returns it, or null when there is nothing usable in it. */
+  parse: (answer: string, data: z.infer<S>) => T | null;
+  /** When `parse` found nothing. */
+  empty: ErrorKey;
+  failed: ErrorKey;
+}
 
-/** 3-5 new tags for the item in the form. Nothing is saved: the form adds the ones the user accepts. */
-export async function generateAutoTags(input: AutoTagsInput): Promise<AiResult<string[]>> {
+/** Validates the input, checks the AI gate and asks the model once. Nothing is saved. */
+async function runCompletion<S extends z.ZodType, T>(
+  input: unknown,
+  { schema, name, messages, maxTokens, parse, empty, failed }: CompletionOptions<S, T>,
+): Promise<AiResult<T>> {
   const e = await getErrors();
-  const parsed = autoTagsSchema.safeParse(input);
-  if (!parsed.success) return failure(e.issue(parsed.error.issues[0]));
+  const parsed = schema.safeParse(input);
+  if (!parsed.success) return fail(e.issue(parsed.error.issues[0]));
 
   try {
     const session = await auth();
-    if (!session?.user?.id) return failure(e.message("notSignedIn"));
+    if (!session?.user?.id) return fail(e.message("notSignedIn"));
 
     const blocked = await aiGate(session.user.id, e);
-    if (blocked) return failure(blocked.error);
+    if (blocked) return fail(blocked.error);
 
     let answer: string;
     try {
-      answer = await complete(tagSuggestionMessages(parsed.data), { maxTokens: TAG_MAX_TOKENS });
+      answer = await complete(await messages(parsed.data), { maxTokens });
     } catch (error) {
       // The client logs the provider's own errors; a missing key or unknown provider is logged here.
       if (!(error instanceof AiProviderError)) {
-        console.error("[ai] generateAutoTags could not call the AI:", error);
+        console.error(`[ai] ${name} could not call the AI:`, error);
       }
-      return failure(await aiErrorMessage(error));
+      return fail(await aiErrorMessage(error));
     }
 
-    const tags = parseTagSuggestions(answer, parsed.data.tags);
-    if (tags.length === 0) return failure(e.message("ai.noTags"));
-    return { success: true, data: tags, error: null };
+    const result = parse(answer, parsed.data);
+    if (result === null) return fail(e.message(empty));
+    return { success: true, data: result, error: null };
   } catch (error) {
-    console.error("[ai] generateAutoTags failed:", error);
-    return failure(e.message("ai.tagsFailed"));
+    console.error(`[ai] ${name} failed:`, error);
+    return fail(e.message(failed));
   }
+}
+
+/** 3-5 new tags for the item in the form. Nothing is saved: the form adds the ones the user accepts. */
+export async function generateAutoTags(input: AutoTagsInput): Promise<AiResult<string[]>> {
+  return runCompletion(input, {
+    schema: autoTagsSchema,
+    name: "generateAutoTags",
+    messages: tagSuggestionMessages,
+    maxTokens: TAG_MAX_TOKENS,
+    parse: (answer, data) => {
+      const tags = parseTagSuggestions(answer, data.tags);
+      return tags.length > 0 ? tags : null;
+    },
+    empty: "ai.noTags",
+    failed: "ai.tagsFailed",
+  });
 }
 
 /** What the item forms send for a description: whatever fields the item's type has, saved or not. */
@@ -104,34 +135,13 @@ const descriptionSchema = autoTagsSchema.extend({
 
 /** A 1-2 sentence description of the item in the form. Nothing is saved: the form fills its Description field. */
 export async function generateDescription(input: DescriptionInput): Promise<AiResult<string>> {
-  const e = await getErrors();
-  const parsed = descriptionSchema.safeParse(input);
-  if (!parsed.success) return failure(e.issue(parsed.error.issues[0]));
-
-  try {
-    const session = await auth();
-    if (!session?.user?.id) return failure(e.message("notSignedIn"));
-
-    const blocked = await aiGate(session.user.id, e);
-    if (blocked) return failure(blocked.error);
-
-    let answer: string;
-    try {
-      answer = await complete(descriptionMessages({ ...parsed.data, locale: await answerLocale() }), {
-        maxTokens: DESCRIPTION_MAX_TOKENS,
-      });
-    } catch (error) {
-      if (!(error instanceof AiProviderError)) {
-        console.error("[ai] generateDescription could not call the AI:", error);
-      }
-      return failure(await aiErrorMessage(error));
-    }
-
-    const description = parseDescription(answer);
-    if (!description) return failure(e.message("ai.noDescription"));
-    return { success: true, data: description, error: null };
-  } catch (error) {
-    console.error("[ai] generateDescription failed:", error);
-    return failure(e.message("ai.descriptionFailed"));
-  }
+  return runCompletion(input, {
+    schema: descriptionSchema,
+    name: "generateDescription",
+    messages: async (data) => descriptionMessages({ ...data, locale: await answerLocale() }),
+    maxTokens: DESCRIPTION_MAX_TOKENS,
+    parse: (answer) => parseDescription(answer) || null,
+    empty: "ai.noDescription",
+    failed: "ai.descriptionFailed",
+  });
 }

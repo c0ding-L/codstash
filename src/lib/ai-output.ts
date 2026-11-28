@@ -1,5 +1,6 @@
 import { ITEM_LIMITS } from "@/lib/item-limits";
 import { toTags } from "@/lib/tags";
+import { truncate } from "@/lib/utils";
 
 export const MAX_TAG_SUGGESTIONS = 5;
 
@@ -49,11 +50,7 @@ export function parseDescription(answer: string): string {
   const quoted = /^(["'`“‘])(.*)(["'`”’])$/.exec(text);
   if (quoted) text = quoted[2]!.trim();
 
-  if (text.length <= ITEM_LIMITS.description) return text;
-  // Cut at the last word that fits, never mid-word.
-  const cut = text.slice(0, ITEM_LIMITS.description - 1);
-  const space = cut.lastIndexOf(" ");
-  return `${(space > 0 ? cut.slice(0, space) : cut).trimEnd()}…`;
+  return truncate(text, ITEM_LIMITS.description, { at: "word" });
 }
 
 export const EXPLANATION_MAX_LENGTH = 4_000;
@@ -75,12 +72,7 @@ export function parseExplanation(answer: string): string {
   // wraps it when nothing inside opens another block at its level: otherwise it is two code blocks.
   if (fenced && (fenced[2] || !new RegExp(`^${fenced[1]}`, "m").test(inside))) text = inside.trim();
 
-  if (text.length <= EXPLANATION_MAX_LENGTH) return text;
-  // Cut at the last line break or space that fits, never mid-word.
-  const cut = text.slice(0, EXPLANATION_MAX_LENGTH - 1);
-  const breakAt = Math.max(cut.lastIndexOf("\n"), cut.lastIndexOf(" "));
-  const kept = breakAt > 0 ? cut.slice(0, breakAt) : cut;
-  return `${kept.trimEnd()}…`;
+  return truncate(text, EXPLANATION_MAX_LENGTH, { at: "lineOrWord" });
 }
 
 const OPENING_MARKDOWN_FENCE = /^(`{3,})(?:markdown|md)[ \t]*\r?\n/i;

@@ -4,6 +4,7 @@ import { cache } from "react";
 import { BILLING_PLANS, extendProUntil, isProActive, type Currency, type Plan } from "@/lib/billing-plans";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
+import { lockUser } from "@/lib/db/user-lock";
 import { LimitReachedError } from "@/lib/usage-limits";
 
 // `Plan` and `Currency` are the same string unions as Prisma's `BillingPlan`
@@ -57,7 +58,7 @@ export async function roomBelowLimit(
   limit: "items" | "collections",
   max: number,
 ): Promise<number> {
-  await tx.$queryRaw`SELECT 1 FROM "User" WHERE "id" = ${userId} FOR UPDATE`;
+  await lockUser(tx, userId);
   const count =
     limit === "items" ? await tx.item.count({ where: { userId } }) : await tx.collection.count({ where: { userId } });
   return Math.max(0, max - count);

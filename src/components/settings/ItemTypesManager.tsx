@@ -1,28 +1,18 @@
 "use client";
 
-import { Crown, Pencil, Plus, Trash2, TriangleAlert } from "lucide-react";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
-import { toast } from "sonner";
+import { useState } from "react";
 
 import { deleteItemType } from "@/actions/item-types";
+import { ProOnlyUpgrade } from "@/components/billing/ProOnlyUpgrade";
+import { DestructiveConfirmDialog, emphasizeName } from "@/components/DestructiveConfirmDialog";
 import { TypeIconTile } from "@/components/items/TypeIconTile";
 import { ItemTypeDialog, type EditableItemType } from "@/components/settings/ItemTypeDialog";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogMedia,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { DEFAULT_CUSTOM_COLOR, customTypeIcon, toColorToken } from "@/lib/item-type-ui";
-import { cn } from "@/lib/utils";
 
 export interface ManagedItemType {
   id: string;
@@ -110,13 +100,7 @@ export function ItemTypesManager({ types, canEdit, max }: ItemTypesManagerProps)
           {atCap ? <p className="text-sm text-muted-foreground">{t("atCap", { max })}</p> : null}
         </div>
       ) : (
-        <div className="flex flex-wrap items-center gap-3">
-          <p className="text-sm text-muted-foreground">{t("proOnly")}</p>
-          <Link href="/upgrade" className={cn(buttonVariants({ variant: "outline" }), "gap-2")}>
-            <Crown className="text-amber-400" aria-hidden />
-            {t("upgrade")}
-          </Link>
-        </div>
+        <ProOnlyUpgrade message={t("proOnly")} label={t("upgrade")} />
       )}
 
       {editing ? (
@@ -138,52 +122,17 @@ function DeleteItemTypeDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const t = useTranslations("settings.types");
-  const tc = useTranslations("common");
   const router = useRouter();
-  const [pending, startDeleting] = useTransition();
-
-  function handleDelete() {
-    startDeleting(async () => {
-      const result = await deleteItemType(type.id);
-      if (!result.success) {
-        toast.error(result.error);
-        return;
-      }
-      toast.success(t("deleted"));
-      onOpenChange(false);
-      router.refresh();
-    });
-  }
 
   return (
-    // Escape and Cancel do nothing while the delete runs: its outcome must still show.
-    <AlertDialog open onOpenChange={(next) => !pending && onOpenChange(next)}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20">
-            <TriangleAlert aria-hidden />
-          </AlertDialogMedia>
-          <AlertDialogTitle>{t("deleteTitle")}</AlertDialogTitle>
-          <AlertDialogDescription>
-            {t.rich("deleteBody", {
-              type: type.name,
-              name: (chunks) => <span className="font-medium break-words text-foreground">{chunks}</span>,
-            })}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>{tc("cancel")}</AlertDialogCancel>
-          {/* Solid red, like the item delete: the `destructive` variant is only a tint. */}
-          <Button
-            variant="destructive"
-            className="bg-destructive text-white hover:bg-destructive/90 dark:bg-destructive dark:hover:bg-destructive/90"
-            disabled={pending}
-            onClick={handleDelete}
-          >
-            {pending ? tc("deleting") : tc("delete")}
-          </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <DestructiveConfirmDialog
+      open
+      onOpenChange={onOpenChange}
+      title={t("deleteTitle")}
+      body={t.rich("deleteBody", { type: type.name, name: emphasizeName })}
+      action={() => deleteItemType(type.id)}
+      successMessage={t("deleted")}
+      onSuccess={() => router.refresh()}
+    />
   );
 }

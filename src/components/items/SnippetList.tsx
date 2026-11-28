@@ -1,9 +1,8 @@
-import { Pin, Star } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { ItemCopyButton } from "@/components/items/ItemCopyButton";
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
-import { SharedBadge } from "@/components/share/SharedBadge";
+import { ItemStatusMarkers } from "@/components/items/ItemStatusMarkers";
 import type { DashboardItem, SnippetPreview } from "@/lib/db/items";
 import { useRelativeTime } from "@/i18n/labels";
 import { formatCollectionNames } from "@/lib/format";
@@ -60,13 +59,7 @@ function SnippetRow({
       <div className="flex min-w-0 flex-col gap-2 border-border px-5 py-4 transition-colors group-hover:border-emerald-400 sm:border-r">
         <div className="flex items-start gap-1.5">
           <h2 className="min-w-0 font-mono font-medium break-words transition-colors group-hover:text-emerald-400">{item.title}</h2>
-          {item.isShared ? <SharedBadge className="mt-1" /> : null}
-          {item.isPinned ? (
-            <Pin className="mt-1 size-3 shrink-0 text-muted-foreground" aria-label={tc("pinned")} />
-          ) : null}
-          {item.isFavorite ? (
-            <Star className="mt-1 size-3 shrink-0 fill-amber-400 text-amber-400" aria-label={tc("favorite")} />
-          ) : null}
+          <ItemStatusMarkers item={item} className="mt-1" />
         </div>
         {item.description ? <p className="text-sm text-muted-foreground">{item.description}</p> : null}
         {preview.tags.length > 0 ? (

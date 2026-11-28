@@ -1,13 +1,13 @@
 import { after, NextResponse } from "next/server";
 
 import { getErrors } from "@/i18n/errors-server";
+import { authFail, readAuthBody } from "@/lib/auth-route";
+import { isValidEmail, normalizeEmail } from "@/lib/auth-rules";
 import { getRequestLocale } from "@/i18n/request";
 import { isEmailVerificationEnabled } from "@/lib/email-verification-flag";
 import { issueVerificationEmail } from "@/lib/verification";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, getClientIp, tooManyAttemptsResponse } from "@/lib/rate-limit";
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Always answers the same way, whether or not the address is registered or
@@ -15,18 +15,13 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  * the send run after the response, so the timing does not give it away either.
  */
 export async function POST(request: Request) {
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ success: false, error: "Request body must be valid JSON." }, { status: 400 });
-  }
+  const read = await readAuthBody(request);
+  if (read instanceof Response) return read;
+  const { body } = read;
 
   const email = (body as { email?: unknown } | null)?.email;
-  if (typeof email !== "string" || !EMAIL_PATTERN.test(email.trim())) {
-    return NextResponse.json({ success: false, error: (await getErrors()).message("auth.emailInvalid") }, { status: 400 });
-  }
-  const normalizedEmail = email.trim().toLowerCase();
+  if (!isValidEmail(email)) return authFail((await getErrors()).message("auth.emailInvalid"), 400);
+  const normalizedEmail = normalizeEmail(email);
 
   const limit = await checkRateLimit("resendVerification", `${getClientIp(request.headers)}:${normalizedEmail}`);
   if (!limit.success) return await tooManyAttemptsResponse(limit.reset);

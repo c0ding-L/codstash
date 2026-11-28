@@ -5,15 +5,12 @@ import { useTranslations } from "next-intl";
 
 import { useTemplateCopy } from "@/components/items/FillVariablesDialog";
 import { buttonVariants } from "@/components/ui/button";
-import type { ItemDetailJson } from "@/lib/db/items";
+import { fetchItemDetail } from "@/lib/item-client";
 import { cn } from "@/lib/utils";
 
 /** The item's full content, which the lists never have: content has no length cap. */
 async function fetchItemContent(itemId: string) {
-  const response = await fetch(`/api/items/${encodeURIComponent(itemId)}`);
-  if (!response.ok) throw new Error(`Could not load the item (${response.status}).`);
-  const detail = (await response.json()) as ItemDetailJson;
-  return detail.content ?? "";
+  return (await fetchItemDetail(itemId)).content ?? "";
 }
 
 interface ItemCopyButtonProps {

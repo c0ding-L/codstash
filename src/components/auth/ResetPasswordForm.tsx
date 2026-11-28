@@ -8,8 +8,8 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
-const MIN_PASSWORD_LENGTH = 8;
+import { postAuthJson, type AuthRouteBody } from "@/lib/auth-request";
+import { MIN_PASSWORD_LENGTH } from "@/lib/auth-rules";
 
 export function ResetPasswordForm({ email, token }: Readonly<{ email: string; token: string }>) {
   const t = useTranslations("auth");
@@ -34,20 +34,14 @@ export function ResetPasswordForm({ email, token }: Readonly<{ email: string; to
     setError(null);
     setPending(true);
     try {
-      const response = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, token, password, confirmPassword }),
-      });
-      const body: { success?: boolean; error?: string; code?: string } = await response
-        .json()
-        .catch(() => ({}));
-
-      if (response.status === 429) {
-        toast.error(body.error ?? t("tooManyAttempts"));
-        return;
-      }
-      if (!response.ok || !body.success) {
+      const answer = await postAuthJson<AuthRouteBody & { code?: string }>(
+        "/api/auth/reset-password",
+        { email, token, password, confirmPassword },
+        { tooManyAttempts: t("tooManyAttempts") },
+      );
+      if (!answer) return;
+      const { ok, body } = answer;
+      if (!ok || !body.success) {
         setError(body.error ?? t("reset.failed"));
         if (body.code === "INVALID_TOKEN") setInvalidToken(true);
         return;

@@ -4,8 +4,10 @@ import { ChevronDown, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
+import type { DescriptionInput } from "@/actions/ai";
 import { CodeEditor } from "@/components/items/CodeEditor";
 import { MarkdownEditor } from "@/components/items/MarkdownEditor";
+import { useTagSuggestions } from "@/components/items/SuggestTags";
 import { TagBadges } from "@/components/items/TagBadges";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { CollectionOption } from "@/lib/db/collections";
 import { isCodeType, languageOptionsFor } from "@/lib/code-language";
-import { toTags } from "@/lib/tags";
+import { addTag, toTags } from "@/lib/tags";
 import type { ItemTypeSlug } from "@/types/item-type";
 
 interface FieldProps {
@@ -94,6 +96,105 @@ export function useFieldErrors<F extends string>(id: string) {
   }
 
   return { error, setError, isInvalid, messageFor, clearFor, fieldProps };
+}
+
+/** The values the create and edit forms share, as their inputs hold them. */
+export interface ItemFieldValues {
+  title: string;
+  description: string;
+  /** Comma-separated, as typed. */
+  tags: string;
+  collectionIds: string[];
+  content: string;
+  language: string;
+  url: string;
+}
+
+/**
+ * The fields the create and edit forms share, and what both build from them. Only the fields
+ * the type shows are sent or scanned: text typed under another type, or a field left out, is not.
+ */
+export function useItemFields({
+  initial,
+  hasContent,
+  hasLanguage,
+  hasUrl,
+  onTagAccepted,
+}: {
+  initial: ItemFieldValues;
+  hasContent: boolean;
+  hasLanguage: boolean;
+  hasUrl: boolean;
+  /** After a suggested tag was added, e.g. to clear the Tags field's error. */
+  onTagAccepted: () => void;
+}) {
+  const [title, setTitle] = useState(initial.title);
+  const [description, setDescription] = useState(initial.description);
+  const [tags, setTags] = useState(initial.tags);
+  const [collectionIds, setCollectionIds] = useState(initial.collectionIds);
+  const [content, setContent] = useState(initial.content);
+  const [language, setLanguage] = useState(initial.language);
+  const [url, setUrl] = useState(initial.url);
+
+  const tagSuggestions = useTagSuggestions({
+    title,
+    content: hasContent ? content : null,
+    tags,
+    onAccept: (tag) => {
+      setTags((current) => addTag(current, tag));
+      onTagAccepted();
+    },
+  });
+
+  /** The input both actions take, beyond the type. */
+  const input = {
+    title,
+    description,
+    tags: toTags(tags),
+    collectionIds,
+    ...(hasContent && { content }),
+    ...(hasLanguage && { language }),
+    ...(hasUrl && { url }),
+  };
+
+  /** What the secret check scans before a save. */
+  const secretFields = { title, description, content: hasContent ? content : null, url: hasUrl ? url : null };
+
+  /** What Generate Description sends. `type` is the slug, or a custom type's name. */
+  const descriptionInput = (type: string | null, fileName: string | null): DescriptionInput => ({
+    type,
+    title,
+    content: hasContent ? content : null,
+    language: hasLanguage ? language : null,
+    url: hasUrl ? url : null,
+    fileName,
+    tags: toTags(tags),
+  });
+
+  /** A title, and a URL for a link: the server refuses either missing. */
+  const canSubmit = title.trim() !== "" && (!hasUrl || url.trim() !== "");
+
+  return {
+    title,
+    setTitle,
+    description,
+    setDescription,
+    tags,
+    setTags,
+    collectionIds,
+    setCollectionIds,
+    content,
+    setContent,
+    language,
+    setLanguage,
+    url,
+    setUrl,
+    tagSuggestions,
+    input,
+    secretFields,
+    descriptionInput,
+    canSubmit,
+  };
 }
 
 interface ContentFieldProps {

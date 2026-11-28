@@ -2,7 +2,7 @@ import { Pin } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { connection } from "next/server";
 
-import { ItemRow } from "@/components/dashboard/ItemRow";
+import { ItemRowSection } from "@/components/dashboard/ItemRowSection";
 import { getPinnedItems } from "@/lib/db/items";
 
 export async function PinnedItems({ userId }: { userId: string }) {
@@ -15,21 +15,6 @@ export async function PinnedItems({ userId }: { userId: string }) {
   // replacing the "Nothing pinned yet." placeholder this used to render.
   if (items.length === 0) return null;
 
-  const now = new Date().toISOString();
   const t = await getTranslations("dashboard");
-
-  return (
-    <section className="flex flex-col gap-3">
-      <h2 className="flex items-center gap-2 text-lg font-semibold">
-        <Pin className="size-4 text-muted-foreground" aria-hidden />
-        {t("pinnedItems")}
-      </h2>
-
-      <ul className="flex flex-col gap-2">
-        {items.map((item) => (
-          <ItemRow key={item.id} item={item} now={now} />
-        ))}
-      </ul>
-    </section>
-  );
+  return <ItemRowSection icon={Pin} title={t("pinnedItems")} items={items} />;
 }

@@ -1,10 +1,10 @@
-import { ArrowUpRight, Pin, Star } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
+import { ItemStatusMarkers } from "@/components/items/ItemStatusMarkers";
 import { LinkCopyButton } from "@/components/items/LinkCopyButton";
 import { LinkLogo } from "@/components/items/LinkLogo";
-import { SharedBadge } from "@/components/share/SharedBadge";
 import { buttonVariants } from "@/components/ui/button";
 import type { DashboardItem } from "@/lib/db/items";
 import { parseLinkUrl } from "@/lib/link-url";
@@ -47,13 +47,7 @@ function LinkRow({ item }: { item: DashboardItem }) {
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
             <h2 className="truncate font-medium">{item.title}</h2>
-            {item.isShared ? <SharedBadge /> : null}
-            {item.isPinned ? (
-              <Pin className="size-3 shrink-0 text-muted-foreground" aria-label={tc("pinned")} />
-            ) : null}
-            {item.isFavorite ? (
-              <Star className="size-3 shrink-0 fill-amber-400 text-amber-400" aria-label={tc("favorite")} />
-            ) : null}
+            <ItemStatusMarkers item={item} />
           </div>
           {item.description ? (
             <p className="truncate text-sm text-muted-foreground">{item.description}</p>

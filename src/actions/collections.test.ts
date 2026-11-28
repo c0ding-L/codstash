@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+import { plan, pro } from "@/lib/__fixtures__/plan";
+import { prismaError } from "@/lib/__fixtures__/prisma";
 import { createCollection, deleteCollection, setCollectionFavorite, updateCollection } from "@/actions/collections";
 import { auth } from "@/auth";
 import { getPlanStatus } from "@/lib/db/billing";
@@ -35,10 +37,9 @@ const favoriteQuery = setCollectionFavoriteQuery as unknown as Mock;
 const redirectTo = redirect as unknown as Mock;
 const planStatus = getPlanStatus as unknown as Mock;
 
-const plan = (isPro: boolean, collections: number) => ({ proUntil: null, isPro, items: 0, collections });
 
 /** Prisma's error when the row to update or delete does not exist (or is not the user's). */
-const notFound = Object.assign(new Error("Record not found"), { code: "P2025" });
+const notFound = prismaError("P2025");
 
 const USER_ID = "user_1";
 
@@ -56,18 +57,18 @@ describe("createCollection", () => {
   beforeEach(() => {
     session.mockResolvedValue({ user: { id: USER_ID } });
     createQuery.mockResolvedValue(card);
-    planStatus.mockResolvedValue(plan(true, 0));
+    planStatus.mockResolvedValue(pro({ collections: 0 }));
   });
 
   it("creates a Free account's 3rd collection", async () => {
-    planStatus.mockResolvedValue(plan(false, 2));
+    planStatus.mockResolvedValue(plan({ collections: 2 }));
 
     expect(await createCollection({ name: "React" })).toMatchObject({ success: true });
     expect(planStatus).toHaveBeenCalledWith(USER_ID);
   });
 
   it("refuses a Free account's 4th collection", async () => {
-    planStatus.mockResolvedValue(plan(false, 3));
+    planStatus.mockResolvedValue(plan({ collections: 3 }));
 
     expect(await createCollection({ name: "React" })).toEqual({
       success: false,
@@ -78,7 +79,7 @@ describe("createCollection", () => {
   });
 
   it("passes the limit to the locked insert and maps a lost race to the limit message", async () => {
-    planStatus.mockResolvedValue(plan(false, 2));
+    planStatus.mockResolvedValue(plan({ collections: 2 }));
     createQuery.mockRejectedValue(new LimitReachedError("collections"));
 
     expect(await createCollection({ name: "React" })).toEqual({
@@ -90,7 +91,7 @@ describe("createCollection", () => {
   });
 
   it("has no collection limit for Pro", async () => {
-    planStatus.mockResolvedValue(plan(true, 3));
+    planStatus.mockResolvedValue(pro({ collections: 3 }));
 
     expect(await createCollection({ name: "React" })).toMatchObject({ success: true });
   });

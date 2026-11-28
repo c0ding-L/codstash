@@ -1,7 +1,7 @@
-import { Pin, Star } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
+import { ItemStatusMarkers } from "@/components/items/ItemStatusMarkers";
 import type { DashboardItem } from "@/lib/db/items";
 import { useFileSize, useRelativeTime } from "@/i18n/labels";
 import { extensionOf, fileKind } from "@/lib/files";
@@ -50,7 +50,6 @@ export function FileList({ items, now }: FileListProps) {
 }
 
 function FileRow({ item, largest, now }: { item: DashboardItem; largest: number; now: string }) {
-  const tc = useTranslations("common");
   const tk = useTranslations("fileKinds");
   const relativeTime = useRelativeTime();
   const fileSize = useFileSize();
@@ -75,15 +74,8 @@ function FileRow({ item, largest, now }: { item: DashboardItem; largest: number;
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
               <span className="truncate font-mono text-sm">{name}</span>
-              {item.isPinned ? (
-                <Pin className="size-3 shrink-0 text-muted-foreground" aria-label={tc("pinned")} />
-              ) : null}
-              {item.isFavorite ? (
-                <Star
-                  className="size-3 shrink-0 fill-amber-400 text-amber-400"
-                  aria-label={tc("favorite")}
-                />
-              ) : null}
+              {/* Files cannot be shared. */}
+              <ItemStatusMarkers item={item} showShared={false} />
             </div>
             {item.description ? (
               <p className="truncate text-xs text-muted-foreground">{item.description}</p>

@@ -168,12 +168,17 @@ export function isOwnKey(userId: string, key: string) {
 }
 
 /**
- * A `Content-Disposition` header that always downloads. The plain `filename` is an
- * ASCII fallback; `filename*` carries the real name, quotes and accents included.
+ * A `Content-Disposition` header that always downloads. A header value must be ASCII, so the
+ * plain `filename` is a fallback with accents removed and anything else replaced, quotes and
+ * backslashes included; `filename*` carries the real name, encoded as RFC 5987 asks.
  */
 export function attachmentDisposition(fileName: string) {
-  const fallback = fileName.replace(/[^\x20-\x7e]|["\\]/g, "_");
-  return `attachment; filename="${fallback}"; filename*=UTF-8''${encodeURIComponent(fileName)}`;
+  const fallback = fileName
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\x20-\x7e]|["\\]/gu, "_");
+  const encoded = encodeURIComponent(fileName).replace(/['()*!]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+  return `attachment; filename="${fallback}"; filename*=UTF-8''${encoded}`;
 }
 
 /**

@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 
-import { auth } from "@/auth";
 import { getErrors } from "@/i18n/errors-server";
 import { getPlanStatus } from "@/lib/db/billing";
 import { buildFileKey, isUploadKind, toObjectMetadata, UPLOAD_RULES, validateUpload } from "@/lib/files";
 import { putObject } from "@/lib/r2";
-import { checkRateLimit, tooManyAttemptsResponse } from "@/lib/rate-limit";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { readFormDataWithin } from "@/lib/request-body";
 import { canUploadFiles } from "@/lib/usage-limits";
+import { rateLimitedResponse, requireSessionUser } from "@/lib/session-route";
 
 /** Room for the multipart boundaries and the other fields on top of the largest file. */
 const MAX_BODY_BYTES = UPLOAD_RULES.file.maxBytes + 64 * 1024;
@@ -20,17 +20,16 @@ const MAX_BODY_BYTES = UPLOAD_RULES.file.maxBytes + 64 * 1024;
  */
 export async function POST(request: Request) {
   const e = await getErrors();
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: e.message("notSignedIn") }, { status: 401 });
-  }
+  const caller = await requireSessionUser();
+  if (caller instanceof Response) return caller;
+  const { userId } = caller;
 
   // Before the body is read, so a refused upload costs nothing.
-  const limit = await checkRateLimit("upload", session.user.id);
-  if (!limit.success) return await tooManyAttemptsResponse(limit.reset);
+  const limit = await checkRateLimit("upload", userId);
+  if (!limit.success) return await rateLimitedResponse(limit.reset);
 
   // Uploads are Pro-only; also before the body is read.
-  if (!canUploadFiles(await getPlanStatus(session.user.id))) {
+  if (!canUploadFiles(await getPlanStatus(userId))) {
     return NextResponse.json({ error: e.message("limits.uploads") }, { status: 403 });
   }
 
@@ -55,7 +54,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: e.message(`upload.${check.error.key}`, check.error.values) }, { status: 400 });
   }
 
-  const key = buildFileKey(session.user.id, file.name);
+  const key = buildFileKey(userId, file.name);
   try {
     await putObject(key, new Uint8Array(await file.arrayBuffer()), check.contentType, toObjectMetadata(kind, file.name));
   } catch (error) {

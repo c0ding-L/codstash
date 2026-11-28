@@ -130,6 +130,27 @@ function readError(body: unknown) {
   };
 }
 
+/** `text` as JSON, or null when it is not JSON. */
+function parseJsonQuietly(text: string): unknown {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+/** The error for a provider's failed answer, logged with the start of its body. */
+function httpError(provider: AiProvider, response: Response, text: string, body: unknown, status: number) {
+  console.error(`[ai] ${provider} answered ${status}: ${text.slice(0, MAX_ERROR_BODY)}`);
+  return new AiProviderError({
+    provider,
+    status,
+    code: readError(body)?.code ?? null,
+    retryAfter: parseRetryAfter(response.headers.get("retry-after")),
+    message: `${provider} request failed with ${status}`,
+  });
+}
+
 /**
  * The answer's text, trimmed. Throws `AiProviderError` on any failure, including an empty answer.
  * With `rejectCutOff`, an answer that stopped on the token cap (`finish_reason: "length"`) is an
@@ -166,25 +187,13 @@ export async function complete(
     });
   }
 
-  let body: unknown = null;
-  try {
-    body = JSON.parse(text);
-  } catch {
-    // Not JSON: handled as an error or an empty answer below.
-  }
+  // Not JSON: handled as an error or an empty answer below.
+  const body = parseJsonQuietly(text);
 
   // OpenRouter can answer 200 with an error in the body, so this comes before `choices`.
   const bodyError = readError(body);
   if (!response.ok || bodyError) {
-    const status = response.ok ? (bodyError?.status ?? 502) : response.status;
-    console.error(`[ai] ${provider} answered ${status}: ${text.slice(0, MAX_ERROR_BODY)}`);
-    throw new AiProviderError({
-      provider,
-      status,
-      code: bodyError?.code ?? null,
-      retryAfter: parseRetryAfter(response.headers.get("retry-after")),
-      message: `${provider} request failed with ${status}`,
-    });
+    throw httpError(provider, response, text, body, response.ok ? (bodyError?.status ?? 502) : response.status);
   }
 
   const choice = isRecord(body) && Array.isArray(body.choices) ? body.choices[0] : undefined;
@@ -353,21 +362,8 @@ export async function completeStream(
   if (!response.ok || !response.body) {
     const text = await response.text().catch(() => "");
     cleanup();
-    let body: unknown = null;
-    try {
-      body = JSON.parse(text);
-    } catch {
-      // Not JSON: the status alone says what went wrong.
-    }
-    const status = response.ok ? 502 : response.status;
-    console.error(`[ai] ${provider} answered ${status}: ${text.slice(0, MAX_ERROR_BODY)}`);
-    throw new AiProviderError({
-      provider,
-      status,
-      code: readError(body)?.code ?? null,
-      retryAfter: parseRetryAfter(response.headers.get("retry-after")),
-      message: `${provider} request failed with ${status}`,
-    });
+    // Not JSON: the status alone says what went wrong.
+    throw httpError(provider, response, text, parseJsonQuietly(text), response.ok ? 502 : response.status);
   }
 
   const body = response.body.getReader();

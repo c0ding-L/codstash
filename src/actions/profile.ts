@@ -6,20 +6,30 @@ import { z } from "zod";
 
 import { auth, signIn, signOut } from "@/auth";
 import { errKey } from "@/i18n/error-keys";
-import { getErrors } from "@/i18n/errors-server";
+import { getErrors, type Errors } from "@/i18n/errors-server";
+import type { SimpleActionResult } from "@/lib/action-result";
+import { MIN_PASSWORD_LENGTH } from "@/lib/auth-rules";
 import { revokeAllApiTokensQuery } from "@/lib/db/api-tokens";
 import { DEMO_USER_EMAIL } from "@/lib/db/collections";
 import { getItemFileKeys } from "@/lib/db/items";
+import { resetIdentifier, verificationIdentifier } from "@/lib/email-token";
+import { hashPassword } from "@/lib/password-hash";
 import { prisma } from "@/lib/prisma";
 import { deleteObjectsQuietly } from "@/lib/r2";
 import { checkRateLimit, tooManyAttemptsMessage } from "@/lib/rate-limit";
 
-const BCRYPT_ROUNDS = 12;
-const MIN_PASSWORD_LENGTH = 8;
+export type ActionResult = SimpleActionResult;
 
-export interface ActionResult {
-  success: boolean;
-  error: string | null;
+/**
+ * The signed-in user's id, under the `reauth` limit, which caps password guesses from a
+ * session that is not its owner's.
+ */
+async function reauthUserId(e: Errors): Promise<{ userId: string } | { error: string }> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: e.message("notSignedIn") };
+  const limit = await checkRateLimit("reauth", session.user.id);
+  if (!limit.success) return { error: await tooManyAttemptsMessage(limit.reset) };
+  return { userId: session.user.id };
 }
 
 const changePasswordSchema = z
@@ -44,14 +54,10 @@ export async function changePassword(_previous: ActionResult, formData: FormData
 
   let email: string;
   try {
-    const session = await auth();
-    if (!session?.user?.id) return { success: false, error: e.message("notSignedIn") };
+    const caller = await reauthUserId(e);
+    if ("error" in caller) return { success: false, error: caller.error };
 
-    // Caps password guesses from a session that is not its owner's.
-    const limit = await checkRateLimit("reauth", session.user.id);
-    if (!limit.success) return { success: false, error: await tooManyAttemptsMessage(limit.reset) };
-
-    const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+    const user = await prisma.user.findUnique({ where: { id: caller.userId } });
     if (!user?.password) return { success: false, error: e.message("profile.noPassword") };
 
     if (!(await bcrypt.compare(parsed.data.currentPassword, user.password))) {
@@ -63,12 +69,12 @@ export async function changePassword(_previous: ActionResult, formData: FormData
         where: { id: user.id },
         // Ends every session signed in before now, this one included.
         data: {
-          password: await bcrypt.hash(parsed.data.newPassword, BCRYPT_ROUNDS),
+          password: await hashPassword(parsed.data.newPassword),
           passwordChangedAt: new Date(),
         },
       }),
       // A reset link requested earlier would otherwise still set a password.
-      prisma.verificationToken.deleteMany({ where: { identifier: `reset@${user.email.toLowerCase()}` } }),
+      prisma.verificationToken.deleteMany({ where: { identifier: resetIdentifier(user.email) } }),
       // The same "I may be compromised" step covers the API tokens (C1).
       revokeAllApiTokensQuery(user.id),
     ]);
@@ -106,15 +112,11 @@ export async function deleteAccount(_previous: ActionResult, formData: FormData)
   if (!parsed.success) return { success: false, error: e.issue(parsed.error.issues[0]) };
 
   try {
-    const session = await auth();
-    if (!session?.user?.id) return { success: false, error: e.message("notSignedIn") };
-
-    // Caps password guesses from a session that is not its owner's.
-    const limit = await checkRateLimit("reauth", session.user.id);
-    if (!limit.success) return { success: false, error: await tooManyAttemptsMessage(limit.reset) };
+    const caller = await reauthUserId(e);
+    if ("error" in caller) return { success: false, error: caller.error };
 
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: caller.userId },
       select: { id: true, email: true, password: true },
     });
     if (!user) return { success: false, error: e.message("profile.accountGone") };
@@ -145,8 +147,7 @@ export async function deleteAccount(_previous: ActionResult, formData: FormData)
       prisma.item.deleteMany({ where: { userId: user.id } }),
       // No foreign key on tokens, so the cascade does not reach them.
       prisma.verificationToken.deleteMany({
-        // Token identifiers are always built from the lowercased address.
-        where: { identifier: { in: [email, `reset@${email}`] } },
+        where: { identifier: { in: [verificationIdentifier(email), resetIdentifier(email)] } },
       }),
       prisma.user.delete({ where: { id: user.id } }),
     ]);

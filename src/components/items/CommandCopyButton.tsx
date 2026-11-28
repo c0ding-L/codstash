@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 
 import { useTemplateCopy } from "@/components/items/FillVariablesDialog";
 import { CopyRefusedError } from "@/lib/clipboard";
-import type { ItemDetailJson } from "@/lib/db/items";
+import { fetchItemDetail } from "@/lib/item-client";
 import { cn } from "@/lib/utils";
 
 interface CommandCopyButtonProps {
@@ -40,9 +40,9 @@ export function CommandCopyButton({ itemId, title, text, isCut, hasVariables, cl
     copyItemContent(
       // A failed fetch shows this message instead of the clipboard's own.
       async () => {
-        const response = await fetch(`/api/items/${encodeURIComponent(itemId)}`).catch(() => null);
-        if (!response?.ok) throw new CopyRefusedError(t("commandCopyFailed"));
-        const detail = (await response.json()) as ItemDetailJson;
+        const detail = await fetchItemDetail(itemId).catch(() => {
+          throw new CopyRefusedError(t("commandCopyFailed"));
+        });
         return detail.content ?? "";
       },
       { itemId, type: "command", hasVariables },

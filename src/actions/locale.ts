@@ -4,13 +4,11 @@ import { cookies } from "next/headers";
 import { z } from "zod";
 
 import { auth } from "@/auth";
+import type { SimpleActionResult } from "@/lib/action-result";
 import { LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE, LOCALES } from "@/lib/locale";
 import { prisma } from "@/lib/prisma";
 
-export interface ActionResult {
-  success: boolean;
-  error: string | null;
-}
+export type ActionResult = SimpleActionResult;
 
 const localeSchema = z.enum(LOCALES);
 

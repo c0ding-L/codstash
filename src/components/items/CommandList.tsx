@@ -1,9 +1,7 @@
-import { Pin, Star } from "lucide-react";
-import { useTranslations } from "next-intl";
 
 import { CommandCopyButton } from "@/components/items/CommandCopyButton";
 import { ItemDrawerTrigger } from "@/components/items/ItemDrawerTrigger";
-import { SharedBadge } from "@/components/share/SharedBadge";
+import { ItemStatusMarkers } from "@/components/items/ItemStatusMarkers";
 import { commandFirstLine, tokenizeCommand, type CommandTokenKind } from "@/lib/command-text";
 import type { CommandText, DashboardItem } from "@/lib/db/items";
 import { useRelativeTime } from "@/i18n/labels";
@@ -55,7 +53,6 @@ function CommandRow({
   command?: CommandText;
   now: string;
 }) {
-  const tc = useTranslations("common");
   const relativeTime = useRelativeTime();
   const collectionNames = formatCollectionNames(item.collections);
   const { line, hasMore } = commandFirstLine(command.text);
@@ -84,11 +81,7 @@ function CommandRow({
           ) : null}
           {relativeTime(item.updatedAt.toISOString(), now)}
         </span>
-        {item.isShared ? <SharedBadge /> : null}
-        {item.isPinned ? <Pin className="size-3 shrink-0" aria-label={tc("pinned")} /> : null}
-        {item.isFavorite ? (
-          <Star className="size-3 shrink-0 fill-amber-400 text-amber-400" aria-label={tc("favorite")} />
-        ) : null}
+        <ItemStatusMarkers item={item} />
         <CommandCopyButton
           itemId={item.id}
           title={item.title}

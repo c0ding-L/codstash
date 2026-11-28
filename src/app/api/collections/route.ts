@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
-import { auth } from "@/auth";
 import { getCollectionOptions } from "@/lib/db/collections";
+import { requireSessionUser } from "@/lib/session-route";
 
 /**
  * The signed-in user's collections, for the item forms' picker. The forms live
@@ -10,10 +10,9 @@ import { getCollectionOptions } from "@/lib/db/collections";
  * session is checked here, and a caller gets a 401 rather than a redirect.
  */
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
-  }
+  const caller = await requireSessionUser();
+  if (caller instanceof Response) return caller;
+  const { userId } = caller;
 
-  return NextResponse.json(await getCollectionOptions(session.user.id));
+  return NextResponse.json(await getCollectionOptions(userId));
 }

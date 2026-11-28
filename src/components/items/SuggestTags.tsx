@@ -70,6 +70,41 @@ interface SuggestTagsProps {
 export function SuggestTagsButton({ aiAllowed, state, disabled }: SuggestTagsProps) {
   const t = useTranslations("ai");
   return (
+    <AiFieldButton
+      aiAllowed={aiAllowed}
+      label={t("suggestTags")}
+      pendingLabel={t("suggesting")}
+      pending={state.pending}
+      disabled={disabled}
+      canRun={state.canSuggest}
+      onClick={state.suggest}
+      dialog={state.secretDialog}
+    />
+  );
+}
+
+interface AiFieldButtonProps {
+  /** From the server's plan check; nothing shows while it is false. */
+  aiAllowed: Promise<boolean>;
+  label: string;
+  pendingLabel: string;
+  pending: boolean;
+  /** While the form saves. */
+  disabled: boolean;
+  /** False until the form has a title: the button says so. */
+  canRun: boolean;
+  onClick: () => void;
+  /** The secret check's dialog, rendered beside the button. */
+  dialog: React.ReactNode;
+}
+
+/**
+ * A small AI button beside a form field's label. Pro only, behind its own Suspense boundary,
+ * so waiting for the plan never holds the form back.
+ */
+export function AiFieldButton({ aiAllowed, label, pendingLabel, pending, disabled, canRun, onClick, dialog }: AiFieldButtonProps) {
+  const t = useTranslations("ai");
+  return (
     <Suspense fallback={null}>
       <ShownIf allowed={aiAllowed}>
         <Button
@@ -77,14 +112,14 @@ export function SuggestTagsButton({ aiAllowed, state, disabled }: SuggestTagsPro
           variant="ghost"
           size="xs"
           className="text-muted-foreground"
-          disabled={state.pending || disabled || !state.canSuggest}
-          title={state.canSuggest ? undefined : t("addTitleFirst")}
-          onClick={state.suggest}
+          disabled={pending || disabled || !canRun}
+          title={canRun ? undefined : t("addTitleFirst")}
+          onClick={onClick}
         >
           <Sparkles aria-hidden />
-          {state.pending ? t("suggesting") : t("suggestTags")}
+          {pending ? pendingLabel : label}
         </Button>
-        {state.secretDialog}
+        {dialog}
       </ShownIf>
     </Suspense>
   );

@@ -1,4 +1,5 @@
 import { markdownToPlainText } from "@/lib/prompt-text";
+import { truncate } from "@/lib/utils";
 
 /** The longest preview the palette receives, so a whole item never travels to the client. */
 export const MAX_SEARCH_PREVIEW_CHARS = 150;
@@ -16,5 +17,5 @@ export function searchPreview(content: string | null, typeSlug: string): string 
       ? markdownToPlainText(content)
       : content.replace(/\s+/g, " ").trim();
 
-  return text.length <= MAX_SEARCH_PREVIEW_CHARS ? text : `${text.slice(0, MAX_SEARCH_PREVIEW_CHARS).trimEnd()}…`;
+  return truncate(text, MAX_SEARCH_PREVIEW_CHARS);
 }

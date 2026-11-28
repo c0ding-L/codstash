@@ -2,14 +2,22 @@
 
 import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
-import { useId, useState, useTransition } from "react";
+import { useId, useTransition } from "react";
 import { toast } from "sonner";
 
 import { updateItem, type UpdateItemField, type UpdateItemInput } from "@/actions/items";
 import { GenerateDescriptionButton } from "@/components/items/GenerateDescription";
 import { useSecretCheck } from "@/components/items/SecretWarningDialog";
-import { SuggestTagsButton, TagSuggestionList, useTagSuggestions } from "@/components/items/SuggestTags";
-import { CollectionsField, ContentField, Field, LanguageField, TagsField, useFieldErrors } from "@/components/items/item-form-fields";
+import { SuggestTagsButton, TagSuggestionList } from "@/components/items/SuggestTags";
+import {
+  CollectionsField,
+  ContentField,
+  Field,
+  LanguageField,
+  TagsField,
+  useFieldErrors,
+  useItemFields,
+} from "@/components/items/item-form-fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -18,7 +26,6 @@ import { useRefreshAfterRemoval } from "@/hooks/use-refresh-after-removal";
 import type { DashboardItem, ItemDetailJson } from "@/lib/db/items";
 import { hasContentField, hasLanguageField, hasUrlField } from "@/lib/item-type-ui";
 import { collectionIdFromPath } from "@/lib/pagination";
-import { addTag, toTags } from "@/lib/tags";
 import type { ItemTypeSlug } from "@/types/item-type";
 
 export interface SavedItem {
@@ -49,48 +56,36 @@ export function ItemEditForm({ card, detail, slug, isCustom, onCancel, onSaved, 
   const [saving, startSaving] = useTransition();
   const { setError, messageFor, clearFor, fieldProps } = useFieldErrors<UpdateItemField>(id);
 
-  const [title, setTitle] = useState(card.title);
-  const [description, setDescription] = useState(card.description ?? "");
-  const [tags, setTags] = useState(detail.tags.join(", "));
-  const [collectionIds, setCollectionIds] = useState(() => card.collections.map(({ id: collectionId }) => collectionId));
-  const [content, setContent] = useState(detail.content ?? "");
-  const [language, setLanguage] = useState(detail.language ?? "");
-  const [url, setUrl] = useState(detail.url ?? "");
-
   const hasContent = hasContentField(slug);
   const hasLanguage = isCustom || hasLanguageField(slug);
   const hasUrl = hasUrlField(slug);
-  const tagSuggestions = useTagSuggestions({
-    title,
-    content: hasContent ? content : null,
-    tags,
-    onAccept: (tag) => {
-      setTags((current) => addTag(current, tag));
-      clearFor("tags");
+  const fields = useItemFields({
+    initial: {
+      title: card.title,
+      description: card.description ?? "",
+      tags: detail.tags.join(", "),
+      collectionIds: card.collections.map(({ id: collectionId }) => collectionId),
+      content: detail.content ?? "",
+      language: detail.language ?? "",
+      url: detail.url ?? "",
     },
+    hasContent,
+    hasLanguage,
+    hasUrl,
+    onTagAccepted: () => clearFor("tags"),
   });
+  const { title, setTitle, description, setDescription, tags, setTags, collectionIds, setCollectionIds } = fields;
+  const { content, setContent, language, setLanguage, url, setUrl, tagSuggestions } = fields;
 
   const secretCheck = useSecretCheck();
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!fields.canSubmit || saving) return;
 
     // Only the fields this type shows: a field left out keeps its stored value.
-    const input: UpdateItemInput = {
-      title,
-      description,
-      tags: toTags(tags),
-      collectionIds,
-      ...(hasContent && { content }),
-      ...(hasLanguage && { language }),
-      ...(hasUrl && { url }),
-    };
-
-    secretCheck.check(
-      { title, description, content: hasContent ? content : null, url: hasUrl ? url : null },
-      "save",
-      () => save(input),
-    );
+    const input: UpdateItemInput = fields.input;
+    secretCheck.check(fields.secretFields, "save", () => save(input));
   }
 
   function save(input: UpdateItemInput) {
@@ -129,16 +124,8 @@ export function ItemEditForm({ card, detail, slug, isCustom, onCancel, onSaved, 
             <GenerateDescriptionButton
               aiAllowed={aiAllowed}
               disabled={saving}
-              input={{
-                // A custom type's name tells the model more than "note".
-                type: isCustom ? card.type.name : slug,
-                title,
-                content: hasContent ? content : null,
-                language: hasLanguage ? language : null,
-                url: hasUrl ? url : null,
-                fileName: detail.fileName,
-                tags: toTags(tags),
-              }}
+              // A custom type's name tells the model more than "note".
+              input={fields.descriptionInput(isCustom ? card.type.name : slug, detail.fileName)}
               onGenerated={(text) => {
                 setDescription(text);
                 clearFor("description");
@@ -211,7 +198,7 @@ export function ItemEditForm({ card, detail, slug, isCustom, onCancel, onSaved, 
         <Button type="button" variant="ghost" onClick={onCancel} disabled={saving}>
           {tc("cancel")}
         </Button>
-        <Button type="submit" disabled={saving || !title.trim()}>
+        <Button type="submit" disabled={saving || !fields.canSubmit}>
           {saving ? t("saving") : t("saveChanges")}
         </Button>
       </div>

@@ -16,6 +16,7 @@ import { ITEM_LIMITS } from "@/lib/item-limits";
 import { checkRateLimit, secondsUntil } from "@/lib/rate-limit";
 import { scanItem, type ScannableItem, type SecretKind } from "@/lib/secrets";
 import { canUseApiWrite } from "@/lib/usage-limits";
+import { truncate } from "@/lib/utils";
 
 /** What a tool answers: one text block, flagged when it is an error. */
 export interface ToolResult {
@@ -99,8 +100,7 @@ export const createItemInput = z.object({
 
 /** One line of whitespace-collapsed text, cut to `max` characters. */
 function oneLine(value: string, max: number) {
-  const line = value.replace(/\s+/g, " ").trim();
-  return line.length > max ? `${line.slice(0, max)}…` : line;
+  return truncate(value.replace(/\s+/g, " ").trim(), max);
 }
 
 function typeLabel(type: ApiItem["type"]) {

@@ -1,3 +1,5 @@
+import { truncate } from "@/lib/utils";
+
 /** The longest excerpt the prompt list receives; the 3-line clamp is CSS on top of it. */
 export const MAX_EXCERPT_CHARS = 300;
 
@@ -22,13 +24,7 @@ export function markdownToPlainText(content: string): string {
  * ellipsis when it runs long.
  */
 export function promptExcerpt(content: string): string {
-  const text = markdownToPlainText(content);
-  if (text.length <= MAX_EXCERPT_CHARS) return text;
-
-  const cut = text.slice(0, MAX_EXCERPT_CHARS);
-  const lastSpace = cut.lastIndexOf(" ");
-  const kept = (lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd();
-  return `${kept.replace(/[.,;:!?]+$/, "")}…`;
+  return truncate(markdownToPlainText(content), MAX_EXCERPT_CHARS, { at: "word", stripPunctuation: true });
 }
 
 /** Words separated by any whitespace. Pass plain text, so Markdown marks are not counted. */

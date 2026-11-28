@@ -10,10 +10,8 @@ import { signInWithGitHub } from "@/actions/auth";
 import { ResendVerificationButton } from "@/components/auth/ResendVerificationButton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MIN_PASSWORD_LENGTH = 8;
-const MAX_NAME_LENGTH = 100;
+import { postAuthJson, type AuthRouteBody } from "@/lib/auth-request";
+import { isValidEmail, MAX_NAME_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/auth-rules";
 
 export function RegisterForm() {
   const t = useTranslations("auth");
@@ -34,7 +32,7 @@ export function RegisterForm() {
 
     if (!name) return setError(te("nameRequired"));
     if (name.length > MAX_NAME_LENGTH) return setError(te("nameTooLong", { max: MAX_NAME_LENGTH }));
-    if (!EMAIL_PATTERN.test(email)) return setError(t("invalidEmail"));
+    if (!isValidEmail(email)) return setError(t("invalidEmail"));
     if (password.length < MIN_PASSWORD_LENGTH) {
       return setError(te("passwordTooShort", { min: MIN_PASSWORD_LENGTH }));
     }
@@ -44,23 +42,14 @@ export function RegisterForm() {
     setUnverifiedEmail(null);
     setPending(true);
     try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, confirmPassword }),
-      });
-      const body: {
-        success?: boolean;
-        error?: string;
-        verificationRequired?: boolean;
-        emailSent?: boolean;
-      } = await response.json().catch(() => ({}));
-
-      if (response.status === 429) {
-        toast.error(body.error ?? t("tooManyAttempts"));
-        return;
-      }
-      if (!response.ok || !body.success) {
+      const answer = await postAuthJson<AuthRouteBody & { verificationRequired?: boolean; emailSent?: boolean }>(
+        "/api/auth/register",
+        { name, email, password, confirmPassword },
+        { tooManyAttempts: t("tooManyAttempts") },
+      );
+      if (!answer) return;
+      const { ok, body } = answer;
+      if (!ok || !body.success) {
         setError(body.error ?? t("register.createFailed"));
         return;
       }

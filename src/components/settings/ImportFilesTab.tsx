@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { dropZoneClassName, useFileDrop } from "@/hooks/use-file-drop";
 import { languageLabel } from "@/lib/code-language";
 import {
   countRefused,
@@ -18,7 +19,6 @@ import {
   type ParsedImport,
 } from "@/lib/import";
 import { ITEM_LIMITS } from "@/lib/item-limits";
-import { cn } from "@/lib/utils";
 
 type FileType = "note" | "snippet" | "command";
 const FILE_TYPES: readonly FileType[] = ["note", "snippet", "command"];
@@ -44,7 +44,6 @@ export function ImportFilesTab({ busy, onImport }: ImportFilesTabProps) {
   const tt = useTranslations("itemTypes");
   const inputId = useId();
   const [entries, setEntries] = useState<Entry[]>([]);
-  const [dragging, setDragging] = useState(false);
 
   function add(files: FileList | null) {
     if (!files) return;
@@ -61,6 +60,8 @@ export function ImportFilesTab({ busy, onImport }: ImportFilesTabProps) {
     if (unsupported > 0) toast.error(t("filesUnsupported", { count: unsupported }));
     setEntries((current) => [...current, ...added.filter((entry) => !current.some((c) => c.key === entry.key))]);
   }
+
+  const { dragging, dropProps } = useFileDrop({ disabled: busy, onFiles: add });
 
   async function submit() {
     const result = emptyImportResult();
@@ -81,28 +82,7 @@ export function ImportFilesTab({ busy, onImport }: ImportFilesTabProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <label
-        htmlFor={inputId}
-        onDragEnter={(event) => {
-          event.preventDefault();
-          if (!busy) setDragging(true);
-        }}
-        onDragOver={(event) => event.preventDefault()}
-        onDragLeave={(event) => {
-          if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false);
-        }}
-        onDrop={(event) => {
-          event.preventDefault();
-          setDragging(false);
-          if (!busy) add(event.dataTransfer.files);
-        }}
-        className={cn(
-          "flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed border-input px-4 py-8 text-center transition-colors",
-          "hover:border-ring hover:bg-muted/40 has-focus-visible:border-ring has-focus-visible:ring-3 has-focus-visible:ring-ring/50",
-          dragging && "border-ring bg-muted/60",
-          busy && "pointer-events-none opacity-50",
-        )}
-      >
+      <label htmlFor={inputId} {...dropProps} className={dropZoneClassName({ dragging, disabled: busy })}>
         <Upload className="size-5 text-muted-foreground" aria-hidden />
         <span className="text-sm">
           {t.rich("filesDrop", { strong: (chunks) => <span className="font-medium">{chunks}</span> })}
