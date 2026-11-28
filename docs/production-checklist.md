@@ -2,7 +2,7 @@
 
 What is left to do before Cortex is open to the public, collected from the feature history
 (`context/current-feature.md`) and the local `.env` files on 2026-11-27. Production runs on
-`https://codstash.vercel.app` with the Neon `production` branch.
+`https://devcortex.io` with the Neon `production` branch.
 
 The real values live in Vercel's environment variables, which this list could not read.
 `.env.production` is a local copy and may be out of date, so every "set" below means "check on
@@ -57,15 +57,14 @@ runs there.
 
 ## 3. Domain and URLs
 
-Everything points at `codstash.vercel.app` until a domain is bought. When `devcortex.dev` (or
-another) is connected, all of these change together.
+Production moved from `codstash.vercel.app` to `devcortex.io` on 2026-11-28.
 
-- [ ] Buy the domain and add it to the Vercel project.
-- [ ] Update `APP_URL` and `AUTH_URL` on Vercel.
-- [ ] Add `https://<domain>/api/auth/callback/github` to the GitHub OAuth app.
-- [ ] Update the webhook URL in the Bictorys dashboard (`/api/webhooks/bictorys`).
-- [ ] Verify the domain in Resend (SPF, DKIM) and update `EMAIL_FROM`.
-- [ ] CLI: change `PRODUCTION_URL` in `cli/tsup.config.ts` and rebuild before publishing.
+- [x] Buy the domain and add it to the Vercel project.
+- [x] Update `APP_URL` and `AUTH_URL` on Vercel.
+- [x] Add `https://devcortex.io/api/auth/callback/github` to the GitHub OAuth app.
+- [x] Update the webhook URL in the Bictorys dashboard (`/api/webhooks/bictorys`).
+- [x] Verify the domain in Resend (SPF, DKIM) and set `EMAIL_FROM` to `Cortex <noreply@devcortex.io>`.
+- [x] CLI: `PRODUCTION_URL` in `cli/tsup.config.ts` is `https://devcortex.io`. Rebuild before publishing.
 
 ## 4. Third-party services
 
@@ -85,7 +84,7 @@ another) is connected, all of these change together.
 ## 5. CLI `cortex`
 
 - [ ] Replace the `@author-scope` placeholder in `cli/package.json` with the npm scope.
-- [ ] Check `PRODUCTION_URL` (section 3).
+- [x] Check `PRODUCTION_URL` (section 3).
 - [ ] Run the postponed manual tests against `next dev`, in WSL and in cmd.exe: `login` (hidden
   input), variable prompts, the numbered pick, answering `N`, a command that reads stdin
   (`read -p "name: " n; echo "hi $n"`), Ctrl+C at a prompt, `get --copy` with accents, `save` from a

@@ -2,15 +2,29 @@
 
 ## Status
 
-Not Started
+In Progress — Production domain `devcortex.io`
 
 ## Goals
 
-<!-- Bullet points of what success looks like -->
+- CLI: `PRODUCTION_URL` in `cli/tsup.config.ts` becomes `https://devcortex.io` (was
+  `https://codstash.vercel.app`), so a fresh `cortex` build points at the new domain.
+- `.env.example`: the sample `EMAIL_FROM` uses the verified domain
+  (`Cortex <noreply@devcortex.io>`) instead of `onboarding@resend.dev`.
+- `docs/production-checklist.md`: production runs on `https://devcortex.io`; tick the section 3
+  items, all done by the author (domain on Vercel, `APP_URL` / `AUTH_URL`, GitHub OAuth callback,
+  Bictorys webhook URL, Resend domain + `EMAIL_FROM`) plus the CLI URL from this change.
 
 ## Notes
 
-<!-- Additional context, constraints, or details from spec -->
+- The app itself has no hardcoded domain: email links and the payment return URL read `APP_URL`,
+  auth and the MCP setup card read `AUTH_URL` (else the request host), the sender reads
+  `EMAIL_FROM`. The author has already set these on Vercel, so no app code changes.
+- No `metadataBase`, sitemap or `serverActions.allowedOrigins` entry needs the domain (same-origin
+  on Vercel).
+- Tests keep their fake `*.test` / `*.example` hosts.
+- The local `.env.production` is a gitignored copy; not touched here.
+- GitHub OAuth callback and Bictorys webhook already moved to `devcortex.io` by the author.
+- Still to do after merge: rebuild and publish the CLI.
 
 ---
 

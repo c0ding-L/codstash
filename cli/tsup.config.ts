@@ -5,7 +5,7 @@ import { defineConfig } from "tsup";
 const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as { version: string };
 
 /** The production URL baked into the binary. `CORTEX_DEFAULT_URL` overrides it for a one-off build. */
-const PRODUCTION_URL = "https://codstash.vercel.app";
+const PRODUCTION_URL = "https://devcortex.io";
 
 const defaultUrl = (process.env.CORTEX_DEFAULT_URL || PRODUCTION_URL).replace(/\/+$/, "");
 if (!/^https?:\/\/[^/]/.test(defaultUrl)) {
