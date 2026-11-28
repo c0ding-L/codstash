@@ -8,7 +8,7 @@ import { pageLinks } from "@/lib/pagination";
 import { cn } from "@/lib/utils";
 
 interface PaginationProps {
-  /** The listing's path without a query, e.g. `/items/snippets`. */
+  /** The listing's path, e.g. `/items/snippets`, with any query to keep (`/admin?q=ada`). */
   basePath: string;
   page: number;
   pageCount: number;
@@ -18,7 +18,8 @@ interface PaginationProps {
 
 /** Page 1 is the bare path, so the listing has one URL for its first page. */
 function pageHref(basePath: string, page: number): string {
-  return page === 1 ? basePath : `${basePath}?page=${page}`;
+  if (page === 1) return basePath;
+  return `${basePath}${basePath.includes("?") ? "&" : "?"}page=${page}`;
 }
 
 /** Prev, numbered page links and next, under a listing. Renders nothing for a single page. */

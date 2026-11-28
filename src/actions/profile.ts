@@ -11,11 +11,10 @@ import type { SimpleActionResult } from "@/lib/action-result";
 import { MIN_PASSWORD_LENGTH } from "@/lib/auth-rules";
 import { revokeAllApiTokensQuery } from "@/lib/db/api-tokens";
 import { DEMO_USER_EMAIL } from "@/lib/db/collections";
-import { getItemFileKeys } from "@/lib/db/items";
-import { resetIdentifier, verificationIdentifier } from "@/lib/email-token";
+import { deleteUserAndData } from "@/lib/db/delete-user";
+import { resetIdentifier } from "@/lib/email-token";
 import { hashPassword } from "@/lib/password-hash";
 import { prisma } from "@/lib/prisma";
-import { deleteObjectsQuietly } from "@/lib/r2";
 import { checkRateLimit, tooManyAttemptsMessage } from "@/lib/rate-limit";
 
 export type ActionResult = SimpleActionResult;
@@ -138,21 +137,7 @@ export async function deleteAccount(_previous: ActionResult, formData: FormData)
       }
     }
 
-    // Read before the items go: the cascade would lose the R2 keys.
-    const fileKeys = await getItemFileKeys(user.id);
-
-    await prisma.$transaction([
-      // Items first: `Item.typeId` is `Restrict`, and the user's custom types
-      // are deleted by the same cascade as their items.
-      prisma.item.deleteMany({ where: { userId: user.id } }),
-      // No foreign key on tokens, so the cascade does not reach them.
-      prisma.verificationToken.deleteMany({
-        where: { identifier: { in: [verificationIdentifier(email), resetIdentifier(email)] } },
-      }),
-      prisma.user.delete({ where: { id: user.id } }),
-    ]);
-
-    await deleteObjectsQuietly(fileKeys);
+    await deleteUserAndData(user);
   } catch (error) {
     console.error("[profile] deleteAccount failed:", error);
     return { success: false, error: e.message("profile.deleteFailed") };

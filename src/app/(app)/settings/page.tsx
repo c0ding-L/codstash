@@ -77,24 +77,31 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         <Card>
           <CardHeader>
             <CardTitle>
-              {plan.isPro && plan.proUntil
-                ? t("plan.proUntil", { date: formatProUntil(plan.proUntil, locale) })
-                : t("plan.free")}
+              {plan.isAdmin
+                ? t("plan.admin")
+                : plan.isPro && plan.proUntil
+                  ? t("plan.proUntil", { date: formatProUntil(plan.proUntil, locale) })
+                  : t("plan.free")}
             </CardTitle>
             <CardDescription>
-              {plan.isPro
-                ? t("plan.proDescription")
-                : t("plan.freeDescription", {
-                    items: plan.items,
-                    maxItems: FREE_LIMITS.items,
-                    collections: plan.collections,
-                    maxCollections: FREE_LIMITS.collections,
-                  })}
+              {plan.isAdmin
+                ? t("plan.adminDescription")
+                : plan.isPro
+                  ? t("plan.proDescription")
+                  : t("plan.freeDescription", {
+                      items: plan.items,
+                      maxItems: FREE_LIMITS.items,
+                      collections: plan.collections,
+                      maxCollections: FREE_LIMITS.collections,
+                    })}
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <UpgradeButtons initialCurrency={parseCurrency(currency)} isPro={plan.isPro} />
-          </CardContent>
+          {/* An admin has Pro through the role: nothing to pay for. */}
+          {plan.isAdmin ? null : (
+            <CardContent>
+              <UpgradeButtons initialCurrency={parseCurrency(currency)} isPro={plan.isPro} />
+            </CardContent>
+          )}
         </Card>
       </section>
 

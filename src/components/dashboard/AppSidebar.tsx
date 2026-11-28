@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock, Folders, LayoutDashboard, Layers, type LucideIcon, Star } from "lucide-react";
+import { Clock, Folders, LayoutDashboard, Layers, type LucideIcon, ShieldCheck, Star } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { connection } from "next/server";
@@ -139,6 +139,15 @@ async function AppSidebarBody() {
                   <span>{t("nav.viewAllCollections")}</span>
                 </SidebarNavButton>
               </SidebarMenuItem>
+              {/* The session's role, for the link only: /admin re-reads it from the database. */}
+              {user.role === "ADMIN" ? (
+                <SidebarMenuItem>
+                  <SidebarNavButton href="/admin" exact tooltip={t("nav.admin")}>
+                    <ShieldCheck aria-hidden />
+                    <span>{t("nav.admin")}</span>
+                  </SidebarNavButton>
+                </SidebarMenuItem>
+              ) : null}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

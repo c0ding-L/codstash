@@ -23,7 +23,8 @@ type TitleKey =
   | "profile.title"
   | "settings.title"
   | "billing.return.title"
-  | "upgrade.title";
+  | "upgrade.title"
+  | "admin.title";
 
 /** A page's `metadata`: "Tableau de bord · Cortex", from the page's own heading message. */
 export async function pageMetadata(key: TitleKey): Promise<Metadata> {

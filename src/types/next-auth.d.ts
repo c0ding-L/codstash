@@ -1,9 +1,11 @@
 import type { DefaultSession } from "next-auth";
 
+import type { Role } from "@/lib/billing-plans";
+
 declare module "next-auth" {
   interface Session {
-    /** `isPro` is for the UI only; server-side gates read `getPlanStatus`. */
-    user: { id: string; isPro: boolean } & DefaultSession["user"];
+    /** `isPro` and `role` are for the UI only; server-side gates read the database. */
+    user: { id: string; isPro: boolean; role: Role } & DefaultSession["user"];
   }
 }
 
@@ -15,7 +17,9 @@ declare module "@auth/core/jwt" {
     id: string;
     /** Sign-in time in ms; absent on tokens issued before it was added. */
     authTime?: number;
-    /** `isProActive(proUntil)` as of the last request; unset right after sign-in. */
+    /** `hasProAccess` as of the last request; unset right after sign-in. */
     isPro?: boolean;
+    /** As of the last request; unset right after sign-in. */
+    role?: Role;
   }
 }

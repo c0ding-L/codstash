@@ -1,3 +1,4 @@
+import type { Role } from "@/lib/billing-plans";
 import { assertBelowCap } from "@/lib/db/user-lock";
 import { prisma } from "@/lib/prisma";
 
@@ -33,7 +34,7 @@ export interface ApiTokenLookup {
   scope: string;
   expiresAt: Date | null;
   revokedAt: Date | null;
-  user: { proUntil: Date | null };
+  user: { proUntil: Date | null; role: Role };
 }
 
 /** Not revoked and not expired: what counts towards the cap. */
@@ -108,7 +109,7 @@ export function revokeAllApiTokensQuery(userId: string) {
   return prisma.apiToken.updateMany({ where: { userId, revokedAt: null }, data: { revokedAt: new Date() } });
 }
 
-/** The token with this hash and its owner's Pro date, or null. Revoked and expired ones included: the caller decides. */
+/** The token with this hash and its owner's Pro date and role, or null. Revoked and expired ones included: the caller decides. */
 export async function findApiTokenByHash(hash: string): Promise<ApiTokenLookup | null> {
   return prisma.apiToken.findUnique({
     where: { hash },
@@ -118,7 +119,7 @@ export async function findApiTokenByHash(hash: string): Promise<ApiTokenLookup |
       scope: true,
       expiresAt: true,
       revokedAt: true,
-      user: { select: { proUntil: true } },
+      user: { select: { proUntil: true, role: true } },
     },
   });
 }

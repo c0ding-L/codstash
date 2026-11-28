@@ -28,7 +28,7 @@ function row(overrides: Partial<ApiTokenLookup> = {}): ApiTokenLookup {
     scope: "write",
     expiresAt: null,
     revokedAt: null,
-    user: { proUntil: new Date(Date.now() + 30 * DAY) },
+    user: { proUntil: new Date(Date.now() + 30 * DAY), role: "USER" },
     ...overrides,
   };
 }
@@ -53,7 +53,7 @@ describe("authenticateApi", () => {
   });
 
   it("lets a read token read, even on Free", async () => {
-    asMock(findApiTokenByHash).mockResolvedValue(row({ scope: "read", user: { proUntil: null } }));
+    asMock(findApiTokenByHash).mockResolvedValue(row({ scope: "read", user: { proUntil: null, role: "USER" } }));
     expect(await authenticateApi(request(`Bearer ${token}`), "read")).toEqual({
       userId: "user1",
       tokenId: "tok1",
@@ -124,15 +124,25 @@ describe("authenticateApi", () => {
   });
 
   it("refuses a write once Pro has lapsed, with 403 pro_required", async () => {
-    asMock(findApiTokenByHash).mockResolvedValue(row({ user: { proUntil: new Date(Date.now() - DAY) } }));
+    asMock(findApiTokenByHash).mockResolvedValue(row({ user: { proUntil: new Date(Date.now() - DAY), role: "USER" } }));
     const response = (await authenticateApi(request(`Bearer ${token}`), "write")) as Response;
     expect(response.status).toBe(403);
     expect((await response.json()).error.code).toBe("pro_required");
     expect(checkRateLimit).not.toHaveBeenCalled();
   });
 
+  it("lets an admin write with no paid plan", async () => {
+    asMock(findApiTokenByHash).mockResolvedValue(row({ user: { proUntil: null, role: "ADMIN" } }));
+    expect(await authenticateApi(request(`Bearer ${token}`), "write")).toEqual({
+      userId: "user1",
+      tokenId: "tok1",
+      scope: "write",
+      isPro: true,
+    });
+  });
+
   it("still lets a lapsed write token read", async () => {
-    asMock(findApiTokenByHash).mockResolvedValue(row({ user: { proUntil: null } }));
+    asMock(findApiTokenByHash).mockResolvedValue(row({ user: { proUntil: null, role: "USER" } }));
     expect(await authenticateApi(request(`Bearer ${token}`), "read")).toEqual({
       userId: "user1",
       tokenId: "tok1",

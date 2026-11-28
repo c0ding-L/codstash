@@ -5,7 +5,7 @@ import Credentials from "next-auth/providers/credentials";
 
 import authConfig from "@/auth.config";
 import { EmailNotVerifiedError, RateLimitedError } from "@/lib/auth-errors";
-import { isProActive } from "@/lib/billing-plans";
+import { hasProAccess, isProActive } from "@/lib/billing-plans";
 import { isEmailVerificationEnabled } from "@/lib/email-verification-flag";
 import { prisma } from "@/lib/prisma";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
@@ -88,16 +88,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       const account = await prisma.user.findUnique({
         where: { id: token.id },
-        select: { passwordChangedAt: true, proUntil: true, isPro: true },
+        select: { passwordChangedAt: true, proUntil: true, isPro: true, role: true },
       });
       if (!account) return null;
       if (account.passwordChangedAt && account.passwordChangedAt.getTime() > (token.authTime ?? 0)) return null;
 
       // For the UI only; server-side gates read `getPlanStatus` at the moment
       // of the check. On sign-in it stays unset until the next request.
-      token.isPro = isProActive(account.proUntil);
-      // Keep the stored mirror in step with the expiry: one write when Pro lapses.
-      if (account.isPro && !token.isPro) {
+      token.isPro = hasProAccess(account);
+      // For the sidebar's Admin link only; the admin pages and actions re-read the role.
+      token.role = account.role;
+      // Keep the stored mirror in step with the expiry: one write when Pro lapses. It mirrors
+      // `proUntil` only, so an admin who never paid keeps `false` there.
+      if (account.isPro && !isProActive(account.proUntil)) {
         await prisma.user.updateMany({ where: { id: token.id, isPro: true }, data: { isPro: false } });
       }
       return token;
@@ -105,6 +108,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     session({ session, token }) {
       session.user.id = token.id;
       session.user.isPro = token.isPro ?? false;
+      session.user.role = token.role ?? "USER";
       return session;
     },
   },

@@ -94,9 +94,17 @@ export function formatYearlyPerMonth(currency: Currency, locale: Locale = "en") 
 
 const DAY_MS = 86_400_000;
 
-/** The only place that decides whether a user is Pro. Expires at `proUntil` exactly. */
+/** Whether the paid plan is running. Expires at `proUntil` exactly. Gates read `hasProAccess`. */
 export function isProActive(proUntil: Date | null | undefined, now = new Date()) {
   return proUntil != null && proUntil.getTime() > now.getTime();
+}
+
+/** The same strings as Prisma's `Role` enum, client-safe. */
+export type Role = "USER" | "ADMIN";
+
+/** The only place that decides whether a user gets the Pro features: an admin always does. */
+export function hasProAccess(user: { role: Role; proUntil: Date | null | undefined }, now = new Date()) {
+  return user.role === "ADMIN" || isProActive(user.proUntil, now);
 }
 
 /** Paying early stacks on the remaining time; paying after expiry starts from now. */

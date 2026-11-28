@@ -27,7 +27,9 @@ runs there.
   - `20261126210956_custom_item_types`
   - `20261127021635_item_last_used`
   - `20261127145330_api_tokens`
+  - `20261128031521_user_role` (every signed-in request reads `role`: run it before the deploy)
 - [ ] Take a Neon snapshot of `production`, then run `prisma migrate deploy` against it.
+- [ ] Make the author's account admin: `UPDATE "User" SET role = 'ADMIN' WHERE email = '…';`
 - [ ] Decide whether the deploy runs migrations automatically (a build step on Vercel) or stays a
   manual step.
 - [ ] Delete the test accounts left in production: `phase2@test.dev`, `uitest@test.dev`,

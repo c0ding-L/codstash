@@ -5,7 +5,7 @@
 import { after } from "next/server";
 
 import { hashToken, parseBearer } from "@/lib/api-token";
-import { isProActive } from "@/lib/billing-plans";
+import { hasProAccess } from "@/lib/billing-plans";
 import { findApiTokenByHash, touchApiToken, type ApiTokenScope } from "@/lib/db/api-tokens";
 import { checkRateLimit, secondsUntil } from "@/lib/rate-limit";
 import { canUseApiWrite } from "@/lib/usage-limits";
@@ -14,7 +14,7 @@ export interface ApiCaller {
   userId: string;
   tokenId: string;
   scope: ApiTokenScope;
-  /** Whether the owner's Pro plan is active: the MCP server checks it per tool, not per request. */
+  /** Whether the owner has Pro access (paid, or admin): the MCP server checks it per tool, not per request. */
   isPro: boolean;
 }
 
@@ -57,7 +57,7 @@ export async function authenticateApi(request: Request, need: ApiTokenScope): Pr
 
   // Anything but "write" is read-only: the column is a free string.
   const scope: ApiTokenScope = row.scope === "write" ? "write" : "read";
-  const isPro = isProActive(row.user.proUntil, now);
+  const isPro = hasProAccess(row.user, now);
   if (need === "write") {
     if (scope !== "write") {
       return apiError(403, "insufficient_scope", "This API token is read-only. Create a read + write token to write.");

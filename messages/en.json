@@ -75,7 +75,8 @@
     "upgrade": "Upgrade",
     "newItem": "New Item",
     "newCollection": "New Collection",
-    "customTypes": "Custom"
+    "customTypes": "Custom",
+    "admin": "Admin"
   },
   "search": {
     "triggerShort": "Search…",
@@ -112,7 +113,9 @@
       "proUntil": "Pro until {date}",
       "free": "Free",
       "proDescription": "Pay again at any time: the new period starts when the current one ends.",
-      "freeDescription": "{items}/{maxItems} items, {collections}/{maxCollections} collections. Pro removes the limits and adds file and image uploads."
+      "freeDescription": "{items}/{maxItems} items, {collections}/{maxCollections} collections. Pro removes the limits and adds file and image uploads.",
+      "admin": "Admin",
+      "adminDescription": "Your account has every Pro feature through the admin role, with no end date."
     },
     "editor": {
       "heading": "Editor",
@@ -945,6 +948,15 @@
       "titlesMore": "{titles} and {count, plural, one {# more} other {# more}}",
       "failed": "Could not update sharing. Try again.",
       "quotedTitle": "“{title}”"
+    },
+    "admin": {
+      "forbidden": "Only an admin can do this.",
+      "userGone": "This account no longer exists.",
+      "adminNotDeletable": "An admin account cannot be deleted from the admin panel.",
+      "invalidDays": "Enter a number of days between 1 and 3,650.",
+      "grantFailed": "Could not grant Pro access. Try again.",
+      "revokeFailed": "Could not remove the Pro plan. Try again.",
+      "deleteFailed": "Could not delete the account. Try again."
     }
   },
   "emails": {
@@ -1209,5 +1221,57 @@
     "footer": "Shared with Cortex",
     "footerCta": "Build your own technical memory",
     "openLink": "Open link"
+  },
+  "admin": {
+    "title": "Admin",
+    "subtitle": "Stats and accounts. Users' items and their content are not shown here.",
+    "stats": {
+      "heading": "Overview",
+      "users": "Users",
+      "verifiedUsers": "Verified emails",
+      "activePro": "Paying Pro users",
+      "signups": "Sign-ups, last 30 days",
+      "items": "Items",
+      "collections": "Collections",
+      "revenue": "Revenue",
+      "revenueNone": "No payments yet.",
+      "payments": "{count, plural, one {# payment} other {# payments}}"
+    },
+    "users": {
+      "heading": "Users",
+      "searchLabel": "Search users",
+      "searchPlaceholder": "Email or name",
+      "search": "Search",
+      "clear": "Clear",
+      "count": "{count, plural, one {# user} other {# users}}",
+      "empty": "No users match.",
+      "you": "You",
+      "joined": "Signed up on {date}",
+      "verified": "Email verified",
+      "notVerified": "Email not verified"
+    },
+    "plan": {
+      "admin": "Admin",
+      "proUntil": "Pro until {date}",
+      "free": "Free"
+    },
+    "actions": {
+      "menu": "Actions for {email}",
+      "grant": "Grant Pro access",
+      "revoke": "Remove the Pro plan",
+      "delete": "Delete account",
+      "grantTitle": "Grant Pro access",
+      "grantDescription": "To <name>{email}</name>. The days are added to the Pro time this user has left.",
+      "days": "Days",
+      "granting": "Granting…",
+      "granted": "Pro access granted.",
+      "revokeTitle": "Remove the Pro plan?",
+      "revokeBody": "<name>{email}</name> goes back to the Free plan now. Their data stays, even over the Free limits.",
+      "revoking": "Removing…",
+      "revoked": "Pro plan removed.",
+      "deleteTitle": "Delete this account?",
+      "deleteBody": "<name>{email}</name> and all of their items, collections and files will be deleted. This cannot be undone.",
+      "deleted": "Account deleted."
+    }
   }
 }

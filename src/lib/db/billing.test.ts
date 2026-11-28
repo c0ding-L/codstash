@@ -46,11 +46,11 @@ beforeEach(() => {
 describe("getPlanStatus", () => {
   it("counts the user's rows and decides Pro from proUntil", async () => {
     const proUntil = new Date(Date.now() + DAY_MS);
-    findUser.mockResolvedValue({ proUntil });
+    findUser.mockResolvedValue({ proUntil, role: "USER" });
     countItems.mockResolvedValue(12);
     countCollections.mockResolvedValue(2);
 
-    expect(await getPlanStatus(USER)).toEqual({ proUntil, isPro: true, items: 12, collections: 2 });
+    expect(await getPlanStatus(USER)).toEqual({ proUntil, isPro: true, isAdmin: false, items: 12, collections: 2 });
     expect(countItems.mock.calls[0]![0].where).toEqual({ userId: USER });
     expect(countCollections.mock.calls[0]![0].where).toEqual({ userId: USER });
   });
@@ -59,11 +59,19 @@ describe("getPlanStatus", () => {
     countItems.mockResolvedValue(0);
     countCollections.mockResolvedValue(0);
 
-    findUser.mockResolvedValue({ proUntil: new Date(Date.now() - DAY_MS) });
+    findUser.mockResolvedValue({ proUntil: new Date(Date.now() - DAY_MS), role: "USER" });
     expect((await getPlanStatus(USER)).isPro).toBe(false);
 
     findUser.mockResolvedValue(null);
-    expect(await getPlanStatus(USER)).toEqual({ proUntil: null, isPro: false, items: 0, collections: 0 });
+    expect(await getPlanStatus(USER)).toEqual({ proUntil: null, isPro: false, isAdmin: false, items: 0, collections: 0 });
+  });
+
+  it("gives an admin Pro access with no paid plan", async () => {
+    countItems.mockResolvedValue(0);
+    countCollections.mockResolvedValue(0);
+    findUser.mockResolvedValue({ proUntil: null, role: "ADMIN" });
+
+    expect(await getPlanStatus(USER)).toMatchObject({ proUntil: null, isPro: true, isAdmin: true });
   });
 });
 

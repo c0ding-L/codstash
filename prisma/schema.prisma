@@ -36,6 +36,9 @@ model User {
   isPro    Boolean   @default(false)
   // Pro is active while this is in the future. Null: never paid.
   proUntil DateTime?
+  // ADMIN has Pro access whatever `proUntil` says, and the /admin panel. Set by hand in the
+  // database only: no form or sign-in ever writes it.
+  role     Role      @default(USER)
 
   accounts    Account[]
   sessions    Session[]
@@ -241,6 +244,11 @@ model ItemTag {
 // ---------------------------------------------------------------------------
 // Billing (Bictorys one-off charges that extend `User.proUntil`)
 // ---------------------------------------------------------------------------
+
+enum Role {
+  USER
+  ADMIN
+}
 
 enum BillingPlan {
   MONTHLY

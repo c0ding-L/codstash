@@ -11,6 +11,7 @@ import {
   formatPrice,
   formatProUntil,
   formatYearlyPerMonth,
+  hasProAccess,
   isProActive,
   parseCurrency,
   toXof,
@@ -61,6 +62,19 @@ describe("isProActive", () => {
 
   it("has expired at exactly now", () => {
     expect(isProActive(new Date(NOW), NOW)).toBe(false);
+  });
+});
+
+describe("hasProAccess", () => {
+  it("follows proUntil for a user", () => {
+    expect(hasProAccess({ role: "USER", proUntil: null }, NOW)).toBe(false);
+    expect(hasProAccess({ role: "USER", proUntil: new Date(NOW.getTime() - 1) }, NOW)).toBe(false);
+    expect(hasProAccess({ role: "USER", proUntil: new Date(NOW.getTime() + 1) }, NOW)).toBe(true);
+  });
+
+  it("is always true for an admin", () => {
+    expect(hasProAccess({ role: "ADMIN", proUntil: null }, NOW)).toBe(true);
+    expect(hasProAccess({ role: "ADMIN", proUntil: new Date(NOW.getTime() - DAY_MS) }, NOW)).toBe(true);
   });
 });
 

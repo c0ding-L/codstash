@@ -75,7 +75,8 @@
     "upgrade": "Passer à Pro",
     "newItem": "Nouvel élément",
     "newCollection": "Nouvelle collection",
-    "customTypes": "Personnalisés"
+    "customTypes": "Personnalisés",
+    "admin": "Admin"
   },
   "search": {
     "triggerShort": "Rechercher…",
@@ -112,7 +113,9 @@
       "proUntil": "Pro jusqu’au {date}",
       "free": "Gratuit",
       "proDescription": "Vous pouvez payer à nouveau à tout moment : la nouvelle période commence à la fin de la période en cours.",
-      "freeDescription": "{items}/{maxItems} éléments, {collections}/{maxCollections} collections. La formule Pro supprime les limites et ajoute l’import de fichiers et d’images."
+      "freeDescription": "{items}/{maxItems} éléments, {collections}/{maxCollections} collections. La formule Pro supprime les limites et ajoute l’import de fichiers et d’images.",
+      "admin": "Admin",
+      "adminDescription": "Votre compte dispose de toutes les fonctionnalités Pro via le rôle d’administrateur, sans date d’expiration."
     },
     "editor": {
       "heading": "Éditeur",
@@ -945,6 +948,15 @@
       "failed": "Impossible de mettre à jour le partage. Veuillez réessayer.",
       "titlesMore": "{titles} et {count, plural, one {# autre} other {# autres}}",
       "quotedTitle": "« {title} »"
+    },
+    "admin": {
+      "forbidden": "Seul un administrateur peut effectuer cette opération.",
+      "userGone": "Ce compte n’existe plus.",
+      "adminNotDeletable": "Un compte administrateur ne peut pas être supprimé depuis le panneau d’administration.",
+      "invalidDays": "Veuillez saisir un nombre de jours compris entre 1 et 3 650.",
+      "grantFailed": "Impossible d’accorder l’accès Pro. Veuillez réessayer.",
+      "revokeFailed": "Impossible de désactiver la formule Pro. Veuillez réessayer.",
+      "deleteFailed": "Impossible de supprimer le compte. Veuillez réessayer."
     }
   },
   "emails": {
@@ -1209,5 +1221,57 @@
     "footer": "Partagé avec Cortex",
     "footerCta": "Constituez-vous votre propre mémoire technique",
     "openLink": "Ouvrir le lien"
+  },
+  "admin": {
+    "title": "Admin",
+    "subtitle": "Statistiques et comptes. Les éléments des utilisateurs et leur contenu n’apparaissent pas ici.",
+    "stats": {
+      "heading": "Présentation générale",
+      "users": "Utilisateurs",
+      "verifiedUsers": "Adresses e-mail vérifiées",
+      "activePro": "Utilisateurs de la formule Pro payante",
+      "signups": "Inscriptions au cours des 30 derniers jours",
+      "items": "Éléments",
+      "collections": "Collections",
+      "revenue": "Chiffre d’affaires",
+      "revenueNone": "Aucun paiement n’a encore été effectué.",
+      "payments": "{count, plural, one {# paiement} other {# paiements}}"
+    },
+    "users": {
+      "heading": "Utilisateurs",
+      "searchLabel": "Rechercher des utilisateurs",
+      "searchPlaceholder": "Adresse e-mail ou nom",
+      "search": "Rechercher",
+      "clear": "Effacer",
+      "count": "{count, plural, one {# utilisateur} other {# utilisateurs}}",
+      "empty": "Aucun utilisateur ne correspond.",
+      "you": "Vous",
+      "joined": "Inscrit le {date}",
+      "verified": "Adresse e-mail vérifiée",
+      "notVerified": "Adresse e-mail non vérifiée"
+    },
+    "plan": {
+      "admin": "Admin",
+      "proUntil": "Pro jusqu’au {date}",
+      "free": "Gratuit"
+    },
+    "actions": {
+      "menu": "Actions pour {email}",
+      "grant": "Accorder l’accès à Pro",
+      "revoke": "Supprimer la formule Pro",
+      "delete": "Supprimer le compte",
+      "grantTitle": "Accorder l’accès à Pro",
+      "grantDescription": "À <name>{email}</name>. Ces jours sont ajoutés au temps restant de la formule Pro de cet utilisateur.",
+      "days": "Jours",
+      "granting": "Octroi…",
+      "granted": "Accès Pro accordé.",
+      "revokeTitle": "Supprimer la formule Pro ?",
+      "revokeBody": "<name>{email}</name> revient désormais à la formule Gratuite. Ses données sont conservées, même au-delà des limites de la formule Gratuite.",
+      "revoking": "Suppression en cours…",
+      "revoked": "La formule Pro a été supprimée.",
+      "deleteTitle": "Souhaitez-vous supprimer ce compte ?",
+      "deleteBody": "<name>{email}</name>, ainsi que tous ses éléments, collections et fichiers, seront supprimés. Cette action est irréversible.",
+      "deleted": "Compte supprimé."
+    }
   }
 }

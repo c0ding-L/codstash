@@ -33,7 +33,7 @@ const tokenRow: ApiTokenLookup = {
   scope: "read",
   expiresAt: null,
   revokedAt: null,
-  user: { proUntil: null },
+  user: { proUntil: null, role: "USER" },
 };
 
 function mcpRequest(body: unknown, authorization?: string) {
