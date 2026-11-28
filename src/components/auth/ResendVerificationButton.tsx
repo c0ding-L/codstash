@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { postAuthJson } from "@/lib/auth-request";
+import { cn } from "@/lib/utils";
 
 /**
  * Asks for a new verification email. The endpoint answers the same way for any
@@ -56,6 +57,8 @@ export function ResendVerificationButton({
       type="button"
       variant={variant}
       size={variant === "link" ? "sm" : "lg"}
+      // The French labels are longer than a phone's card: let them wrap instead of widening it.
+      className={cn("h-auto whitespace-normal text-center", variant === "link" ? "py-1" : "min-h-9 py-2")}
       onClick={onClick}
       disabled={pending || (!getEmail && !email)}
     >

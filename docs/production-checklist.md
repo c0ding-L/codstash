@@ -70,7 +70,7 @@ Production moved from `codstash.vercel.app` to `devcortex.io` on 2026-11-28.
 
 - [ ] **Bictorys:** switch from `test.bictorys.com` to live keys and the live API URL, then make one
   real payment and check that the webhook sets the plan to Pro.
-- [ ] **Resend:** sending domain verified; send a verification email and a password reset to a real
+- [x] **Resend:** sending domain verified; send a verification email and a password reset to a real
   inbox.
 - [ ] **Upstash:** the Vercel token works (sign-in blocks from the 6th failed attempt).
 - [ ] **R2:** create a separate production bucket (dev and prod share one today) and set its
@@ -96,9 +96,9 @@ Production moved from `codstash.vercel.app` to `devcortex.io` on 2026-11-28.
 
 Check each path once in production, with a real account:
 
-- [ ] Sign up with email: verification email received, link works.
+- [x] Sign up with email: verification email received, link works (2026-11-28, from `noreply@devcortex.io`).
 - [ ] Sign in with GitHub.
-- [ ] Forgot password: reset email received, new password works, API tokens revoked.
+- [x] Forgot password: reset email received, new password works, API tokens revoked (2026-11-28).
 - [ ] Create, edit and delete an item; upload a file and an image; download them.
 - [ ] Upgrade to Pro with a real payment; Pro features unlock.
 - [ ] One AI feature (e.g. auto-tagging) answers.

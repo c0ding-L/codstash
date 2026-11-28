@@ -12,6 +12,7 @@ import {
   Text,
 } from "react-email";
 
+import { EmailBrand } from "@/emails/EmailBrand";
 import { styles } from "@/emails/styles";
 import { emailTranslator } from "@/emails/translator";
 import type { Locale } from "@/lib/locale";
@@ -31,10 +32,7 @@ export function VerificationEmail({ locale = "en", name, url }: Readonly<Verific
       <Preview>{t("verification.preview")}</Preview>
       <Body style={styles.body}>
         <Container style={styles.card}>
-          <Section>
-            <span style={styles.logo}>{"</>"}</span>
-            <Text style={{ ...styles.brand, marginTop: "10px" }}>Cortex</Text>
-          </Section>
+          <EmailBrand appUrl={url} />
 
           <Heading as="h1" style={styles.heading}>
             {t("verification.heading")}

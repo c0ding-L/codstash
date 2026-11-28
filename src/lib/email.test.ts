@@ -45,6 +45,24 @@ describe("emails", () => {
     expect(message?.text).toContain("Vérifier mon adresse e-mail");
   });
 
+  it("loads the logo from the app the links point to", async () => {
+    await sendVerificationEmail({ to: "ada@example.com", locale: "en", name: "Ada", url: URL });
+    await sendPasswordResetEmail({ to: "ada@example.com", locale: "en", name: "Ada", url: URL });
+    await sendAccountExistsEmail({
+      to: "ada@example.com",
+      locale: "en",
+      name: "Ada",
+      signInUrl: "https://cortex.test/sign-in",
+      resetUrl: null,
+    });
+
+    expect(sent).toHaveLength(3);
+    for (const message of sent) {
+      expect(message.html).toContain('src="https://cortex.test/email-logo.png"');
+      expect(message.html).not.toContain("&lt;/&gt;");
+    }
+  });
+
   it("greets someone named like a keyword by their name", async () => {
     await sendPasswordResetEmail({ to: "ada@example.com", locale: "en", name: "none", url: URL });
 

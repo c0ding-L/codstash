@@ -14,6 +14,12 @@ Not Started
 
 ---
 
+Previous feature (completed) — Email logo and sign-in overflow on phones: the emails show the
+app's mark, and the resend-verification button wraps instead of widening the auth card. Outcome
+in the History below.
+
+---
+
 Previous feature (completed) — Production domain `devcortex.io`: the CLI's baked-in URL, the
 `.env.example` sender and the production checklist moved from `codstash.vercel.app`. Outcome
 in the History below.
@@ -3239,3 +3245,15 @@ Environment notes that outlive any one feature:
     `https://devcortex.io/api/mcp`. `localhost:3000` only appears in local dev.
   - 1,738 tests, build, lint, CLI typecheck and build green. Fast-forward merged into `main`;
     branch deleted. Left: publish the CLI, send real verification and reset emails.
+- 2026-11-28 — Email logo and auth pages on phones.
+  - Emails: verification, password reset and account-exists show the app's `Layers` mark
+    (`public/email-logo.png`, 64×64 rendered from `icon.svg` in the emails' dark/white colours)
+    through a shared `src/emails/EmailBrand.tsx`. Loaded by absolute URL from the link's origin
+    (mail clients drop SVG and `data:`); no URL, no image. Test: each email's HTML loads
+    `<origin>/email-logo.png`.
+  - Phones: `ResendVerificationButton` wraps its label (`h-auto whitespace-normal`). The French
+    sign-in link made the card content 379 px wide; the outline button overflowed at 320 px on
+    `/verify-email` and after registering. Playwright (mobile emulation, 320 and 375 px, fr/en,
+    verification on): sign-in, register, forgot/reset password and verify-email clean.
+  - Production checklist: Resend, sign-up email and forgot password checked off by the author.
+  - 1,739 tests, build and lint green.
