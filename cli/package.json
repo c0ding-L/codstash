@@ -1,5 +1,5 @@
 {
-  "name": "@author-scope/cortex-cli",
+  "name": "@devcortexio/cortex-cli",
   "version": "0.1.0",
   "description": "Command-line client for Cortex: search, copy, run and save snippets, prompts and commands.",
   "license": "MIT",

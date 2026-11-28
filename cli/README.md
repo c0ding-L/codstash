@@ -9,7 +9,7 @@ dependencies.
 ## Install
 
 ```bash
-npm i -g @author-scope/cortex-cli
+npm i -g @devcortexio/cortex-cli
 cortex --version
 ```
 

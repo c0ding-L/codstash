@@ -83,13 +83,14 @@ Production moved from `codstash.vercel.app` to `devcortex.io` on 2026-11-28.
 
 ## 5. CLI `cortex`
 
-- [ ] Replace the `@author-scope` placeholder in `cli/package.json` with the npm scope.
+- [x] npm scope: `@devcortexio` (the npm user `devcortexio`; `@devcortex` belongs to someone else).
 - [x] Check `PRODUCTION_URL` (section 3).
 - [ ] Run the postponed manual tests against `next dev`, in WSL and in cmd.exe: `login` (hidden
   input), variable prompts, the numbered pick, answering `N`, a command that reads stdin
   (`read -p "name: " n; echo "hi $n"`), Ctrl+C at a prompt, `get --copy` with accents, `save` from a
   pipe, `context -o`.
-- [ ] From `cli/`: `npm install`, `npm run typecheck`, `npm run build`, then `npm publish --access public`.
+- [x] From `cli/`: `npm install`, `npm run typecheck`, `npm run build`, then `npm publish --access public`
+  (`@devcortexio/cortex-cli@0.1.0`, 2026-11-28; publishing needs 2FA on the npm account).
 
 ## 6. After the deploy
 
